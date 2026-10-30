@@ -116,13 +116,44 @@
   document.addEventListener('pointerdown', event => { if (!bar.hidden && !bar.contains(event.target) && !event.target.closest('.emoji-react-btn')) closeBar(false); });
   window.addEventListener('resize', () => closeBar(false));
 
-  const seen = new Set();
+  const seen = new Set(), pendingLocal = new Map(), localQueue = [], localToReal = new Map();
   let initialized = false, sinceLastBadge = 2;
+  const byId = id => id && document.querySelector(`#messages [data-message-id="${CSS.escape(id)}"]`);
+  const messageText = msg => [...msg.querySelectorAll(':scope > .bubble')].map(bubble => {
+    const copy = bubble.cloneNode(true); copy.querySelectorAll('.emoji-badge').forEach(node => node.remove()); return copy.textContent;
+  }).join('\n').trim();
+  // 你的新消息：连续 3 条里最多贴 1 次；先不打扰或关掉开关时不贴。
+  function decide(text) {
+    sinceLastBadge += 1;
+    if (!enabled() || quiet() || sinceLastBadge < 3) return null;
+    const emoji = pick(text);
+    if (emoji) sinceLastBadge = 0;
+    return emoji;
+  }
+  function announce(id, emoji) {
+    requestAnimationFrame(() => {
+      const current = byId(id) || byId(localToReal.get(id));
+      if (current) celebrate(badgeFor(current, emoji), emoji);
+      glow(emoji);
+    });
+  }
   function decorate(messages) {
     let sawHistory = false;
     for (const msg of messages.querySelectorAll(':scope > .msg[data-message-id]')) {
       const id = msg.dataset.messageId;
-      if (!realId(id)) continue;
+      if (!id || id === 'thinking') continue;
+      if (!realId(id)) {
+        // 刚发出、还没被服务确认的那条：此刻就贴，赶在回复之前。
+        if (!msg.classList.contains('user')) continue;
+        if (pendingLocal.has(id)) { badgeFor(msg, pendingLocal.get(id)); continue; }
+        if (seen.has(id) || !initialized) continue;
+        seen.add(id);
+        const text = messageText(msg), emoji = decide(text);
+        localQueue.push({id, text, emoji});
+        if (localQueue.length > 20) localQueue.shift();
+        if (emoji) { pendingLocal.set(id, emoji); announce(id, emoji); }
+        continue;
+      }
       sawHistory = true;
       if (msg.classList.contains('assistant') && !msg.querySelector(':scope > .emoji-react-btn')) {
         const button = document.createElement('button');
@@ -135,18 +166,19 @@
       if (seen.has(id)) continue;
       seen.add(id);
       if (!initialized || !msg.classList.contains('user')) continue;
-      // 新的一条你的消息：连续 3 条里最多贴 1 次；先不打扰或关掉开关时不贴。
-      sinceLastBadge += 1;
-      if (!enabled() || quiet() || sinceLastBadge < 3 || reactions[id]) continue;
-      const emoji = pick([...msg.querySelectorAll(':scope > .bubble')].map(node => node.textContent).join('\n'));
+      // 服务确认后的同一条消息：沿用发出时贴的角标，不重复计数、不重播动画。
+      const text = messageText(msg), index = localQueue.findIndex(item => item.text === text);
+      if (index >= 0) {
+        const [local] = localQueue.splice(index, 1);
+        pendingLocal.delete(local.id); localToReal.set(local.id, id);
+        if (local.emoji && !reactions[id]) { reactions[id] = local.emoji; persist(); badgeFor(msg, local.emoji); }
+        continue;
+      }
+      // 别的设备发来的消息：确认到达时再贴。
+      if (reactions[id]) continue;
+      const emoji = decide(text);
       if (!emoji) continue;
-      reactions[id] = emoji; persist(); sinceLastBadge = 0;
-      setTimeout(() => {
-        const current = document.querySelector(`#messages [data-message-id="${CSS.escape(id)}"]`);
-        if (!current) return;
-        celebrate(badgeFor(current, emoji), emoji);
-        glow(emoji);
-      }, 400);
+      reactions[id] = emoji; persist(); announce(id, emoji);
     }
     // 第一次载入的历史消息只作已读，不补贴角标。
     if (sawHistory) initialized = true;

@@ -6,7 +6,7 @@
 <title>念响 · 具身个人伙伴</title>
 <link rel="stylesheet" href="/static/styles.css?v=b21fcb6e9e0eadff" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=9a5157d850acc511" />
+<link rel="stylesheet" href="/static/design-system.css?v=b77b2556cba31ac9" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
@@ -229,7 +229,7 @@
     <span class="response-choices-hint">加入草稿，发送后生效；随时可换</span>
   </div>
       <form id="composer" class="composer">
-        <textarea id="input" rows="2" placeholder="说点什么，我在听……"></textarea>
+        <textarea id="input" rows="1" placeholder="说点什么，我在听……"></textarea>
         <div class="composer-actions">
           <div class="composer-tools"><button type="button" class="composer-connect" id="composer-connect" aria-label="连接应用" title="连接应用">＋</button><span class="composer-hint">Enter 发送 · Shift+Enter 换行</span></div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -250,12 +250,10 @@
         <button class="tab" data-tab="memory" data-copy-key="nav.memory">记忆</button>
         <button class="tab" data-tab="persona">角色</button>
         <button class="tab" data-tab="apps" title="连接应用">连接</button>
-        <button class="tab" data-tab="more">更多</button>
+        <button class="tab" data-tab="design">设置</button>
       </div>
 
-      <section id="tab-design" class="tab-panel is-hidden"><div class="panel-title-row"><h3>设置</h3></div><div class="design-shortcuts"><button type="button" class="btn ghost" data-design-route="apps">连接应用</button><button type="button" class="btn ghost" data-design-route="bookmark">任务与草稿</button><button type="button" class="btn ghost" data-design-route="persona">角色与设备</button><button type="button" class="btn ghost" data-design-route="more">数据与记录</button><button type="button" class="btn ghost is-hidden" id="desktop-connection-entry">连接与空间</button></div><p class="note" id="desktop-connection-entry-status" role="status" aria-live="polite"></p><div id="design-settings"></div><div id="paired-devices"></div></section>
-      <section id="tab-more" class="tab-panel is-hidden">
-        <div class="panel-title-row"><h3>更多</h3><span class="muted small">低频设置与记录</span></div>
+      <section id="tab-design" class="tab-panel is-hidden"><div class="panel-title-row"><h3>设置</h3></div><div class="design-shortcuts"><button type="button" class="btn ghost" data-design-route="apps">连接应用</button><button type="button" class="btn ghost" data-design-route="bookmark">任务与草稿</button><button type="button" class="btn ghost" data-design-route="persona">角色与设备</button><button type="button" class="btn ghost is-hidden" id="desktop-connection-entry">连接与空间</button></div><p class="note" id="desktop-connection-entry-status" role="status" aria-live="polite"></p><div id="design-settings"></div><div id="paired-devices"></div><div class="settings-section"><div class="panel-title-row"><h3>数据与记录</h3><span class="muted small">低频设置与记录</span></div>
         <div class="action-row" style="flex-direction:column;align-items:stretch">
           <button class="btn ghost small" data-more-tab="understanding">理解卡</button>
           <button class="btn ghost small" data-more-tab="audit">审计记录</button>
@@ -263,8 +261,7 @@
           <button class="btn ghost small" data-more-tab="data">数据与模型设置</button>
         </div>
         <div class="data-block" id="plugin-status"><div class="k">插件</div><p class="note">正在检查本机插件…</p></div>
-        <p class="note">理解、设置和记录都在这里；聊天一直留在左边。</p>
-      </section>
+</div></section>
 
       <section id="tab-apps" class="tab-panel is-hidden">
         <div class="panel-title-row"><h3>连接应用</h3><button type="button" class="text-btn" id="apps-refresh">重新检查</button></div>
@@ -504,6 +501,6 @@
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
 <script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
 <script src="/static/app.js?v=9632f059e42bfe26"></script>
-<script src="/static/emoji-reactions.js?v=4feb65e2cab01bbf"></script>
+<script src="/static/emoji-reactions.js?v=3d8ec368c41b1941"></script>
 </body>
 </html>
