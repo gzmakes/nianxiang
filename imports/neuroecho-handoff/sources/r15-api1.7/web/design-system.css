@@ -258,7 +258,7 @@ html[data-reduce-transparency=true] #app .context,html[data-reduce-transparency=
 @keyframes emoji-pop{from{transform:translate(-50%,50%) scale(0)}to{transform:translate(-50%,50%) scale(1)}}
 @keyframes emoji-float{from{opacity:1;transform:translate(-50%,-50%)}to{opacity:0;transform:translate(-50%,calc(-50% - 60px))}}
 @keyframes emoji-orb{0%{opacity:0;transform:scale(.6)}20%{opacity:1;transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-8px)}}
-.emoji-react-btn{position:absolute;top:24px;right:-44px;width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(80,100,170,.12)}
+.emoji-react-btn{position:absolute;top:28px;right:-44px;width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(80,100,170,.12)}
 .emoji-react-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .msg:hover>.emoji-react-btn,.emoji-react-btn:focus-visible{opacity:1}
 .emoji-react-btn:hover{color:var(--ink);background:#fff}
@@ -334,4 +334,31 @@ html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=tru
   #app .conversation>.composer{gap:0;padding:6px 8px}
   #app .composer #composer-connect,#app .composer #meme-btn,#app .composer #mic-btn,#app .composer #stop-btn,#app .composer [type=submit]{width:36px;height:36px;min-height:36px}
   #app .composer>.composer-actions>div[style]{gap:0!important}
+}
+/* Web 改版 5 (2026-10-31，产品要求)：气泡宽度随文字；去掉气泡下的「朗读」「标记话题」；「生成语音」收成气泡旁的语音图标；
+   输入框图标改用 flex 居中（原 grid 被按钮里 0 号字的文字占了第二行，图标整体偏上）。 */
+#app .msg{width:fit-content;max-width:min(540px,100%)}
+#app .msg.assistant{align-self:flex-start}
+#app .msg .bubble{width:fit-content;max-width:100%;box-sizing:border-box}
+#app .msg.user .bubble{margin-left:auto}
+#app .msg [data-voice-message],#app .msg [data-topic-message],#app .msg [data-voice-clip-slot]{display:none!important}
+#app .composer #composer-connect,#app .composer #meme-btn,#app .composer #mic-btn,#app .composer #stop-btn,#app .composer [type=submit]{display:inline-flex;align-items:center;justify-content:center}
+/* 语音图标：气泡右侧第一个位置，常显；emoji 笑脸排在它外侧，悬停出现 */
+#app .msg [data-voice-clip]{position:absolute;top:28px;right:-44px;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;margin:0;
+  border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);font-size:0!important;cursor:pointer;box-shadow:0 2px 8px rgba(80,100,170,.12)}
+#app .msg [data-voice-clip][hidden]{display:none}
+#app .msg [data-voice-clip]:hover{background:#fff;color:var(--ink)}
+#app .msg [data-voice-clip]::before{content:"";width:18px;height:18px;background:currentColor;-webkit-mask:var(--v-icon) center/contain no-repeat;mask:var(--v-icon) center/contain no-repeat}
+#app .msg [data-voice-clip]{--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M4 10v4M8 7v10M12 4v16M16 8v8M20 10.5v3'/></svg>")}
+#app .msg [data-voice-clip][data-voice-state=ready]{color:var(--ink);--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8.5 6.2v11.6c0 .7.8 1.2 1.4.8l9-5.8a1 1 0 0 0 0-1.6l-9-5.8c-.6-.4-1.4 0-1.4.8z' fill='black'/></svg>")}
+#app .msg [data-voice-clip][data-voice-state=playing]{color:#fff;background:var(--ink);border-color:var(--ink)}
+#app .msg [data-voice-clip][data-voice-state=playing]::before{animation:voice-wave 1s ease-in-out infinite}
+#app .msg [data-voice-clip][data-voice-state=busy]::before{animation:voice-wave .8s ease-in-out infinite;opacity:.6}
+#app .msg [data-voice-clip][data-voice-state=error]{color:var(--danger)}
+@keyframes voice-wave{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(1.1)}}
+html[data-reduce-motion=true] #app .msg [data-voice-clip]::before{animation:none}
+@media(prefers-reduced-motion:reduce){#app .msg [data-voice-clip]::before{animation:none}}
+#app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
+@media(max-width:899px){
+  #app .msg [data-voice-clip]{position:static;margin-top:4px}
 }
