@@ -97,3 +97,268 @@ html[data-desktop=true][data-native-platform=win32] .topbar{margin:8px 150px 0 1
 .sheet-update-line [data-update-status] {flex:1 1 160px;}
 .sheet-update-line [data-update-context] {flex:1 1 100%;line-height:1.5;padding-bottom:4px;}
 @media(max-width:600px){.content-update-line{font-size:11px;gap:6px;padding-inline:12px;}}
+/* UI pass 1 (2026-10-30): 对话顶部收成一行(#1)、空状态不重复回应选项(#3/#4)、删除用危险色(#2)、心情按钮(#8)、提醒设置折叠行(#9) */
+.conversation-toolbar{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;flex:none;padding:4px 20px 0}
+.conversation-toolbar .topic-toolbar{flex:none;padding:0}
+.conversation-toolbar .companion-boundary{flex:1 1 260px;min-width:0;flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:0 4px;padding:0}
+.conversation-toolbar .companion-boundary-copy{font-size:12px;color:var(--ink-mute);text-align:right}
+.conversation-toolbar .companion-boundary-actions{width:auto;gap:0;flex-wrap:nowrap}
+.conversation-toolbar .companion-boundary button{font-size:13px;padding:8px 10px;color:var(--ink-mute)}
+.conversation-toolbar .companion-boundary button:hover{color:var(--ink)}
+.conversation-toolbar .topic-description{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.conversation>.content-update-line:not([data-update-state=pending]):not([data-update-state=offline]):not([data-update-state=unsupported]):not([data-update-state=identity]){display:none}
+.conversation:has(#chat-empty:not(.is-hidden)) .response-choices,#m-app:has(#m-chat-empty:not(.is-hidden)) .response-choices{display:none}
+.mini[data-act=delete],.mini-btn[data-act=delete]{color:var(--danger)}
+.mood-intro .mood-open{flex:none;padding-inline:18px}
+.notification-settings:not([open]){border-color:transparent;padding-block:0}
+.notification-settings summary{list-style:none;justify-content:space-between;gap:8px;font-size:14px;color:var(--ink-mute)}
+.notification-settings summary::-webkit-details-marker{display:none}
+.notification-settings summary::after{content:"›";font-size:18px;line-height:1;transition:transform .2s}
+.notification-settings[open] summary::after{transform:rotate(90deg)}
+html[data-reduce-motion=true] .notification-settings summary::after{transition:none}
+/* UI pass 1 · H5 (2026-10-30): 安静开关移到话题行(#1)、更新行按需显示、记住原话开关留出 16px 边距避免露在记忆面板外(#12) */
+.m-topic-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px}
+.m-topic-toolbar .topic-description,.m-topic-toolbar .companion-boundary:not(:has([data-b-resume]:not([hidden]))):not(:has(button:disabled)) .companion-boundary-copy{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.m-topic-toolbar .companion-boundary{flex:1 1 auto;min-width:0;flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:0 4px;padding:0}
+.m-topic-toolbar .companion-boundary-copy{flex-basis:100%;order:2;font-size:12px;color:var(--ink-mute);text-align:right}
+.m-topic-toolbar .companion-boundary-actions{width:auto;gap:0;flex-wrap:nowrap}
+.m-topic-toolbar .companion-boundary button{font-size:13px;padding:8px;color:var(--ink-mute)}
+#m-app>.content-update-line:not([data-update-state=pending]):not([data-update-state=offline]):not([data-update-state=unsupported]):not([data-update-state=identity]){display:none}
+#m-app>.memory-preference-toggle{padding:4px 16px}
+/* Web 改版 2 (2026-10-30，产品要求)：宽屏(≥900)字号缩小、去左侧栏、去顶栏卡片、品牌居中于对话栏、话题条变扁、
+   顶栏操作统一为 icon+文字、侧栏“＋”改“连接”、卡片半透磨砂玻璃。只作用于 index.html(#app)，不影响 H5 与手机布局。 */
+.ui-icon{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.topbar-actions .text-btn{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:899px){.topbar .action-label{display:none}.topbar-actions .text-btn .ui-icon{width:18px;height:18px}}
+@media(min-width:900px){
+  /* 顶栏：去卡片，只留右侧操作；品牌移到对话栏 */
+  #app .topbar{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;min-height:40px;margin:0;padding:0 4px;justify-content:flex-end}
+  #app .topbar::before,#app .topbar::after{display:none}
+  #app .topbar .brand,#app .topbar-center,#app .topbar-actions #apps-btn{display:none}
+  #app .topbar-actions{gap:4px}
+  #app .topbar-actions .text-btn{font-size:13px;min-height:36px;padding:6px 12px;border-radius:18px;color:var(--ink-mute)}
+  #app .topbar-actions .text-btn:hover{color:var(--ink);background:rgba(255,255,255,.55)}
+  html[data-desktop=true] #app .topbar{margin-top:10px}
+  html[data-desktop=true][data-native-platform=win32] #app .topbar{margin:8px 150px 0 12px}
+  /* 去左侧栏 */
+  #app .design-rail{display:none}
+  #app .layout{grid-template-columns:minmax(0,1fr)}
+  /* 品牌：光球在上、名字胶囊在下，居中于对话栏 */
+  #app .conversation-head{justify-content:center;padding:0 0 4px;min-height:0}
+  #app .conversation-persona{flex-direction:column;align-items:center;gap:0;text-align:center}
+  #app .conversation-persona .persona-face{display:grid;place-items:center;width:64px;height:64px;position:relative;z-index:1;margin:0 auto -12px}
+  #app .conversation-persona .persona-face .presence-light{width:64px;height:64px}
+  #app .conversation-persona h2{display:inline-block;margin:0;padding:15px 30px 6px;border-radius:999px;font-size:15px;font-weight:600;line-height:1.3;color:var(--ink);
+    background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,.35));border:1px solid rgba(255,255,255,.8);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 #fff,0 6px 18px rgba(80,100,170,.12)}
+  #app .companion-status{margin:6px 0 0;font-size:12px;justify-content:center}
+  #app .quiet-hint{display:none}
+  /* 空状态：光球已在顶部，空状态不再重复；文字居中 */
+  #app .chat-empty-orb{display:none}
+  #app .chat-empty-heading{justify-content:center;text-align:center}
+  #app .chat-empty-intro{text-align:center}
+  #app .chat-chips{justify-content:center}
+  /* 话题条变扁，与右侧安静开关同高 */
+  #app .topic-tabs{padding:2px;border-radius:17px}
+  #app .topic-chip{min-height:30px;padding:4px 14px;font-size:12px;border-radius:15px}
+  #app .conversation-toolbar{padding:0 8px}
+  #app .conversation>.composer{margin-inline:8px;width:auto}
+  #app .conversation>.resume-banner,#app .conversation>.carryover-banner{margin-inline:8px}
+  #app .resume-banner,#app .carryover-banner{border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,227,211,.45);color:var(--ink-mute);font-size:12px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+  #app .conversation-toolbar .companion-boundary button{min-height:32px;padding:4px 8px;font-size:12px}
+  /* 字号整体缩小，接近 macOS 常规界面 */
+  #app .msg .bubble{font-size:14px;line-height:1.6}
+  #app #input{font-size:14px}
+  #app .chat-hello{font-size:12px}
+  #app .chat-empty h3{font-size:22px;line-height:1.35}
+  #app .chat-empty-intro{font-size:13px;margin:10px 0 14px}
+  #app .chat-chips button,#app .response-choices button{font-size:12px;min-height:34px;padding:6px 14px}
+  #app .companion-source b{font-size:13px}
+  #app .context h3,#app .today-head h3{font-size:17px}
+  #app .mood-intro h3,#app .followup-head h3{font-size:15px}
+  #app .mood-open,#app .context .mini-btn{font-size:12px}
+  #app .notification-settings summary{font-size:13px}
+  #app .today-card b,#app .panel b,#app .app-card b{font-size:14px}
+  #app .today-hello b{font-size:17px}
+  #app .topbar-actions #export-btn{display:inline-flex}
+  #app .composer .btn{min-height:36px}
+  /* 卡片：半透磨砂玻璃 */
+  #app .context{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.65);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+  #app .tabs{background:rgba(255,255,255,.5)}
+  #app .companion-source,#app .mood-card,#app .followup-card,#app .context .today-card,#app .context .panel,#app .context .data-block,#app .context .mem-item,#app .context .mem-card,#app .context .bookmark-card,#app .context .app-card,#app .context .next-step{
+    background:rgba(255,255,255,.34)!important;border:1px solid rgba(255,255,255,.75)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)!important}
+}
+@media(min-width:1200px){
+  #app .layout{grid-template-columns:minmax(0,1fr) 392px}
+  html[data-panel-collapsed=true] #app .layout{grid-template-columns:minmax(0,1fr)}
+  html:not([data-panel-collapsed=true]) #app #design-panel-toggle{display:none}
+}
+@media(min-width:900px) and (max-width:1199px){
+  html[data-desktop=true] #app .layout{grid-template-columns:minmax(0,1fr) 392px}
+  html:not([data-desktop=true]) #app .context{background:rgba(248,250,255,.86)}
+}
+html[data-reduce-transparency=true] #app .context,html[data-reduce-transparency=true] #app .conversation-persona h2,html[data-reduce-transparency=true] #app .companion-source,html[data-reduce-transparency=true] #app .mood-card,html[data-reduce-transparency=true] #app .followup-card,html[data-reduce-transparency=true] #app .context .today-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+@media(prefers-reduced-transparency:reduce){#app .context,#app .conversation-persona h2,#app .companion-source,#app .mood-card,#app .followup-card,#app .context .today-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
+/* Web 改版 3 (2026-10-30，产品要求 + 念念 design.md v0.2)：品牌顶对齐、标语艺术字、对话左移、细滚动条、
+   陪伴开关玻璃胶囊、边界说明移到首条消息上方、气泡按 §7.2、emoji 回应 §7.10、搜索框重做。 */
+.echo-slogan{display:none}
+@media(min-width:900px){
+  /* 品牌与顶栏同一顶线；对话栏整体上移，右侧面板位置不变 */
+  #app .topbar{position:relative;z-index:3}
+  #app .layout{margin-top:-56px}
+  #app .context{margin-top:56px}
+  #app .conversation{justify-self:start;margin-left:max(0px,min(40px,calc(100% - 700px)))}
+  #app .conversation-persona .persona-face{margin:0 auto -6px}
+  #app .conversation-persona h2{padding:9px 28px 5px}
+  #app .companion-status{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  #app .echo-slogan{display:block;margin:8px 0 0;font-family:"Xingkai SC","STXingkai","Hannotate SC","Kaiti SC","STKaiti","KaiTi",serif;font-size:20px;font-weight:400;line-height:1.4;letter-spacing:.12em;
+    color:transparent;background:linear-gradient(100deg,#1B2433 0%,#56627A 55%,#9AA7C7 100%);-webkit-background-clip:text;background-clip:text}
+  /* 「按你的节奏…」只在首条消息上方淡淡出现 */
+  #app .conversation-toolbar .companion-boundary-copy{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  #app #messages::before{content:var(--boundary-note,"");display:block;text-align:center;font-size:12px;line-height:16px;color:rgba(86,98,122,.6);letter-spacing:.04em}
+  #app .conversation:has(#chat-empty:not(.is-hidden)) #messages::before{display:none}
+  /* 陪伴开关：与话题筛选同款玻璃胶囊，图标 + 文字；核对只留图标；恢复时主色 */
+  #app .conversation-toolbar .companion-boundary-actions{display:inline-flex;align-items:center;gap:0;padding:2px;border-radius:17px;
+    background:linear-gradient(135deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 48%,rgba(255,255,255,.4));border:1px solid rgba(255,255,255,.72);
+    -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 4px 12px rgba(80,100,170,.12)}
+  #app .conversation-toolbar .companion-boundary button{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:4px 12px;border:0;border-radius:14px;background:transparent;color:var(--ink-mute);font-size:12px;font-weight:500;line-height:20px}
+  #app .conversation-toolbar .companion-boundary button:hover:not(:disabled){background:rgba(255,255,255,.88);color:var(--ink);box-shadow:0 1px 4px rgba(80,100,170,.14)}
+  #app .conversation-toolbar .companion-boundary button::before{content:"";width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:var(--b-icon) center/contain no-repeat;mask:var(--b-icon) center/contain no-repeat}
+  #app [data-b-today]{--b-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z'/></svg>")}
+  #app [data-b-pause]{--b-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M9 6.5v11M15 6.5v11'/></svg>")}
+  #app [data-b-resume]{--b-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'><path d='M8.5 6v12l9.5-6z'/></svg>")}
+  #app [data-b-refresh]{--b-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4'/></svg>")}
+  #app .conversation-toolbar .companion-boundary [data-b-refresh]{font-size:0;gap:0;padding:4px 8px}
+  #app .conversation-toolbar .companion-boundary button[hidden]{display:none}
+  #app .conversation-toolbar .companion-boundary [data-b-resume]:not([hidden]){background:var(--ink);color:#fff}
+  /* 气泡（§7.2）：内边距 10/16，白卡 .86 + line 描边；时间行用无衬线 */
+  #app .msg .bubble{padding:10px 16px}
+  #app .msg.assistant .bubble{background:rgba(255,255,255,.86)!important;border-color:rgba(27,36,51,.10)}
+  #app .msg .meta,#app .msg .meta span{font-family:var(--sans);font-size:12px;color:var(--ink-mute);letter-spacing:0}
+}
+/* 细滚动条：有一点就行 */
+#app,#app *{scrollbar-width:thin;scrollbar-color:rgba(86,98,122,.2) transparent}
+#app ::-webkit-scrollbar{width:6px;height:6px}
+#app ::-webkit-scrollbar-track{background:transparent}
+#app ::-webkit-scrollbar-thumb{background:rgba(86,98,122,.16);border-radius:3px}
+#app :hover::-webkit-scrollbar-thumb{background:rgba(86,98,122,.28)}
+/* emoji 回应（§7.10）：白色实底角标 24，中心落在气泡朝内一侧的下角；悬停回响的气泡出笑脸按钮 */
+#app .msg{position:relative}
+#app .msg .bubble{position:relative}
+#app .msg.has-emoji{margin-bottom:12px}
+.emoji-badge,.emoji-bar button,.emoji-orb,.emoji-float{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.emoji-badge{position:absolute;bottom:0;z-index:1;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 4px;box-sizing:border-box;border-radius:12px;background:#fff;border:1px solid rgba(27,36,51,.10);box-shadow:0 2px 8px rgba(80,100,170,.16);font-size:16px;line-height:1;transform:translate(-50%,50%)}
+.msg.user .emoji-badge{left:0}
+.msg.assistant .emoji-badge{left:100%}
+.emoji-badge.is-new{animation:emoji-pop .45s cubic-bezier(.3,1.7,.5,1)}
+.emoji-float{position:absolute;left:50%;top:50%;pointer-events:none;font-size:16px;animation:emoji-float 1.1s ease-out forwards}
+.emoji-orb{position:absolute;inset:0;z-index:2;display:grid;place-items:center;font-size:24px;pointer-events:none;animation:emoji-orb 1.4s ease-out forwards}
+@keyframes emoji-pop{from{transform:translate(-50%,50%) scale(0)}to{transform:translate(-50%,50%) scale(1)}}
+@keyframes emoji-float{from{opacity:1;transform:translate(-50%,-50%)}to{opacity:0;transform:translate(-50%,calc(-50% - 60px))}}
+@keyframes emoji-orb{0%{opacity:0;transform:scale(.6)}20%{opacity:1;transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-8px)}}
+.emoji-react-btn{position:absolute;top:28px;right:-44px;width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(80,100,170,.12)}
+.emoji-react-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.msg:hover>.emoji-react-btn,.emoji-react-btn:focus-visible{opacity:1}
+.emoji-react-btn:hover{color:var(--ink);background:#fff}
+@media(hover:none){.emoji-react-btn{opacity:.7}}
+@media(max-width:899px){.emoji-react-btn{right:0;top:-8px}}
+.emoji-bar{position:fixed;z-index:130;display:flex;gap:0;height:48px;padding:4px;box-sizing:border-box;border-radius:24px;
+  background:linear-gradient(135deg,rgba(255,255,255,.8),rgba(255,255,255,.5) 48%,rgba(255,255,255,.66));border:1px solid rgba(255,255,255,.75);
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 12px 32px rgba(80,100,170,.2),0 2px 6px rgba(80,100,170,.1)}
+.emoji-bar[hidden]{display:none}
+.emoji-bar button{width:40px;height:40px;padding:0;border:0;border-radius:20px;background:transparent;font-size:20px;line-height:1;cursor:pointer}
+.emoji-bar button:hover,.emoji-bar button:focus-visible{background:rgba(255,255,255,.9)}
+.emoji-bar button[aria-pressed=true]{background:#fff;box-shadow:0 1px 4px rgba(80,100,170,.2)}
+.emoji-pref{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.6);cursor:pointer}
+.emoji-pref input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:var(--ink)}
+.emoji-pref b{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+.emoji-pref small{display:block;margin-top:4px;font-size:12px;line-height:16px;color:var(--ink-mute)}
+html[data-reduce-motion=true] .emoji-badge.is-new,html[data-reduce-motion=true] .emoji-float,html[data-reduce-motion=true] .emoji-orb{animation:none}
+@media(prefers-reduced-motion:reduce){.emoji-badge.is-new,.emoji-float,.emoji-orb{animation:none}}
+/* 搜索框：遮罩 + 液态玻璃卡；白色实底输入胶囊带放大镜；结果为白卡 */
+body:has(#app) .design-search{background:rgba(27,36,51,.28);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding-top:14vh}
+body:has(#app) .design-search-card{width:min(600px,100%);padding:16px;border-radius:28px;
+  background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(255,255,255,.62) 48%,rgba(255,255,255,.76));border:1px solid rgba(255,255,255,.8);
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 24px 64px rgba(27,36,51,.18)}
+body:has(#app) .design-search-head{gap:8px}
+body:has(#app) .design-search-head input{height:48px;min-height:48px;padding:0 16px 0 44px;border-radius:24px;border:1px solid rgba(27,36,51,.10);font-size:14px;color:var(--ink);outline:none;
+  background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2356627A' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M16 16l4.5 4.5'/></svg>") no-repeat 16px center/18px}
+body:has(#app) .design-search-head input:focus-visible{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+body:has(#app) .design-search-head .icon-btn{width:40px;height:40px;min-height:40px;padding:0;border-radius:20px;border:0;background:rgba(27,36,51,.07);color:var(--ink-mute);font-size:20px}
+body:has(#app) .design-search-card>.note{margin:12px 8px 4px;font-size:12px;color:var(--ink-mute)}
+body:has(#app) .design-search-results button{padding:12px 16px;margin:8px 0 0;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.86);cursor:pointer}
+body:has(#app) .design-search-results button:hover,body:has(#app) .design-search-results button:focus-visible{background:#fff;box-shadow:0 4px 12px rgba(80,100,170,.12)}
+body:has(#app) .design-search-results p{font-size:14px;margin:4px 0 0}
+html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96);-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Web 改版 4 (2026-10-30，产品要求)：设置并入右侧面板（替代“更多”）、对话在左侧区域居中、输入框改为单行胶囊（ChatGPT 式）、
+   标语使用随项目打包的马善政楷书子集（OFL，见 web/fonts/README.md）。 */
+@font-face{font-family:"Echo Slogan";src:url("fonts/mashanzheng-slogan.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
+@media(min-width:900px){
+  #app .conversation{justify-self:center;margin-left:0}
+  #app .topbar-actions #design-settings-btn{display:none}
+  #app .echo-slogan{font-family:"Echo Slogan","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi",serif;font-size:24px;letter-spacing:.08em}
+}
+#app #tab-design .settings-section{margin-top:24px}
+#app #tab-design .settings-section .action-row{gap:8px}
+/* 输入框：一行白色胶囊，左 ＋，中间输入，右侧 表情 / 语音 / 发送（圆形主按钮）；内容多时自动长高 */
+#app .conversation>.composer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:4px;min-height:56px;padding:8px;box-sizing:border-box;
+  border-radius:28px;border:1px solid rgba(27,36,51,.10);background:#fff!important;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 4px 16px rgba(80,100,170,.10)}
+#app .conversation>.composer:focus-within{border-color:rgba(27,36,51,.24)}
+#app .composer>.composer-actions,#app .composer .composer-tools{display:contents}
+#app .composer .composer-hint{display:none}
+#app .composer #composer-connect{grid-column:1;grid-row:1}
+#app .composer>.composer-actions>div[style]{grid-column:3;grid-row:1;gap:4px!important}
+#app .composer textarea{grid-column:2;grid-row:1;align-self:center;min-height:40px;max-height:160px;height:auto;margin:0;padding:9px 4px;border:0!important;border-radius:0;outline:none;box-shadow:none!important;background:transparent!important;
+  font-size:14px;line-height:22px;color:var(--ink);resize:none;field-sizing:content}
+#app .composer textarea:focus,#app .composer textarea:focus-visible{outline:none;box-shadow:none!important}
+#app .composer textarea::placeholder{color:rgba(86,98,122,.7)}
+#app .composer #composer-connect,#app .composer #meme-btn,#app .composer #mic-btn,#app .composer #stop-btn,#app .composer [type=submit]{
+  display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0!important;border-radius:20px;background:transparent!important;color:var(--ink)!important;font-size:0!important;box-shadow:none;cursor:pointer}
+#app .composer #meme-btn.is-hidden,#app .composer #mic-btn.is-hidden,#app .composer #stop-btn.is-hidden{display:none}
+#app .composer #composer-connect:hover,#app .composer #meme-btn:hover,#app .composer #mic-btn:hover,#app .composer #stop-btn:hover{background:rgba(27,36,51,.07)!important}
+#app .composer #mic-btn.listening{background:var(--chip-peach)!important}
+#app .composer [type=submit]{background:var(--ink)!important;color:#fff!important}
+#app .composer:has(textarea:placeholder-shown) [type=submit]{background:rgba(27,36,51,.16)!important}
+#app .composer #composer-connect::before,#app .composer #meme-btn::before,#app .composer #mic-btn::before,#app .composer #stop-btn::before,#app .composer [type=submit]::before{
+  content:"";width:20px;height:20px;background:currentColor;-webkit-mask:var(--c-icon) center/contain no-repeat;mask:var(--c-icon) center/contain no-repeat}
+#app .composer #composer-connect{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M12 5v14M5 12h14'/></svg>")}
+#app .composer #meme-btn{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8.5'/><path d='M8.5 14c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2'/><path d='M9.5 10h.01M14.5 10h.01' stroke-width='2.4'/></svg>")}
+#app .composer #mic-btn{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='3.5' width='6' height='11' rx='3'/><path d='M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V20.5'/></svg>")}
+#app .composer #stop-btn{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='7' y='7' width='10' height='10' rx='2' fill='black'/></svg>")}
+#app .composer [type=submit]{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 18.5V5.5M6.5 11 12 5.5 17.5 11'/></svg>")}
+@media(max-width:899px){
+  #app .conversation>.composer{gap:0;padding:6px 8px}
+  #app .composer #composer-connect,#app .composer #meme-btn,#app .composer #mic-btn,#app .composer #stop-btn,#app .composer [type=submit]{width:36px;height:36px;min-height:36px}
+  #app .composer>.composer-actions>div[style]{gap:0!important}
+}
+/* Web 改版 5 (2026-10-31，产品要求)：气泡宽度随文字；去掉气泡下的「朗读」「标记话题」；「生成语音」收成气泡旁的语音图标；
+   输入框图标改用 flex 居中（原 grid 被按钮里 0 号字的文字占了第二行，图标整体偏上）。 */
+#app .msg{width:fit-content;max-width:min(540px,100%)}
+#app .msg.assistant{align-self:flex-start}
+#app .msg .bubble{width:fit-content;max-width:100%;box-sizing:border-box}
+#app .msg.user .bubble{margin-left:auto}
+#app .msg [data-voice-message],#app .msg [data-topic-message],#app .msg [data-voice-clip-slot]{display:none!important}
+#app .composer #composer-connect,#app .composer #meme-btn,#app .composer #mic-btn,#app .composer #stop-btn,#app .composer [type=submit]{display:inline-flex;align-items:center;justify-content:center}
+/* 语音图标：气泡右侧第一个位置，常显；emoji 笑脸排在它外侧，悬停出现 */
+#app .msg [data-voice-clip]{position:absolute;top:28px;right:-44px;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;margin:0;
+  border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);font-size:0!important;cursor:pointer;box-shadow:0 2px 8px rgba(80,100,170,.12)}
+#app .msg [data-voice-clip][hidden]{display:none}
+#app .msg [data-voice-clip]:hover{background:#fff;color:var(--ink)}
+#app .msg [data-voice-clip]::before{content:"";width:18px;height:18px;background:currentColor;-webkit-mask:var(--v-icon) center/contain no-repeat;mask:var(--v-icon) center/contain no-repeat}
+#app .msg [data-voice-clip]{--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M4 10v4M8 7v10M12 4v16M16 8v8M20 10.5v3'/></svg>")}
+#app .msg [data-voice-clip][data-voice-state=ready]{color:var(--ink);--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8.5 6.2v11.6c0 .7.8 1.2 1.4.8l9-5.8a1 1 0 0 0 0-1.6l-9-5.8c-.6-.4-1.4 0-1.4.8z' fill='black'/></svg>")}
+#app .msg [data-voice-clip][data-voice-state=playing]{color:#fff;background:var(--ink);border-color:var(--ink)}
+#app .msg [data-voice-clip][data-voice-state=playing]::before{animation:voice-wave 1s ease-in-out infinite}
+#app .msg [data-voice-clip][data-voice-state=busy]::before{animation:voice-wave .8s ease-in-out infinite;opacity:.6}
+#app .msg [data-voice-clip][data-voice-state=error]{color:var(--danger)}
+@keyframes voice-wave{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(1.1)}}
+html[data-reduce-motion=true] #app .msg [data-voice-clip]::before{animation:none}
+@media(prefers-reduced-motion:reduce){#app .msg [data-voice-clip]::before{animation:none}}
+#app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
+@media(max-width:899px){
+  #app .msg [data-voice-clip]{position:static;margin-top:4px}
+}

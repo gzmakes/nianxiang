@@ -2931,6 +2931,13 @@
         if (match) { match.setAttribute("tabindex", "-1"); match.focus({preventScroll: true}); match.scrollIntoView({block: "center", behavior: "auto"}); }
       }});
     window.XinjiWorkspace.mountTopics($("#design-topics"));
+    // 宽屏把「按你的节奏…」这句以浅色放在首条消息上方；原文仍留在工具栏作读屏状态。
+    const boundaryHost = $(".conversation-toolbar [data-companion-boundary]");
+    if (boundaryHost && typeof MutationObserver !== "undefined") {
+      const syncBoundaryNote = () => els.messages.style.setProperty("--boundary-note", JSON.stringify(boundaryHost.querySelector(".companion-boundary-copy")?.textContent?.trim() || ""));
+      new MutationObserver(syncBoundaryNote).observe(boundaryHost, {subtree: true, childList: true, characterData: true});
+      syncBoundaryNote();
+    }
     document.addEventListener("xinji-topic-change", () => window.XinjiWorkspace.filterMessages(els.messages));
     window.XinjiDesign.mountSettings($("#design-settings"));
     $("#design-search-btn").onclick = () => { globalThis.XinjiVoice?.stop?.(); window.XinjiWorkspace.openSearch(); };
