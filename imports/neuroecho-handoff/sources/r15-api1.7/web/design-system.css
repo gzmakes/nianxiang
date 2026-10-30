@@ -362,3 +362,121 @@ html[data-reduce-motion=true] #app .msg [data-voice-clip]::before{animation:none
 @media(max-width:899px){
   #app .msg [data-voice-clip]{position:static;margin-top:4px}
 }
+/* Web 改版 6 (2026-10-31，产品要求)：光球改成带眼睛的 3D 玻璃球（两道竖向药丸眼，参考产品给的示意图）；
+   表情随你最近一条消息的情绪关键词变化（orb-face.js，与 emoji 回应共用关键词，本地判断）；
+   颜色随对话状态变化，对应念念 design.md v0.2 §7.1 的四种：安静陪着（雾蓝）/ 在听你说（淡杏，放大不呼吸）/
+   想起一件事（蓝杏交融，向外亮一圈）/ 先不打扰（缩小变淡，闭眼）。眼睛是 CSS 伪元素，H5 的光球同样生效。
+   标语去掉句号、变小，并用 SVG 腐蚀滤镜把笔画削细。 */
+:root{--orb-a:#F3F6FF;--orb-b:#CFDAFF;--orb-c:#A6B9F0;--orb-glow:#C6D4FF;--orb-eye:#283245;--orb-scale:1;--orb-breathe:orb-breathe 4.8s ease-in-out infinite}
+html[data-presence-state=input],html[data-presence-state=responding]{--orb-a:#FFF5ED;--orb-b:#FFDBC8;--orb-c:#F5B08C;--orb-glow:#FFD9C6;--orb-scale:1.12;--orb-breathe:none}
+html[data-presence-state=thinking]{--orb-a:#EEF3FF;--orb-b:#D6DEFF;--orb-c:#FFC6A8;--orb-glow:#E9D8EE}
+html[data-presence-state=failed]{--orb-a:#F4F4F7;--orb-b:#DCDFE8;--orb-c:#B8BECE;--orb-glow:#DCDFE8;--orb-breathe:none}
+html:has([data-companion-boundary] [data-b-resume]:not([hidden])){--orb-a:#F3F4F8;--orb-b:#DDE1EA;--orb-c:#C0C6D5;--orb-glow:#DDE1EA;--orb-scale:.72;--orb-breathe:none}
+html[data-presence-state] .presence-light-core,html:not([data-presence-state]) .presence-light-core{position:relative;border:0;
+  background:radial-gradient(circle at 31% 24%,#fff 0,rgba(255,255,255,.95) 9%,rgba(255,255,255,0) 34%),
+    radial-gradient(circle at 70% 90%,rgba(255,255,255,.65) 0,rgba(255,255,255,0) 36%),
+    radial-gradient(circle at 46% 42%,var(--orb-a) 0,var(--orb-b) 56%,var(--orb-c) 100%);
+  box-shadow:inset -4px -7px 12px rgba(78,98,165,.24),inset 3px 4px 8px rgba(255,255,255,.95),inset 0 0 0 1px rgba(255,255,255,.7),0 12px 18px -8px rgba(78,98,165,.42),0 0 18px var(--orb-glow);
+  transform:scale(var(--orb-scale));animation:var(--orb-breathe);filter:none;
+  transition:background .6s ease,box-shadow .6s ease,transform .5s cubic-bezier(.2,.8,.2,1),opacity .4s ease}
+html:has([data-companion-boundary] [data-b-resume]:not([hidden])) .presence-light-core{opacity:.55}
+@keyframes orb-breathe{0%,100%{transform:scale(calc(var(--orb-scale) * .97))}50%{transform:scale(calc(var(--orb-scale) * 1.04))}}
+/* 想起一件事：向外亮一圈，1.2 秒一次，不循环 */
+html[data-presence-state=thinking] .presence-light::after{animation:orb-flash 1.2s ease-out 1 both}
+@keyframes orb-flash{0%{box-shadow:0 0 0 0 rgba(255,217,198,.9),0 0 24px #c6d4ff80;opacity:1}100%{box-shadow:0 0 0 18px rgba(255,217,198,0),0 0 24px #c6d4ff80;opacity:var(--echo-light-intensity)}}
+/* 眼睛：两道竖向药丸，带一点高光；左右各用一个变量描述表情 */
+.presence-light-core{--eye-l:translate(0,0);--eye-r:translate(0,0);--eye-h:1}
+.presence-light-core::before,.presence-light-core::after{content:"";position:absolute;top:36%;width:12%;height:calc(27% * var(--eye-h));border-radius:999px;
+  background:radial-gradient(circle at 36% 20%,rgba(255,255,255,.95) 0,rgba(255,255,255,.95) 15%,rgba(255,255,255,0) 17%),var(--orb-eye);
+  box-shadow:0 1px 2px rgba(20,28,48,.22);transform:var(--eye-tf);transform-origin:50% 50%;
+  animation:orb-blink 5.6s ease-in-out infinite;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),height .4s ease,width .4s ease,top .4s ease,left .4s ease,border-radius .4s ease,background .3s ease,opacity .3s ease}
+.presence-light-core::before{left:31%;--eye-tf:var(--eye-l)}
+.presence-light-core::after{left:57%;--eye-tf:var(--eye-r);animation-delay:.04s}
+@keyframes orb-blink{0%,90%,100%{transform:var(--eye-tf) scaleY(1)}93%{transform:var(--eye-tf) scaleY(.08)}96%{transform:var(--eye-tf) scaleY(1)}}
+/* 表情（orb-face.js 写在 <html data-presence-face>） */
+html[data-presence-face=happy] .presence-light-core::before,html[data-presence-face=happy] .presence-light-core::after{top:40%;width:20%;height:15%;background:transparent;box-shadow:none;
+  border:0 solid var(--orb-eye);border-top-width:3px;border-radius:100% 100% 0 0/100% 100% 0 0;animation:none}
+html[data-presence-face=happy] .presence-light-core::before{left:25%}
+html[data-presence-face=happy] .presence-light-core::after{left:55%}
+html[data-presence-face=sad] .presence-light-core{--eye-l:translateY(10%) rotate(16deg);--eye-r:translateY(10%) rotate(-16deg);--eye-h:.78}
+html[data-presence-face=sleepy] .presence-light-core::before,html[data-presence-face=sleepy] .presence-light-core::after{top:46%;width:18%;height:7%;background:var(--orb-eye);box-shadow:none;animation:none}
+html[data-presence-face=sleepy] .presence-light-core::before{left:27%}
+html[data-presence-face=sleepy] .presence-light-core::after{left:55%}
+html[data-presence-face=curious] .presence-light-core{--eye-l:translate(14%,-4%);--eye-r:translate(14%,-4%);--eye-h:1.18}
+html[data-presence-face=stuck] .presence-light-core{--eye-l:translateY(-2%);--eye-r:translateY(4%) scaleY(.55)}
+html[data-presence-face=cheer] .presence-light-core{--eye-l:rotate(-10deg) scaleY(.72);--eye-r:rotate(10deg) scaleY(.72)}
+html[data-presence-face=calm] .presence-light-core{--eye-l:translateY(12%);--eye-r:translateY(12%);--eye-h:.66}
+/* 对话状态优先于表情：思考时往上看，出错时皱一下，先不打扰时闭眼 */
+html[data-presence-state=thinking] .presence-light-core{--eye-l:translate(26%,-20%) scaleY(.9);--eye-r:translate(26%,-20%) scaleY(.9);--eye-h:1}
+html[data-presence-state=thinking] .presence-light-core::before,html[data-presence-state=thinking] .presence-light-core::after{animation:orb-wonder 3.2s ease-in-out infinite}
+@keyframes orb-wonder{0%,38%,100%{transform:var(--eye-tf)}50%,88%{transform:translate(-20%,-20%) scaleY(.9)}}
+html[data-presence-state=failed] .presence-light-core{--eye-l:translateY(6%) rotate(12deg) scaleY(.7);--eye-r:translateY(6%) rotate(-12deg) scaleY(.7);--eye-h:1}
+html:has([data-companion-boundary] [data-b-resume]:not([hidden])) .presence-light-core::before,html:has([data-companion-boundary] [data-b-resume]:not([hidden])) .presence-light-core::after{top:46%;width:18%;height:7%;transform:none;border:0;background:var(--orb-eye);box-shadow:none;animation:none}
+html:has([data-companion-boundary] [data-b-resume]:not([hidden])) .presence-light-core::before{left:27%}
+html:has([data-companion-boundary] [data-b-resume]:not([hidden])) .presence-light-core::after{left:55%}
+/* 小尺寸光球（H5 顶栏 40px）眼睛细一点 */
+@media(max-width:899px){html[data-presence-face=happy] .presence-light-core::before,html[data-presence-face=happy] .presence-light-core::after{border-top-width:2px}}
+html[data-reduce-motion=true] .presence-light-core,html[data-reduce-motion=true] .presence-light-core::before,html[data-reduce-motion=true] .presence-light-core::after{transition:none}
+/* 标语：去句号、19px、笔画削细 */
+@media(min-width:900px){
+  #app .echo-slogan{font-size:19px;letter-spacing:.1em;filter:url(#echo-slogan-thin);background:linear-gradient(100deg,#2E3849 0%,#66728B 55%,#A3AFCB 100%);-webkit-background-clip:text;background-clip:text}
+}
+/* Web 改版 7 (2026-10-31，产品要求)：标语加深；眼睛跟鼠标（orb-face.js 写 --gaze-x/--gaze-y）；搜索框去掉黑色选中框；
+   emoji 回应按钮与语音图标同尺寸、同一条线；心情记录卡的平面、坐标标签和滑杆重做（mood-polish.js 写滑杆填充）；
+   回复语音自动播放（message-voice.js）。 */
+@media(min-width:900px){#app .echo-slogan{filter:none;font-size:20px;letter-spacing:.1em;color:#1B2433;background:none;-webkit-background-clip:border-box;background-clip:border-box;-webkit-text-fill-color:#1B2433;opacity:.88}}
+:root{--gaze-x:0%;--gaze-y:0%}
+.presence-light-core::before,.presence-light-core::after{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf);transition:transform .3s cubic-bezier(.2,.8,.2,1),height .4s ease,width .4s ease,top .4s ease,left .4s ease,border-radius .4s ease,background .3s ease,opacity .3s ease}
+@keyframes orb-blink{0%,90%,100%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}93%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(.08)}96%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}}
+/* 搜索框：聚焦只是边缘略深、投影略大 */
+body:has(#app) .design-search-head input:focus,body:has(#app) .design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18);box-shadow:0 6px 18px rgba(80,100,170,.14)}
+/* emoji 回应按钮：和语音图标一样 32×32、同一条线 */
+#app .msg .emoji-react-btn{top:28px;width:32px;height:32px;min-width:32px;min-height:32px;border-radius:16px}
+/* 心情记录卡 */
+.mood-card .mood-map-wrap{padding:0;margin:4px 0 0}
+.mood-card .mood-map{height:230px;border:0;border-radius:22px;
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.85) 0,rgba(255,255,255,0) 58%),
+    radial-gradient(circle at 100% 0,#FFC4A0 0,rgba(255,196,160,0) 62%),radial-gradient(circle at 0 0,#D6CCFF 0,rgba(214,204,255,0) 62%),
+    radial-gradient(circle at 0 100%,#B9CCFF 0,rgba(185,204,255,0) 62%),radial-gradient(circle at 100% 100%,#FFE0C8 0,rgba(255,224,200,0) 62%),
+    linear-gradient(140deg,var(--mood-tint,#DCE5FF),#FFE3D3);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.75),0 10px 26px rgba(80,100,170,.12)}
+.mood-card .mood-map:before,.mood-card .mood-map:after{background:rgba(255,255,255,.8)}
+.mood-card .mood-point{width:20px;height:20px;border:3px solid #fff;box-shadow:0 0 0 7px rgba(27,36,51,.08),0 6px 14px rgba(27,36,51,.28);transition:left .22s cubic-bezier(.2,.8,.2,1),top .22s cubic-bezier(.2,.8,.2,1)}
+.mood-card .mood-point::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:2px solid rgba(27,36,51,.22);animation:mood-pulse 2.4s ease-out infinite}
+@keyframes mood-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.mood-card .mood-axis{z-index:2;font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,.78);box-shadow:0 1px 4px rgba(80,100,170,.12);pointer-events:none}
+.mood-card .mood-axis.top{top:10px;color:#1B2433}.mood-card .mood-axis.bottom{bottom:10px;color:#56627A}
+.mood-card .mood-axis.left{left:10px;color:#4A5FA8}.mood-card .mood-axis.right{right:10px;color:#C2602F}
+.mood-card .mood-state{display:table;margin:12px auto 0;padding:6px 14px;border-radius:14px;background:rgba(255,255,255,.8);font-size:13px;color:var(--ink);box-shadow:0 1px 4px rgba(80,100,170,.1)}
+.mood-card .mood-sliders label{font-size:13px;color:var(--ink-mute);margin:16px 0 4px}
+.mood-card .mood-sliders input[type=range]{-webkit-appearance:none;appearance:none;height:40px;margin:0;padding:0;background:transparent;border:0;border-radius:0;
+  --track-a:#9DB4FF;--track-b:#FFB38A;--track-dim-a:rgba(157,180,255,.35);--track-dim-b:rgba(255,179,138,.35);--thumb:#C2602F}
+.mood-card .mood-sliders input[data-mood-y]{--thumb:#1B2433}
+.mood-card .mood-sliders input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;
+  background:linear-gradient(90deg,var(--track-a),var(--track-b)) 0 0/var(--p,50%) 100% no-repeat,linear-gradient(90deg,var(--track-dim-a),var(--track-dim-b))}
+.mood-card .mood-sliders input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:#fff;border:2.5px solid var(--thumb);box-shadow:0 2px 8px rgba(27,36,51,.25);cursor:grab;transition:transform .15s}
+.mood-card .mood-sliders input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12);cursor:grabbing}
+.mood-card .mood-sliders input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--track-dim-a),var(--track-dim-b))}
+.mood-card .mood-sliders input[type=range]::-moz-range-progress{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--track-a),var(--track-b))}
+.mood-card .mood-sliders input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:2.5px solid var(--thumb);box-shadow:0 2px 8px rgba(27,36,51,.25)}
+.mood-card .mood-sliders input[type=range]:focus-visible{outline:none}
+.mood-card .mood-sliders input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(27,36,51,.12),0 2px 8px rgba(27,36,51,.25)}
+html[data-reduce-motion=true] .mood-card .mood-point::after{animation:none}
+@media(prefers-reduced-motion:reduce){.mood-card .mood-point::after{animation:none}}
+#app .msg [data-voice-clip]{min-width:32px;right:-40px}
+#app .msg .emoji-react-btn{right:-40px}
+#app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
+body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none}
+/* Web 改版 8 (2026-10-31，产品要求)：搜索弹层里任何元素聚焦都不画描边（不依赖 :has）；标语更浅更小；右侧面板按钮统一成小号、同高、对齐。 */
+.design-search :focus,.design-search :focus-visible,.design-search:focus,.design-search:focus-visible,.design-search-card:focus,.design-search-card:focus-visible{outline:none!important;outline-offset:0!important}
+.design-search-head input:focus,.design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18)!important;box-shadow:0 6px 18px rgba(80,100,170,.14)!important;background:#fff!important}
+@media(min-width:900px){#app .echo-slogan{font-size:18px;color:#56627A;-webkit-text-fill-color:#56627A;opacity:1}}
+/* 右侧面板：所有按钮统一 12px / 32px 高 / 16px 圆角；页签同高；标题行与按钮居中对齐；按钮行间距 8px */
+#app .context .tabs .tab{min-height:32px;height:32px;padding:6px 10px;font-size:12px;line-height:20px;border-radius:16px}
+#app .context button:not(.tab):not(.context-close):not(.icon-btn):not(.mood-date),#app .context .btn{font-size:12px!important;line-height:20px;min-height:32px;min-width:0;padding:6px 12px!important;border-radius:16px;font-weight:500}
+#app .context .mini-btn.confirm,#app .context .mood-save{font-weight:600}
+#app .context .today-head,#app .context .followup-head,#app .context .mood-intro,#app .context .mem-group-label,#app .context .panel-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#app .context .today-head h3,#app .context .followup-head b,#app .context .panel-title-row h3{margin:0}
+#app .context .row,#app .context .today-footer-actions,#app .context .action-row,#app .context .mood-actions,#app .context .design-shortcuts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#app .context .followup-card>.text-btn,#app .context .today-app-list>.text-btn{margin-top:4px}

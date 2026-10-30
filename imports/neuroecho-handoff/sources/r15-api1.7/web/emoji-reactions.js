@@ -36,6 +36,8 @@
     }
     return !serious && value.length >= 20 ? '👀' : null;
   }
+  // 光球表情（orb-face.js）共用同一套关键词，避免两份规则各改各的。
+  window.XinjiEmojiRules = { RULES, SERIOUS, pick };
 
   function persist() {
     const keys = Object.keys(reactions);
