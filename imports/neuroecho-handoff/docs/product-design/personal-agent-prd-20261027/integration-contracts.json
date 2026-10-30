@@ -1,0 +1,77 @@
+{
+  "status": "proposed_interfaces_not_implemented",
+  "sensor": {
+    "required": [
+      "source_mode",
+      "device_model",
+      "firmware",
+      "sample_rate",
+      "units",
+      "channel_map",
+      "reference",
+      "device_ts",
+      "received_ts",
+      "seq",
+      "quality",
+      "algorithm_version"
+    ],
+    "notes": "RSC actual SDK names and data schema not yet delivered"
+  },
+  "bookmark": {
+    "required": [
+      "document_id",
+      "document_revision",
+      "scope",
+      "position",
+      "source_fragment",
+      "user_next_step",
+      "trigger_basis",
+      "created_at"
+    ],
+    "notes": "editor scope only until explicit app adapter is tested"
+  },
+  "presentation": {
+    "required": [
+      "event_id",
+      "state",
+      "text",
+      "priority",
+      "expires_at",
+      "source_mode",
+      "receipt_required"
+    ],
+    "notes": "dsh-pet is optional local output; no raw EEG or broker control"
+  },
+  "trader": {
+    "required": [
+      "user_rule",
+      "rule_revision",
+      "event_source",
+      "permission",
+      "refusal_scope",
+      "user_statement",
+      "review_id"
+    ],
+    "notes": "synthetic events only in this PRD; institutional data purpose never inherited"
+  },
+  "onboarding": {
+    "contract_file": "onboarding-contracts.json",
+    "notes": "P0 one selected Feishu doc; optional watch/calendar; no real auth in HTML"
+  },
+  "connector_capability": {
+    "required": [
+      "connector_id",
+      "owner_type",
+      "interface_type",
+      "environments",
+      "auth_type",
+      "readable_objects",
+      "allowed_actions",
+      "scope_requirements",
+      "freshness",
+      "idempotency",
+      "revocation",
+      "availability_evidence"
+    ]
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "scope": "reviewed invariants and current limits; does not add cloud sync or permissions",
+  "conversation": {
+    "endpoint": "/api/conversation",
+    "single_per": "local_database",
+    "display_session_id": false,
+    "cloud_sync_implemented": false,
+    "foreground_updates": {
+      "endpoint": "/api/conversation/changes",
+      "scope": "same backend/canonical conversation; metadata-only invalidation cursor",
+      "commit": "read cursor before snapshots, stable second check, publish all successful resources and original cursor together",
+      "editors": "preserve unsent drafts and unknown operation identities; never auto-write or merge",
+      "background": "stop polling; foreground single flight with timeouts and failure backoff",
+      "cloud_push_offline_merge": false
+    }
+  },
+  "chat": {
+    "request_id": "reuse same ID and payload while reconciling",
+    "unknown": "read status before a user decision; never silently resend",
+    "cancel_success": "only result.cancelled == true",
+    "turn_states": [
+      "running",
+      "completed",
+      "cancelled",
+      "unknown"
+    ]
+  },
+  "actions": {
+    "commit_same_id": true,
+    "native_real": false,
+    "success_state": "committed",
+    "unrecognized_state": "show unresolved, never success"
+  },
+  "files": {
+    "max_batch": 3,
+    "preview_code_points": 4000,
+    "counting": "Unicode code points",
+    "byte_limit_native": 262144,
+    "confirmation_before_attach": true,
+    "byte_limit_web_picker": 262144,
+    "byte_limit_desktop_native_bridge": 1048576
+  },
+  "memory": {
+    "inference_confirmation_required": true,
+    "forget_disclosure": "related source may be paused; original chat may remain",
+    "expected_version_patch": true,
+    "expected_version_delete": true,
+    "conflict": "409 memory_version_conflict preserves the editing draft; explicit review before saving again",
+    "proposals_default": false,
+    "proposal_confirmation": "user decides per proposed memory; preserve an existing saved on/off setting"
+  },
+  "device_preferences": {
+    "sync": "device-local",
+    "current_defaults": {
+      "web": {
+        "reduce_motion": false,
+        "reduce_transparency": false,
+        "light_intensity": 0.7
+      },
+      "ios": {
+        "reduce_motion": false,
+        "reduce_transparency": false,
+        "light_intensity": 0.7
+      },
+      "android": {
+        "reduce_motion": false,
+        "reduce_transparency": false,
+        "light_intensity": 0.7
+      }
+    },
+    "default_policy": "shared/generated defaults for new settings only; never overwrite saved user preferences; system accessibility preferences take priority"
+  },
+  "followups": {
+    "delivery": "Web foreground and supported desktop/system interfaces require shared claim and immediate recheck; native apps currently passive management only; no cloud/background push",
+    "request_id": "persist same ID and payload across unknown outcomes; compare server receipt before unlocking",
+    "explicit_first_rejection": "only first unambiguous 400/422 may release an unused request ID",
+    "status": [
+      "pending",
+      "paused",
+      "done",
+      "cancelled"
+    ],
+    "terminal_receipt": "accept matching ID/content/time even when already done or cancelled",
+    "recurrence": {
+      "web": "once or daily, with time zone and quiet interval",
+      "ios_android": "once or daily create, complete, pause/resume/cancel with item time zone, optional quiet interval, strict occurrence and receipt identity; SDK/device acceptance pending",
+      "receipt_identity": "request_id, content, original created_due_at, repeat, time_zone, quiet interval and known status"
+    },
+    "contact": {
+      "default": false,
+      "window_minutes": [
+        5,
+        180
+      ],
+      "topic": "explicit per-item normalized topic, one shared attempt across channels and overlapping windows",
+      "expiry": "no catch-up when offline, quiet or paused; passive item remains visible",
+      "claim": "shared server claim then one-time immediate recheck; unknown/failure consumes the chance",
+      "native_auto_contact": false
+    }
+  },
+  "companion_boundary": {
+    "storage": "shared local backend, CAS revision required",
+    "today": "until next local midnight in explicit IANA zone",
+    "pause": "applies to all proactive channels while passive chat and tasks remain",
+    "changes": "invalidate all existing contact permissions/claims/queued proposals; resuming does not resurrect them",
+    "defaults": "active boundary alone is not permission to contact"
+  },
+  "mood_diary": {
+    "source": "user explicitly selects both coordinates and optional exact note",
+    "implicit_neutral_selection": false,
+    "model_context": "never automatic; explicit bring-to-chat only appends a draft, user still sends",
+    "memory": "never automatic",
+    "cas": "exact ISO updated_at read token; global monotonic version prevents delete/recreate ABA",
+    "unknown": "immutable mutation body persists; only GET reconciliation; absence after unknown new PUT does not prove it failed",
+    "native": "manual self report CRUD, date picker, durable draft, explicit chat handoff; native auto suggestion/device inference not implemented"
+  }
+}

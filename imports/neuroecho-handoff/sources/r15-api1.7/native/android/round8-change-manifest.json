@@ -1,0 +1,159 @@
+{
+  "scope": "integration-src/native/android only; compare with round8-integration-base; SDK not installed",
+  "verification": {
+    "junit_core": 71,
+    "host_backend_http": 34,
+    "psi_files": 22,
+    "psi_errors": 0,
+    "structural": 22,
+    "android_runtime": false
+  },
+  "three_way_source_inputs": {
+    "base": {
+      "app/src/main/java/cn/xinji/echo/Api.kt": "255ab16d3c4cf4ae25642b6898a9ed9464e5ca4e3150062796cc76cfc0da9dd4",
+      "app/src/main/java/cn/xinji/echo/EchoViewModel.kt": "66ce40e0affe0c027dc516fcd911fb35355c39287f24bff17eb933d1c97dc18b",
+      "app/src/main/java/cn/xinji/echo/FollowupRules.kt": "0b5031b35813c03612834b7626c44c21b263a0f881a38c36276dead65ac797a6",
+      "app/src/main/java/cn/xinji/echo/MainActivity.kt": "e33545b9284f355e4f676be8ae2399a149245a2acd2f31380b26cfdb2ef416b5",
+      "app/src/main/java/cn/xinji/echo/Rules.kt": "d1f8c1616b6192e4f25cc9d261879062c8e7962b60e737d9a6f44a299cfbac24",
+      "app/src/main/java/cn/xinji/echo/ProductRules.kt": "9edeee293176e0b92bf8d32bee2d9a8d8d18c86116ff98ab712e966ee3b84ac7"
+    },
+    "ours_before_merge": {
+      "app/src/main/java/cn/xinji/echo/Api.kt": "255ab16d3c4cf4ae25642b6898a9ed9464e5ca4e3150062796cc76cfc0da9dd4",
+      "app/src/main/java/cn/xinji/echo/EchoViewModel.kt": "5e7df539fe5fd6b65e5791452fc50445e5aaced73dfb596150441bf6912592a3",
+      "app/src/main/java/cn/xinji/echo/FollowupRules.kt": "79c2e38ecf52c5fdc3ebf7e621ae71b6d7e76698c9416f3974517799af76a471",
+      "app/src/main/java/cn/xinji/echo/MainActivity.kt": "c6f8035e2261e2b8fbfdae3bc939445bf9f84c2b389a7d2f991e8292bfe08206",
+      "app/src/main/java/cn/xinji/echo/Rules.kt": "d1f8c1616b6192e4f25cc9d261879062c8e7962b60e737d9a6f44a299cfbac24",
+      "app/src/main/java/cn/xinji/echo/ProductRules.kt": "35524cc22b02545b4c22940dbd7cdfd51def01af28214e868aae15403d79c058"
+    },
+    "theirs_snapshot": {
+      "app/src/main/java/cn/xinji/echo/Api.kt": "01c0a9416d8957cebb56c3e33f5d267ce1bf588053255078cddb53b5373c9ad2",
+      "app/src/main/java/cn/xinji/echo/EchoViewModel.kt": "66b87f3a96d9a6e9336df14365694bf60f404b5caa261fc1b091136338c48255",
+      "app/src/main/java/cn/xinji/echo/FollowupRules.kt": "11edaf86f49afb150dec35daeb333ce57b089984074b0f6c6828fe612ece864c",
+      "app/src/main/java/cn/xinji/echo/MainActivity.kt": "21ada35f65a06c53838fe4210ff24ac529fbded0c180e0b5a7e8cfdd5cbdd734",
+      "app/src/main/java/cn/xinji/echo/Rules.kt": "d1f8c1616b6192e4f25cc9d261879062c8e7962b60e737d9a6f44a299cfbac24",
+      "app/src/main/java/cn/xinji/echo/ProductRules.kt": "9edeee293176e0b92bf8d32bee2d9a8d8d18c86116ff98ab712e966ee3b84ac7"
+    }
+  },
+  "changes": [
+    {
+      "path": "README.md",
+      "kind": "changed",
+      "sha256": "5846ae3a0102665f493aa163c3887f67354ca5999dccdd9e5c3fd2c082bad12e"
+    },
+    {
+      "path": "ROUND8-MERGE.md",
+      "kind": "added",
+      "sha256": "99924feeb88f8b3654be70ac6f9a3cb45e6d10cac1b3616126189874639cfaf6"
+    },
+    {
+      "path": "VERIFICATION.md",
+      "kind": "changed",
+      "sha256": "86d2ac516bdbb76fee866c173569d36cc46d94c7d852ab67d0ab5eabee6b00f8"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/Api.kt",
+      "kind": "changed",
+      "sha256": "01c0a9416d8957cebb56c3e33f5d267ce1bf588053255078cddb53b5373c9ad2"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/EchoViewModel.kt",
+      "kind": "changed",
+      "sha256": "2d92d0e53cd8be6eb844d90f0cc70317381216c21c4b4baf14d9803f5d124f18"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/FollowupRules.kt",
+      "kind": "changed",
+      "sha256": "792b8f895e340fe9b6e52c77c542df5a70a2c7a97e15dfe7744d50395b4c27f8"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/MainActivity.kt",
+      "kind": "changed",
+      "sha256": "e282229020456dc201351633a5679a01ade1f8b09e99fbdf29fe4d88f30f9c0c"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/ProductRules.kt",
+      "kind": "changed",
+      "sha256": "2412c1bc11907b43d8682af96acc2d5932f436ae866b9306534feea6cea4a8ed"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/Rules.kt",
+      "kind": "changed",
+      "sha256": "6168467315af7d42fa7202a92f931994bdb51b12c6f3ee5609ad18486d8e487a"
+    },
+    {
+      "path": "app/src/main/java/cn/xinji/echo/SourceRevocationRules.kt",
+      "kind": "added",
+      "sha256": "9219727c9b9ca6d12c55d56f400b2e6267559029934719583a18c846c59d50b1"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/ApiContractTest.kt",
+      "kind": "changed",
+      "sha256": "cb6252c93a0888b995e09573601f8bd0684a15483ff4db594e769ab7e3cdc88a"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/ApiMetadataTest.kt",
+      "kind": "changed",
+      "sha256": "229fa052afc5459ce0b199461e94074e1b76b4cbc26313c29cb120398bd92bda"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/FollowupRulesTest.kt",
+      "kind": "changed",
+      "sha256": "461836c75e313dda223c9d0f398fcb85b8734201ea482b75236749ad24bd8d66"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/ProductRulesTest.kt",
+      "kind": "changed",
+      "sha256": "ae8a216259a5784267c4b60f4e51b1515df4e39043a9c9c6071b46cf48999f51"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/RulesTest.kt",
+      "kind": "changed",
+      "sha256": "e2732fbeb2f506d827f4d19ea5e03bb03bd88deff71a24ab89236d6de0077522"
+    },
+    {
+      "path": "app/src/test/java/cn/xinji/echo/SourceRevocationTest.kt",
+      "kind": "added",
+      "sha256": "28097d4f735e55d142eaef95c080c7c6eb6aaafa2d86b4f04d0d5e81ee4a5f03"
+    },
+    {
+      "path": "rules-jvm/build.gradle.kts",
+      "kind": "changed",
+      "sha256": "7cc32568b17d368848bd75415a0050406eb07f8e54a7a4d36114e1a30f481323"
+    },
+    {
+      "path": "scripts/BackendHttpSmoke.kt",
+      "kind": "added",
+      "sha256": "8826933ef6605f1d4a6ab77d201f5dd509cdf11dbd4b0654886c9962acbb09fe"
+    },
+    {
+      "path": "scripts/test_backend_http_cached.py",
+      "kind": "added",
+      "sha256": "8b7b097d0b834bb667ed91b095a87440eab3f782357fbdf9a735f3c9a50419f5"
+    },
+    {
+      "path": "scripts/test_rules_cached.py",
+      "kind": "changed",
+      "sha256": "199d3a3593107684ed2a9ea497460ac43bd217787638353eaf03312cbe73c8a2"
+    },
+    {
+      "path": "verification-backend-http.log",
+      "kind": "added",
+      "sha256": "7251aac8dca350c52492e03724561377068b6083a61ab6a5896f82a2471ff7bd"
+    },
+    {
+      "path": "verification-build-round8.log",
+      "kind": "added",
+      "sha256": "4e1489e0b3d91433fb07df3457e8ca4d57021dcadd28c40d8294638c172e7af5"
+    },
+    {
+      "path": "verification-jvm.log",
+      "kind": "changed",
+      "sha256": "17a34d7fae15b386d8384f2392784bd18164f8435090ad3b20574bfce0f5a64e"
+    },
+    {
+      "path": "verification-syntax.log",
+      "kind": "added",
+      "sha256": "9a8696ba5eab806956092b735dd78374473767decb1f3ce696bafb0ab733b93b"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Desktop build 7. Unit checks 24/24 passed. Native UI: quit, reopen through macOS app entry, minimize, reopen and restore; chat and source catalog present. Borrowed Web service remains. Original user failure mode unconfirmed. Ad-hoc signature only, no notarization or Gatekeeper bypass.

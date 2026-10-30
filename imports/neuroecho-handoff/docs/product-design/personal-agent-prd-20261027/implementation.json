@@ -1,0 +1,172 @@
+[
+  {
+    "layer": "UI与交互",
+    "component": "原生HTML/CSS/SVG；可选React",
+    "license": "开源/标准能力",
+    "framework": "现有组件与动画机制",
+    "ai_scope": "AI快做：响应式界面、状态切换、原型；约4—8人时",
+    "human_gate": "设计评审、移动/键盘/减少动画验收",
+    "risk": "低",
+    "url": "https://react.dev/"
+  },
+  {
+    "layer": "接口与服务",
+    "component": "FastAPI＋Pydantic；SQLite",
+    "license": "开源；SQLite公共领域",
+    "framework": "HTTP、schema与数据库",
+    "ai_scope": "AI快做：API、表与校验；约3—6人时",
+    "human_gate": "租户隔离、数据迁移和实际写入核对",
+    "risk": "低",
+    "url": "https://fastapi.tiangolo.com/"
+  },
+  {
+    "layer": "Agent循环",
+    "component": "显式状态机；需持久等待时LangGraph",
+    "license": "LangGraph MIT",
+    "framework": "checkpoint、interrupt、恢复",
+    "ai_scope": "AI可做：节点与回放；约4—8人时",
+    "human_gate": "幂等、重启、副作用顺序和实际权限",
+    "risk": "中",
+    "url": "https://docs.langchain.com/oss/python/langgraph/interrupts"
+  },
+  {
+    "layer": "TS替代路线",
+    "component": "Mastra 代替Python循环",
+    "license": "核心Apache-2.0；ee另许可",
+    "framework": "agent/workflow/memory/eval",
+    "ai_scope": "AI可做：已熟悉TS时搭薄循环",
+    "human_gate": "只选一个运行时，核实际许可目录",
+    "risk": "中",
+    "url": "https://github.com/mastra-ai/mastra"
+  },
+  {
+    "layer": "EEG适配",
+    "component": "厂商实时SDK＋自有RSCAdapter；NumPy，设备受支持时可用BrainFlow",
+    "license": "RSC SDK/实时访问权待确认；BrainFlow MIT不覆盖RSC协议",
+    "framework": "统一SensorFrame，先验官方raw与数据字典",
+    "ai_scope": "AI可做：有文档后的适配骨架、假流、日志；实机工时未知",
+    "human_gate": "RSC实际协议、采样率/时间戳、质量字段与断流停止；无已确认的BrainFlow RSC驱动",
+    "risk": "高",
+    "url": "https://www.eegion.com/"
+  },
+  {
+    "layer": "信号处理",
+    "component": "厂商实时SDK＋自有RSCAdapter；NumPy，设备受支持时可用BrainFlow",
+    "license": "开源算法库",
+    "framework": "滤波、频段与伪迹工具",
+    "ai_scope": "AI可做：有单位的特征管线与可视化",
+    "human_gate": "RSC实际协议、采样率/时间戳、质量字段与断流停止；无已确认的BrainFlow RSC驱动",
+    "risk": "高",
+    "url": "https://brainflow.readthedocs.io/en/stable/Examples.html"
+  },
+  {
+    "layer": "终端固件",
+    "component": "ESP-IDF＋WebSocket；显示可选LVGL",
+    "license": "ESP-IDF Apache-2.0；LVGL MIT",
+    "framework": "板卡、协议与图形框架",
+    "ai_scope": "AI可做：命令/ACK/按钮状态；约4—10人时",
+    "human_gate": "引脚、电源、烧录、断网本地停止与TLS验证",
+    "risk": "高",
+    "url": "https://docs.espressif.com/projects/esp-protocols/esp_websocket_client/docs/latest/index.html"
+  },
+  {
+    "layer": "记忆",
+    "component": "先结构表＋来源；需要时Mem0",
+    "license": "Mem0 Apache-2.0；托管另计",
+    "framework": "提取/检索组件可选",
+    "ai_scope": "AI快做：确认/修订/删除与检索过滤；约3—6人时",
+    "human_gate": "不能用框架去重代替产品纠错与删除联动",
+    "risk": "中",
+    "url": "https://github.com/mem0ai/mem0"
+  },
+  {
+    "layer": "模型与语音",
+    "component": "一个可用模型HTTP API；语音P1",
+    "license": "商业服务，SDK开源不代表模型开源",
+    "framework": "统一调用、结构输出和预算",
+    "ai_scope": "AI可做：适配、超时、成本记录；约2—4人时",
+    "human_gate": "账号/地区/配额/响应schema与数据流核验",
+    "risk": "中",
+    "url": "https://www.anthropic.com/research/building-effective-agents"
+  },
+  {
+    "layer": "完整harness参考",
+    "component": "Hermes 或 OpenClaw",
+    "license": "MIT；模型/渠道另有条件",
+    "framework": "身份、技能、网关和工具",
+    "ai_scope": "参考其接口，赛期不同时整套移植",
+    "human_gate": "工具权限、依赖、比赛披露；不能只改品牌",
+    "risk": "中高",
+    "url": "https://github.com/NousResearch/hermes-agent"
+  },
+  {
+    "layer": "实验管线参考",
+    "component": "NeuroSkill",
+    "license": "GPLv3软件；skills许可另核",
+    "framework": "本地EXG到Agent/CLI管线",
+    "ai_scope": "借鉴协议与事件结构，不默认复制整个栈",
+    "human_gate": "指标代理性质、版本网络监听、开源义务",
+    "risk": "高",
+    "url": "https://arxiv.org/abs/2603.03212"
+  },
+  {
+    "layer": "评测",
+    "component": "规则断言＋JSON案例＋人工观察",
+    "license": "自建业务验收；论文可借方法",
+    "framework": "pytest/Playwright等工具",
+    "ai_scope": "AI快做：失败样例与回放；约3—6人时",
+    "human_gate": "独立标注、真实实机分母和不挑最好结果",
+    "risk": "中",
+    "url": "https://arxiv.org/abs/2604.08455"
+  },
+  {
+    "layer": "书签与任务恢复",
+    "component": "队友Brain Bookmark的完整工程＋来源适配",
+    "license": "公开代码未见LICENSE；团队原作者明确权利，数据CC BY4.0另层",
+    "framework": "现有静态回放/localStorage可参考，模型和训练工程待补",
+    "ai_scope": "AI可做：存储层、文档版本、恢复定位、Agent接口；需先定真实范围",
+    "human_gate": "原作者授权、冻结模型/split、实际恢复与误触发成本",
+    "risk": "高",
+    "url": "https://github.com/Dililianxice/Dililianxice.github.io/tree/main/brain-bookmark"
+  },
+  {
+    "layer": "桌宠与呈现",
+    "component": "PresentationAdapter → dsh-pet本机HTTP",
+    "license": "代码MIT；动画/提示词/源视频禁止商用，具体使用范围另核",
+    "framework": "锁、broadcast、anim、playback回执、work-status已有",
+    "ai_scope": "AI可做：有限事件映射、超时/降级、原创renderer与契约测试",
+    "human_gate": "锁定DSH/插件版本、素材权利、浏览器兼容、用户接管与本机安全",
+    "risk": "中高",
+    "url": "https://github.com/PC2005-cloud/dsh-pet"
+  },
+  {
+    "layer": "交易候选",
+    "component": "用户自订流程＋模拟事件＋复盘卡",
+    "license": "自有业务逻辑；不需交易执行框架",
+    "framework": "日志/事件规则足以起步；券商连接不进MVP",
+    "ai_scope": "AI可做：模拟事件、预承诺、可解释策略、复盘schema",
+    "human_gate": "真实用户验证、错误心理断言、EEG基线与数据用途边界",
+    "risk": "高",
+    "url": "https://www.nber.org/papers/w35345"
+  },
+  {
+    "layer": "连接与授权",
+    "component": "lark-cli只读Adapter＋FastAPI会话／OAuth库",
+    "license": "lark-cli MIT；平台数据与服务权利另核",
+    "framework": "已有Device Flow、结构化JSON与文档局部读取",
+    "ai_scope": "AI快做：连接状态、受控argv、资料白名单、回调与失败回放",
+    "human_gate": "应用配置、scope与资源ACL、用户隔离、撤权、真实读取及模型处理方披露",
+    "risk": "中高",
+    "url": "https://github.com/larksuite/cli"
+  },
+  {
+    "layer": "冷启动理解",
+    "component": "来源片段＋结构化候选＋确认记忆",
+    "license": "自有业务；可复用既有schema／记忆版本组件",
+    "framework": "不用先做全库RAG；一份有界资料即可验证",
+    "ai_scope": "AI快做：事实／推测区分、一个问题、纠正和来源卡UI",
+    "human_gate": "真实资料漏读／误解、第三方话语、提示注入、删除传播与用户价值；模型路由的数据用途/保留门槛",
+    "risk": "中",
+    "url": "https://github.com/larksuite/cli"
+  }
+]

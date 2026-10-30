@@ -1,0 +1,67 @@
+{
+  "release_id": "2026.10.30-round15-integrated",
+  "time_utc": "2026-10-30T02:58:28.407522+00:00",
+  "origin": "http://127.0.0.1:18819",
+  "scope": "disposable synthetic QA only",
+  "actual_browser_flows": [
+    "390x844 H5 memory sheet includes visible pending status and explicit check button",
+    "peer PATCH changed candidate memory v1 to v2; displayed memory stayed v1 while sheet open",
+    "user click check on memory sheet adopted v2, left unsent composer unchanged",
+    "reload restored same unsent composer; final opaque memory body no underlying text bleed",
+    "after exact-owned QA process stopped, explicit check shows offline inside still-open sheet; no mutation retried"
+  ],
+  "proof_limitations": [
+    "Actual native iOS/Android UI not run",
+    "Memory edit prompt was cancelled; no new memory edit/save claim from browser",
+    "No model, external CLI, account, hardware, action or mood calls",
+    "Other form sheets remain conservative; only explicit read-only memory review may publish while sheet open"
+  ],
+  "qa_user_messages": 0,
+  "qa_sources": 0,
+  "model_configured": false,
+  "counts": {
+    "chat_turns": 0,
+    "paired_devices": 0,
+    "mood_operations": 0
+  },
+  "source_hashes": {
+    "web/client-sync.js": "aa4d3bc740cb64412fe45d4c797af791d7a3de692c353be643d7f24ccd306e18",
+    "web/m.js": "aa3f8aad4fa1d7f979bf2b7035d4aa27ea2df98f6952f85e71671fed77864c00",
+    "web/m.html": "1182adc4d818261f6905030d19157bfd37630781a3f52202f8487f9499da78d5",
+    "web/design-system.css": "d097fda219cb78235a342ee800e31d06280418503b4a5abaac29616fbdb45c20"
+  },
+  "screenshots": {
+    "H5记忆页核对后更新390x844.png": "1c49a2fbb01a6ef9d8fd98cbfd3492cb6c650fbb8afe22eac0d564754238c0b3",
+    "H5冻结源码实际更新390x844.png": "470fcc25ae95426b0875533bcd0371d9dd08c024c85cbd2ee644e944a7945287",
+    "H5最终记忆正文与更新栏390x844.png": "200ac8f9759cf19c41ba8682bc15e6b057de2a351d99fb9ce671d890d1e8afe3",
+    "H5冻结源码离线提示390x844.png": "4624c0fdfbc09763b568b431e4db757aa258e9c5d63a5dad6d9d9a300dd7d8a2",
+    "H5断线提示可见390x844.png": "e4427c0c1177b9079f5d087892f47cbe3728ab2575a9ca56a11317d8659921bf",
+    "H5记忆页可见待更新390x844.png": "811aba03d89a92ec686ebc55efe15092a7f1da5cb5c48cd1e190f6e3062da81a"
+  },
+  "qa_process_stopped": {
+    "pid": 686,
+    "exec_session": 12819,
+    "exit_code": 0,
+    "data_preserved": true
+  },
+  "frozen_source_revalidation": {
+    "source": "../念响-第15轮交付/念响-多端集成候选-R15",
+    "actual_flow": "fresh 390x844 H5 on frozen source displayed v2; peer PATCH v3 then explicit check displayed v3; close confirmed same unsent composer text",
+    "memory_version": 3,
+    "user_messages": 0,
+    "model_calls": 0,
+    "source_hashes": {
+      "web/client-sync.js": "aa4d3bc740cb64412fe45d4c797af791d7a3de692c353be643d7f24ccd306e18",
+      "web/m.js": "cbed8c62b3c94e20abe8f635512c417a925876e2af51a8e71f87e94d00831ea2",
+      "web/m.html": "aaf20a6cc8b6f4b5d5120825b0f550ca021eeb22d3ee2bc35dc2642e8355cb03",
+      "web/design-system.css": "d097fda219cb78235a342ee800e31d06280418503b4a5abaac29616fbdb45c20"
+    },
+    "actual_offline_after_owned_stop": true
+  },
+  "qa_final_process_stopped": {
+    "pid": 9143,
+    "exec_session": 89264,
+    "exit_code": 0,
+    "data_preserved": true
+  }
+}

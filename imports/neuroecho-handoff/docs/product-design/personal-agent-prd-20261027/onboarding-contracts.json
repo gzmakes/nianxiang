@@ -1,0 +1,91 @@
+{
+  "status": "proposed_not_connected",
+  "session": {
+    "required": [
+      "id",
+      "connector",
+      "user_id",
+      "tenant_id",
+      "application_id",
+      "environment",
+      "requested_scopes",
+      "granted_scopes",
+      "resource_allowlist",
+      "purpose",
+      "consent_revision",
+      "expires_at",
+      "state"
+    ],
+    "secret_fields_server_only": [
+      "access_token",
+      "refresh_token",
+      "device_code",
+      "client_secret"
+    ],
+    "note": "provider OAuth scope may exceed product allowlist; server enforces both"
+  },
+  "states": [
+    "disconnected",
+    "authorizing",
+    "verifying",
+    "reading",
+    "drafting",
+    "awaiting_user",
+    "ready",
+    "denied",
+    "expired",
+    "empty",
+    "failed",
+    "revoked"
+  ],
+  "source_fragment": {
+    "required": [
+      "id",
+      "source_mode",
+      "connector",
+      "object_id",
+      "revision",
+      "locator",
+      "observed_at",
+      "fetched_at",
+      "text",
+      "subject",
+      "permissions_revision"
+    ]
+  },
+  "insight_candidate": {
+    "required": [
+      "id",
+      "facts",
+      "hypotheses",
+      "source_fragment_ids",
+      "question",
+      "uncertainties",
+      "status"
+    ]
+  },
+  "confirmed_memory": {
+    "required": [
+      "id",
+      "user_statement",
+      "revision",
+      "confirmed_at",
+      "source_dependencies",
+      "purpose",
+      "retention",
+      "deleted_at"
+    ]
+  },
+  "revocation": [
+    "cancel pending read and model jobs",
+    "increment session generation so late callbacks cannot apply",
+    "stop future synchronization",
+    "delete source and derived memory or explicitly preserve independent user statements",
+    "verify provider revocation separately"
+  ],
+  "not_in_prd": [
+    "real OAuth URLs",
+    "tokens",
+    "private user files"
+  ]
+}

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>念响 · 具身个人伙伴</title>
+<link rel="stylesheet" href="/static/styles.css?v=b21fcb6e9e0eadff" />
+<link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
+<link rel="stylesheet" href="/static/design-system.css?v=a843089739648179" />
+<link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
+<link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
+<link rel="stylesheet" href="/static/lab.css?v=e7a794801788b770" />
+<link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
+<link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ 首次进入 ============ -->
+<section id="onboarding" class="onboarding is-hidden" role="dialog" aria-modal="true" aria-label="补充一点背景">
+  <div class="onboarding-card wizard-card">
+    <button class="onboarding-return text-btn" id="onboarding-return" type="button" aria-label="关闭资料接入">关闭 ×</button>
+    <div class="wizard-top">
+      <div class="eyebrow">回响 · 个人伙伴</div>
+      <div class="steps"><span data-step="1" class="on">01</span><span data-step="2">02</span><span data-step="3">03</span><span data-step="4">04</span></div>
+    </div>
+
+    <!-- Step 1：场景 -->
+    <div id="wz-1" class="wz-step">
+      <h1>先理解你，<br /><em>再决定怎样陪你。</em></h1>
+      <p class="lede">从一个真实来源开始，或者直接开始对话。</p>
+      <div class="section-label">你现在更想聊哪一面？</div>
+      <div id="scenario-grid" class="scenario-grid"></div>
+      <div class="alt-row">
+        <button class="btn ghost" id="alt-toggle">粘贴资料 / 本地文件</button>
+      </div>
+      <div id="alt-panel" class="is-hidden">
+        <label class="paste-box">
+          <span class="paste-label">粘贴一段你正在做的事</span>
+          <textarea id="seed-text" rows="3" placeholder="例如：我在整理下一版交互原型，卡在如何让助手记住上下文又不过度打扰……"></textarea>
+          <button class="btn ghost" id="paste-start" type="button">添加这段背景</button>
+        </label>
+        <button class="btn ghost wide" id="local-file-btn" type="button">选择文件</button>
+      </div>
+      <div class="synthetic-note"><span class="dot"></span>连接你的真实应用，或直接开始对话。读取前会先给你看范围。</div>
+    </div>
+
+    <!-- Step 2：推荐连接器 -->
+    <div id="wz-2" class="wz-step is-hidden">
+      <h1>补一点背景，<br /><em>让我更懂这件事。</em></h1>
+      <p class="lede" id="wz-2-sub">我会用你连接的数据，构建关于你的记忆。只读取你选择的内容，可从当前对话移除。</p>
+      <div id="reco-list" class="connector-list"></div>
+      <div class="wizard-actions">
+        <button class="btn ghost" id="wz-skip">先直接聊聊</button>
+      </div>
+      <p class="synthetic-note"><span class="dot"></span>选此刻需要的一份就好，之后也可以单独移除。</p>
+    </div>
+
+    <!-- Step 3：读取确认 -->
+    <div id="wz-3" class="wz-step is-hidden">
+      <button class="text-btn" id="wz-back-2">← 返回</button>
+      <div id="read-head"></div>
+      <div class="section-label">将读取（仅这些）</div>
+      <div id="read-items" class="read-items"></div>
+      <div id="read-scope" class="scope-row"></div>
+      <div class="wizard-actions">
+        <button class="btn primary" id="wz-read">开始读取</button>
+      </div>
+      <p class="synthetic-note"><span class="dot"></span>按你的节奏就好，随时可以回到聊天。</p>
+    </div>
+
+    <!-- Step 4：洞察 -->
+    <div id="wz-4" class="wz-step is-hidden">
+      <div class="eyebrow">先对一下</div>
+      <h2 class="wz-title">先核对这份资料</h2>
+      <div id="insight-list" class="insight-list"></div>
+      <div class="section-label" style="margin-top:16px">理解卡</div>
+      <div id="wz-understanding"></div>
+      <div class="wizard-actions">
+        <button class="btn ghost" id="wz-edit">先改一条</button>
+        <button class="btn primary" id="wz-start">开始对话</button>
+      </div>
+      <p class="synthetic-note"><span class="dot"></span><span id="wz-note-text">这些来自你授权的来源；可随时纠正或撤回。</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 主界面 ============ -->
+<div id="app" class="app is-hidden">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-avatar" data-companion-art></span>
+      <span class="brand-name">回响</span>
+      <span class="brand-sub">XINJI ECHO</span>
+    </div>
+    <div class="topbar-center">
+      <span id="desktop-badge" class="badge quiet is-hidden">桌面端 · 本地文件</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="text-btn" id="design-search-btn" aria-label="搜索对话和记忆">⌕ <span class="search-label">搜索</span></button>
+      <button class="text-btn" id="design-settings-btn" aria-label="显示与设置">⚙</button>
+      <button class="text-btn" id="design-panel-toggle" aria-label="展开或收起侧面板" aria-expanded="true">☷</button>
+      <button class="text-btn" id="apps-btn">连接</button>
+      <button class="text-btn" id="export-btn">导出数据</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="design-rail" aria-label="主要导航"><button type="button" data-design-nav="today" class="active"><span aria-hidden="true">◌</span><span data-copy-key="nav.today">回响</span></button><button type="button" data-design-nav="chat"><span aria-hidden="true">⌁</span><span data-copy-key="nav.chat">对话</span></button><button type="button" data-design-nav="memory"><span aria-hidden="true">▤</span><span data-copy-key="nav.memory">记忆</span></button><button type="button" data-design-nav="apps"><span aria-hidden="true">＋</span>连接</button><span class="rail-spacer"></span><button type="button" data-design-nav="design"><span aria-hidden="true">⚙</span>设置</button></nav>
+    <!-- 左：在场 -->
+    <aside class="presence">
+      <div class="orb-wrap">
+        <div id="orb" class="orb" data-state="listening">
+          <div class="orb-core"></div>
+          <div class="orb-ring r1"></div>
+          <div class="orb-ring r2"></div>
+        </div>
+        <div class="orb-halo"></div>
+      </div>
+
+      <div class="panel device-panel">
+        <div class="panel-head">
+          <span>设备状态</span>
+        </div>
+        <div class="device-row">
+          <button id="device-toggle" class="btn switch" aria-pressed="false">
+            <span class="switch-dot"></span>
+            <span id="device-toggle-label">开启采集</span>
+          </button>
+          <span id="device-status" class="muted">未开启</span>
+        </div>
+        <div class="meter">
+          <div class="meter-bar"><span id="quality-bar"></span></div>
+          <div class="meter-meta">
+            <span>信号质量</span>
+            <span id="quality-value">—</span>
+          </div>
+        </div>
+        <p id="device-note" class="note">合成流仅用于验证契约：来源、时间戳、序列、质量、算法版本。</p>
+        <div class="device-sim">
+          <button class="text-btn" id="sim-button" type="button">标记此刻</button>
+          <div id="display-ack" class="ack is-hidden"></div>
+        </div>
+      </div>
+
+      <div class="panel source-panel">
+        <div class="panel-head"><span>你提供的背景</span></div>
+        <p id="source-label" class="source-label">从对话开始</p>
+        <div id="connected-sources" class="connected-sources"></div>
+        <p class="note">可从这段对话移除来源和记忆；历史消息、已独立修改的副本和第三方授权需要分别处理。</p>
+        <button class="text-btn danger" id="revoke-btn">移除全部已接入来源</button>
+      </div>
+    </aside>
+
+    <!-- 中：对话 -->
+    <main class="conversation">
+      <div class="conversation-head">
+        <div class="conversation-persona">
+          <div class="persona-face" data-companion-art></div>
+          <div>
+            <h2>回响</h2>
+            <p class="companion-status" role="status" aria-live="polite"><span id="state-label">我在这里</span><span id="state-hint">慢慢说，我在听</span></p>
+            <p class="session-technical" id="session-meta" hidden>—</p>
+          </div>
+        </div>
+        <div class="quiet-hint">这一刻，留给你</div>
+      </div>
+
+  <section class="companion-boundary" data-companion-boundary aria-label="陪伴与安静"></section>
+  <div class="content-update-line" data-content-update><span data-update-status role="status" aria-live="polite"></span><button type="button" class="text-btn" data-update-check data-copy-key="connection.sync.check">检查更新</button></div>
+      <div class="topic-toolbar"><div id="design-topics" class="topic-tabs" aria-label="话题视图"></div><p class="topic-description">未标记归入「日常」；话题仅筛选本设备视图，不另建对话。</p></div>
+      <div id="carryover-banner" class="carryover-banner is-hidden">
+        <div id="carryover-text" class="carryover-content"></div>
+        <span style="display:flex;gap:6px;flex:none">
+          <button class="text-btn" id="carryover-accept">带进这次</button>
+          <button class="text-btn" id="carryover-dismiss">这次不用</button>
+        </span>
+      </div>
+      <div id="starter-bar" class="starter-bar is-hidden"></div>
+      <div id="resume-banner" class="resume-banner is-hidden">
+        <span id="resume-text">上次停在这里</span>
+        <span style="display:flex;gap:6px">
+          <button class="text-btn is-hidden" id="resume-bookmark">回到书签</button>
+          <button class="text-btn" id="resume-dismiss">回到最后</button>
+        </span>
+      </div>
+      <div id="chat-empty" class="chat-empty is-hidden">
+        <div class="chat-empty-heading"><span class="chat-empty-orb" data-companion-art></span><div><div class="chat-hello">属于你的一小段空白</div><h3>今天，有什么想说的吗？</h3></div></div>
+        <p class="chat-empty-intro">从一件正在发生的小事开始，想说多少都可以。</p>
+        <div class="chat-chips">
+          <button data-prompt="今天想和你聊聊，">说说今天</button>
+          <button data-prompt="帮我梳理一下，">一起梳理</button>
+          <button data-prompt="先听我说，">先听我说</button>
+        </div>
+        <div class="connect-invite">
+          <div class="connect-invite-head"><b>也可以，带一点你的生活进来</b><span>随时再连也可以</span></div>
+          <div class="companion-sources">
+            <button type="button" class="companion-source" data-companion-source="feishu"><span class="source-symbol source-feishu">↗</span><span><b>飞书</b><small>选一篇资料，一起看看</small></span><span class="source-arrow">→</span></button>
+            <button type="button" class="companion-source" data-companion-source="rokid"><span class="source-symbol source-rokid">⌁</span><span><b>Rokid <i>待联调</i></b><small>把陪伴延伸到眼前</small></span><span class="source-arrow">→</span></button>
+            <button type="button" class="companion-source" data-companion-source="calendar"><span class="source-symbol source-calendar">▦</span><span><b>日历</b><small>先看看范围，再读安排</small></span><span class="source-arrow">→</span></button>
+            <button type="button" class="companion-source" data-companion-source="local"><span class="source-symbol source-local">⌑</span><span><b>本机资料</b><small>只选你想聊的那一份</small></span><span class="source-arrow">→</span></button>
+          </div>
+          <div class="connect-more"><button id="open-connect" type="button" class="text-btn">其他来源</button><button id="skip-connect" type="button" class="text-btn">现在先聊聊</button></div>
+        </div>
+      </div>
+      <div class="chat-viewport">
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <button type="button" id="chat-new-messages" class="chat-new-messages is-hidden">新消息 ↓</button>
+      </div>
+
+      <div id="source-uncertain-notice" class="resume-banner is-hidden" role="status">
+        <span>来源接入结果尚未确认，请重新核对这段对话。</span>
+        <span style="display:flex;gap:6px">
+          <button class="text-btn" type="button" id="source-uncertain-history">重新核对</button>
+          <button class="text-btn" type="button" id="source-uncertain-dismiss">知道了</button>
+        </span>
+      </div>
+      <div id="memory-proposal" class="is-hidden" role="status" style="padding:10px 14px; background:#f6f3eb; border-radius:12px; margin:6px 12px; font-size:13px"></div>
+  <label class="memory-preference-toggle"><input type="checkbox" id="memory-proposal-enabled"> 偶尔提议记住我的原话（由我决定）</label>
+  <p id="chat-error" class="chat-error is-hidden" role="status"></p>
+  <button type="button" id="chat-recover" class="text-btn is-hidden">核对发送状态</button>
+  <button type="button" id="chat-stop-pending" class="text-btn is-hidden">请求停止这条回复</button>
+  <div class="response-choices" aria-label="选择回应方式">
+    <span>希望回响</span>
+    <button type="button" data-response-choice="listen">先听我说</button>
+    <button type="button" data-response-choice="reflect">一起梳理</button>
+    <button type="button" data-response-choice="auto">自然聊</button>
+    <span class="response-choices-hint">加入草稿，发送后生效；随时可换</span>
+  </div>
+      <form id="composer" class="composer">
+        <textarea id="input" rows="2" placeholder="说点什么，我在听……"></textarea>
+        <div class="composer-actions">
+          <div class="composer-tools"><button type="button" class="composer-connect" id="composer-connect" aria-label="连接应用" title="连接应用">＋</button><span class="composer-hint">Enter 发送 · Shift+Enter 换行</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="btn ghost small is-hidden" id="meme-btn">表情</button>
+            <button type="button" class="btn ghost small" id="mic-btn">语音</button>
+            <button type="button" class="btn ghost small is-hidden" id="stop-btn">停止</button>
+            <button type="submit" class="btn primary small">发送</button>
+          </div>
+        </div>
+      </form>
+    </main>
+
+    <!-- 右：上下文 -->
+    <aside class="context" id="design-context" aria-label="侧面板"><button type="button" class="text-btn context-close" id="design-context-close">收起面板 ×</button>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="today" data-copy-key="nav.today">回响</button>
+        <button class="tab" data-tab="bookmark">任务</button>
+        <button class="tab" data-tab="memory" data-copy-key="nav.memory">记忆</button>
+        <button class="tab" data-tab="persona">角色</button>
+        <button class="tab" data-tab="apps" title="连接应用">＋</button>
+        <button class="tab" data-tab="more">更多</button>
+      </div>
+
+      <section id="tab-design" class="tab-panel is-hidden"><div class="panel-title-row"><h3>设置</h3></div><div class="design-shortcuts"><button type="button" class="btn ghost" data-design-route="apps">连接应用</button><button type="button" class="btn ghost" data-design-route="bookmark">任务与草稿</button><button type="button" class="btn ghost" data-design-route="persona">角色与设备</button><button type="button" class="btn ghost" data-design-route="more">数据与记录</button></div><div id="design-settings"></div><div id="paired-devices"></div></section>
+      <section id="tab-more" class="tab-panel is-hidden">
+        <div class="panel-title-row"><h3>更多</h3><span class="muted small">低频设置与记录</span></div>
+        <div class="action-row" style="flex-direction:column;align-items:stretch">
+          <button class="btn ghost small" data-more-tab="understanding">理解卡</button>
+          <button class="btn ghost small" data-more-tab="audit">审计记录</button>
+          <button class="btn ghost small" data-more-tab="metrics">指标</button>
+          <button class="btn ghost small" data-more-tab="data">数据与模型设置</button>
+        </div>
+        <div class="data-block" id="plugin-status"><div class="k">插件</div><p class="note">正在检查本机插件…</p></div>
+        <p class="note">理解、设置和记录都在这里；聊天一直留在左边。</p>
+      </section>
+
+      <section id="tab-apps" class="tab-panel is-hidden">
+        <div class="panel-title-row"><h3>连接应用</h3><button type="button" class="text-btn" id="apps-refresh">重新检查</button></div>
+        <p class="note">选一个此刻需要的来源。先核对范围，再由你确认读取。</p>
+        <div id="apps-connected" class="connected-sources"></div>
+        <div id="apps-grid" class="apps-grid"><p class="muted">正在检查本机可用来源…</p></div>
+      </section>
+
+      <section id="tab-persona" class="tab-panel is-hidden">
+        <div class="panel-title-row"><h3>角色与设备</h3><span class="muted small">虚构角色不写入你的事实</span></div>
+        <div class="data-block" id="mindlink-panel">
+          <div class="k">脑电设备 · 可选</div>
+          <p class="note">仅在这台电脑上读取 MindLink 的实时专注度设备估计值；不记录、不发送给模型，也不判断情绪。需要先启动队友提供的本机服务并连接设备。</p>
+          <p class="note" id="mindlink-status" role="status">脑电设备未开启</p>
+          <button class="btn ghost small" id="mindlink-toggle" type="button">同意并开启读取</button>
+        </div>
+        <div class="data-block"><div class="k">Rokid 眼镜 · 规划中</div><p class="note">将用于查看用户选择的简短提示；型号、连接方式和真机显示待联调。</p></div>
+        <div id="persona-mount"></div>
+        <p class="note">换模型或头像不影响已确认的记忆。</p>
+      </section>
+
+      <section id="tab-today" class="tab-panel">
+        <div class="today-head">
+          <div>
+            <div class="today-kicker">TODAY · 你的空间</div>
+            <h3>今天的小角落</h3>
+          </div>
+          <button class="mini-btn" id="today-refresh">刷新</button>
+        </div>
+        <div id="today-mood"></div><div id="today-followups"></div>
+        <div id="today-body"><p class="muted">正在整理今天的上下文…</p></div>
+        <div class="today-apps">
+          <div class="mem-group-label"><span>可用来源</span><button class="text-btn" id="today-apps-btn">管理</button></div>
+          <div id="today-apps-list" class="today-app-list"></div>
+        </div>
+      </section>
+
+      <section id="tab-understanding" class="tab-panel is-hidden">
+        <div class="panel-title-row">
+          <h3>理解卡</h3>
+          <span class="muted small">事实 / 推测 / 问题 分栏</span>
+        </div>
+        <div id="insight-panel" class="insight-panel is-hidden"></div>
+        <div id="understanding-facts" class="mem-group"></div>
+        <div id="understanding-inferences" class="mem-group"></div>
+        <div id="understanding-questions" class="mem-group"></div>
+        <div id="next-step-card" class="next-step"></div>
+        <p class="note">纠正任意一条，会让下一步随之改变，并留下版本。</p>
+      </section>
+
+      <section id="tab-memory" class="tab-panel is-hidden">
+        <div class="panel-title-row">
+          <h3>记忆</h3>
+          <button class="text-btn" id="add-memory-btn">+ 手动添加</button>
+        </div>
+        <div id="memory-list" class="mem-list"></div>
+      </section>
+
+      <section id="tab-bookmark" class="tab-panel is-hidden">
+        <div class="panel-title-row">
+          <h3>任务与书签</h3>
+          <span class="muted small">书签 · 提醒 · 日历 · 草稿</span>
+        </div>
+        <div id="bookmark-card" class="bookmark-card empty">
+          <p class="muted">还没有书签。聊到一个想停下的位置，点「标记此刻」。</p>
+        </div>
+        <button class="btn ghost wide" id="create-bookmark-btn">标记此刻</button>
+        <div class="section-label" style="margin-top:16px">新建一件小事</div>
+        <div class="task-create-actions"><button type="button" class="btn ghost small" data-new-action="message">消息草稿</button><button type="button" class="btn ghost small" data-new-action="reminder">提醒</button><button type="button" class="btn ghost small" data-new-action="calendar">日历</button></div>
+        <div class="section-label" style="margin-top:16px">已保存与待确认</div>
+        <div id="task-actions"></div>
+        <p class="note">书签保存位置、取舍与下一步；动作保留回执，真实写入可选。</p>
+      </section>
+
+      <section id="tab-metrics" class="tab-panel is-hidden">
+        <div class="panel-title-row">
+          <h3>指标</h3>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="text-btn" id="metrics-scope" hidden disabled aria-hidden="true">当前对话</button>
+            <button class="text-btn" id="refresh-metrics-btn">刷新</button>
+          </div>
+        </div>
+        <div id="metrics-body"></div>
+        <div id="fault-panel" class="fault-panel is-hidden">
+          <div class="mem-group-label" style="margin-top:16px"><span>故障演练</span><span class="muted">?debug=1</span></div>
+          <div class="fault-actions">
+            <button class="mini-btn" data-fault="model_timeout">模型超时</button>
+            <button class="mini-btn" data-fault="device_stall">设备断流</button>
+            <button class="mini-btn" data-fault="lark_auth">飞书授权过期</button>
+            <button class="mini-btn" data-fault="clear">清除故障</button>
+          </div>
+          <p class="note" id="fault-note">注入故障后：发消息 / 开设备 / 读飞书文档，观察 failed/unknown 与降级。</p>
+        </div>
+      </section>
+
+      <section id="tab-data" class="tab-panel is-hidden">
+        <div class="panel-title-row"><h3>数据与隐私</h3><button class="text-btn" id="refresh-data-btn">刷新</button></div>
+        <div id="data-body"></div>
+        <div class="data-block" id="model-settings">
+          <div class="k">模型（可选）</div>
+          <p class="note" style="margin:4px 0 8px">不配置时使用规则引擎；配置后对话走模型，失败自动降级。</p>
+          <div id="model-status" class="note"></div>
+          <input id="ms-base" placeholder="Base URL，例如 https://api.deepseek.com/v1" />
+          <input id="ms-model" placeholder="模型名，例如 deepseek-chat" style="margin-top:6px" />
+          <input id="ms-key" type="password" placeholder="API Key（仅存本机，权限 600）" style="margin-top:6px" />
+          <div class="action-row" style="margin-top:8px">
+            <button class="mini-btn confirm" id="ms-save">保存并启用</button>
+            <button class="mini-btn" id="ms-test">测试连接</button>
+            <button class="mini-btn" id="ms-clear">清除</button>
+          </div>
+        </div>
+        <div class="data-actions">
+          <button class="btn ghost small" id="data-export">导出对话数据</button>
+          <button class="btn ghost small" id="data-revoke">移除全部已接入来源</button>
+        </div>
+      </section>
+
+      <section id="tab-audit" class="tab-panel is-hidden">
+        <div class="panel-title-row">
+          <h3>审计</h3>
+          <button class="text-btn" id="refresh-audit-btn">刷新</button>
+        </div>
+        <ul id="audit-list" class="audit-list"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- 书签草稿弹层 -->
+<div id="modal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="eyebrow">WORK BOOKMARK</div>
+    <h3>标记此刻</h3>
+    <label class="field">
+      <span>停在了哪里</span>
+      <textarea id="bm-note" rows="2" placeholder="例：整理交互原型第 3 版，卡在记忆分寸"></textarea>
+    </label>
+    <label class="field">
+      <span>当时的取舍</span>
+      <input id="bm-choice" placeholder="例：先做最小闭环，不接真模型" />
+    </label>
+    <label class="field">
+      <span>下一步（可改）</span>
+      <input id="bm-next" placeholder="例：把理解卡给团队看，收集 3 条反馈" />
+    </label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modal-cancel">取消</button>
+      <button class="btn primary" id="modal-save">先存为草稿</button>
+    </div>
+  </div>
+</div>
+
+<div id="meme-modal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal-card meme-card">
+    <div class="apps-head"><div><div class="eyebrow">MEME · LOCAL PACK</div><h3>斗图</h3></div><button class="icon-btn" id="meme-close">×</button></div>
+    <p class="note">回响自带表情；也可使用你本机已有的表情。</p>
+    <div id="meme-grid" class="meme-grid"></div>
+  </div>
+</div>
+
+<div id="auth-modal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal-card auth-card">
+    <div class="eyebrow">FEISHU · AUTHORIZATION</div>
+    <h3>连接飞书</h3>
+    <p id="auth-hint" class="note">正在唤起飞书授权…</p>
+    <img id="auth-qr" class="auth-qr is-hidden" alt="飞书授权二维码" />
+    <a id="auth-url" class="btn ghost small is-hidden" target="_blank" rel="noopener">在飞书中打开授权</a>
+    <div id="auth-status" class="note">等待你在飞书中确认…</div>
+    <button class="btn ghost small is-hidden" id="auth-fix">了解并更改凭据存储</button>
+    <p class="note">关闭此窗口不会撤销已发起的授权；授权链接可能在有效期内继续生效。</p><div class="modal-actions"><button class="btn ghost" id="auth-cancel">关闭</button></div>
+  </div>
+</div>
+
+<div id="action-modal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="eyebrow">先核对范围与内容</div>
+    <h3 id="action-title">我打算这样做</h3>
+    <ol class="plan-steps"><li>只处理下方已核对的标题、内容与时间。</li><li>默认保存在本机；系统写入需要你另外勾选。</li><li>消息草稿不发送。已发出的系统写入不能承诺自动撤回。</li></ol>
+    <p class="note" id="action-detail" style="margin-top:-6px"></p>
+    <p id="action-result" class="note is-hidden" role="status"></p>
+    <label class="action-field">标题<input id="action-name" maxlength="200" placeholder="给这件事起个名字" /></label>
+    <label class="check-row is-hidden" id="action-message-row">
+      <span id="action-content-label">内容</span>
+      <textarea id="action-message" rows="3" placeholder="消息草稿（不会自动发送）"></textarea>
+    </label>
+    <label class="check-row is-hidden" id="action-when-row">
+      <span>时间</span>
+      <input type="datetime-local" id="action-when" />
+    </label>
+    <label class="check-row is-hidden" id="action-real-row">
+      <input type="checkbox" id="action-real" />
+      尝试写入系统提醒事项（仅提醒，需自动化权限）
+    </label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="action-cancel">取消</button>
+      <button class="btn primary" id="action-confirm">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="intro-modal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal-card intro-card">
+    <div class="eyebrow">CONTEXT REVIEW</div>
+    <h3>先对一下理解</h3>
+    <p class="note" style="margin-top:-8px">连接成功 ≠ 已经理解。确认后再开始对话。</p>
+    <div id="intro-body"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="intro-edit">先改一条</button>
+      <button class="btn primary" id="intro-start">开始对话</button>
+    </div>
+  </div>
+</div>
+
+<button type="button" id="design-panel-backdrop" class="design-panel-backdrop" aria-label="关闭侧面板"></button>
+<nav class="design-mobile-nav glass" aria-label="主要导航"><button type="button" data-design-nav="today"><span aria-hidden="true">◌</span><span data-copy-key="nav.today">回响</span></button><button type="button" data-design-nav="chat"><span aria-hidden="true">⌁</span><span data-copy-key="nav.chat">对话</span></button><button type="button" data-design-nav="memory"><span aria-hidden="true">▤</span><span data-copy-key="nav.memory">记忆</span></button></nav>
+<div id="toast" class="toast is-hidden"></div>
+
+<script src="/static/startup-guard.js?v=fb9700ea37a70d76"></script>
+<script src="/static/generated-shared.js?v=279e6e0bf8a3189a"></script>
+<script src="/static/client-sync.js?v=9de5b62c3f9b5f46"></script>
+<script src="/static/companion-welcome.js?v=6aaed23ecb72760e"></script>
+<script src="/static/action-cards.js?v=dbe0125a989a3987"></script>
+<script src="/static/memory-proposal.js?v=2b762001652794c3"></script>
+<script src="/static/companion-choices.js?v=f8fddd4115b6e179"></script>
+<script src="/static/contact-contract.js?v=feaef733761dc498"></script>
+<script src="/static/companion-boundary.js?v=9f7064ef5da3f82e"></script>
+<script src="/static/proactive-contact.js?v=1b420ff27a413139"></script>
+<script src="/static/mood.js?v=127121994941f5e6"></script>
+<script src="/static/followups.js?v=5b2e33e357d5472a"></script>
+<script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
+<script src="/static/file-picker.js?v=4423da3d970bf429"></script>
+<script src="/static/chat-transport.js?v=0cb85f853d5850f2"></script>
+<script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
+<script src="/static/lab.js?v=2cab1a42f2a11c03"></script>
+<script src="/static/design-system.js?v=7dc7d736e9075954"></script>
+<script src="/static/paired-devices.js?v=8641114376d41d40"></script>
+<script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
+<script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
+<script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
+<script src="/static/app.js?v=235b8a24a057b04f"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "checked_at": "2026-10-27T18:56:37.050Z",
+  "checks": [
+    "five sections five features and three visible gates",
+    "user-selected B is the only active product scene",
+    "reading progress persists without implying implementation",
+    "details open and reading navigation stays useful",
+    "five acceptance groups remain unmeasured",
+    "local links and anchors resolve",
+    "responsive 320 390 768 1440 and screenshot checks"
+  ],
+  "errors": [],
+  "screenshots": [
+    "/Users/yuntun/Documents/yuntun_karpathy/outputs/personal-agent-dev-prd-20261028/preview-390-top.png",
+    "/Users/yuntun/Documents/yuntun_karpathy/outputs/personal-agent-dev-prd-20261028/preview-390-s3.png",
+    "/Users/yuntun/Documents/yuntun_karpathy/outputs/personal-agent-dev-prd-20261028/preview-1440-top.png",
+    "/Users/yuntun/Documents/yuntun_karpathy/outputs/personal-agent-dev-prd-20261028/preview-1440-s3.png"
+  ],
+  "scope": "只验文档导航、阅读标记、已选场景和排版；不代表产品或真实接入通过"
+}

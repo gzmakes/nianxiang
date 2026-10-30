@@ -1,0 +1,380 @@
+{
+  "best": "Gradient Boosting",
+  "selection": "maximum validation balanced accuracy among three EEG models; no tuning on test",
+  "refit": "training subjects only; validation not added to fitted model",
+  "split": {
+    "train": [
+      "2302032",
+      "1911018",
+      "2311026",
+      "2311004",
+      "2401002",
+      "2211005",
+      "1911016",
+      "2312002",
+      "2304127",
+      "2211023",
+      "2311005",
+      "2302077",
+      "2211015",
+      "2211010",
+      "2211024",
+      "2311003",
+      "2311024",
+      "2311007",
+      "1911013",
+      "2301071",
+      "2302128",
+      "2302007",
+      "2311006",
+      "1911028",
+      "2311027",
+      "2211021",
+      "2302069",
+      "2311016",
+      "2111023",
+      "2311017"
+    ],
+    "validation": [
+      "2304113",
+      "2111017",
+      "1910016",
+      "2302087",
+      "2011018",
+      "2311019",
+      "1911017",
+      "2011022",
+      "2211022",
+      "2211014"
+    ],
+    "test": [
+      "2304128",
+      "1903020",
+      "2102090",
+      "2111013",
+      "2401001",
+      "1910013",
+      "2306013",
+      "2304121",
+      "1909017",
+      "2104041",
+      "1911019"
+    ]
+  },
+  "confusion_matrices": {
+    "Majority baseline": [
+      [
+        0,
+        0,
+        94
+      ],
+      [
+        0,
+        0,
+        50
+      ],
+      [
+        0,
+        0,
+        111
+      ]
+    ],
+    "Logistic Regression": [
+      [
+        71,
+        10,
+        13
+      ],
+      [
+        8,
+        13,
+        29
+      ],
+      [
+        9,
+        13,
+        89
+      ]
+    ],
+    "Random Forest": [
+      [
+        68,
+        19,
+        7
+      ],
+      [
+        8,
+        14,
+        28
+      ],
+      [
+        10,
+        19,
+        82
+      ]
+    ],
+    "Gradient Boosting": [
+      [
+        67,
+        13,
+        14
+      ],
+      [
+        6,
+        18,
+        26
+      ],
+      [
+        9,
+        23,
+        79
+      ]
+    ],
+    "Vendor Attention": [
+      [
+        94,
+        0,
+        0
+      ],
+      [
+        50,
+        0,
+        0
+      ],
+      [
+        111,
+        0,
+        0
+      ]
+    ]
+  },
+  "classification_reports": {
+    "Majority baseline": {
+      "Eyes-closed rest": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 94.0
+      },
+      "Medium arithmetic": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 50.0
+      },
+      "Hard arithmetic": {
+        "precision": 0.43529411764705883,
+        "recall": 1.0,
+        "f1-score": 0.6065573770491803,
+        "support": 111.0
+      },
+      "accuracy": 0.43529411764705883,
+      "macro avg": {
+        "precision": 0.1450980392156863,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.20218579234972678,
+        "support": 255.0
+      },
+      "weighted avg": {
+        "precision": 0.1894809688581315,
+        "recall": 0.43529411764705883,
+        "f1-score": 0.2640308582449373,
+        "support": 255.0
+      }
+    },
+    "Logistic Regression": {
+      "Eyes-closed rest": {
+        "precision": 0.8068181818181818,
+        "recall": 0.7553191489361702,
+        "f1-score": 0.7802197802197802,
+        "support": 94.0
+      },
+      "Medium arithmetic": {
+        "precision": 0.3611111111111111,
+        "recall": 0.26,
+        "f1-score": 0.3023255813953488,
+        "support": 50.0
+      },
+      "Hard arithmetic": {
+        "precision": 0.6793893129770993,
+        "recall": 0.8018018018018018,
+        "f1-score": 0.7355371900826446,
+        "support": 111.0
+      },
+      "accuracy": 0.6784313725490196,
+      "macro avg": {
+        "precision": 0.6157728686354641,
+        "recall": 0.6057069835793241,
+        "f1-score": 0.6060275172325912,
+        "support": 255.0
+      },
+      "weighted avg": {
+        "precision": 0.6639556015173437,
+        "recall": 0.6784313725490196,
+        "f1-score": 0.667064966704315,
+        "support": 255.0
+      }
+    },
+    "Random Forest": {
+      "Eyes-closed rest": {
+        "precision": 0.7906976744186046,
+        "recall": 0.723404255319149,
+        "f1-score": 0.7555555555555555,
+        "support": 94.0
+      },
+      "Medium arithmetic": {
+        "precision": 0.2692307692307692,
+        "recall": 0.28,
+        "f1-score": 0.27450980392156865,
+        "support": 50.0
+      },
+      "Hard arithmetic": {
+        "precision": 0.7008547008547008,
+        "recall": 0.7387387387387387,
+        "f1-score": 0.7192982456140351,
+        "support": 111.0
+      },
+      "accuracy": 0.6431372549019608,
+      "macro avg": {
+        "precision": 0.5869277148346915,
+        "recall": 0.5807143313526293,
+        "f1-score": 0.5831212016970531,
+        "support": 255.0
+      },
+      "weighted avg": {
+        "precision": 0.6493411437323886,
+        "recall": 0.6431372549019608,
+        "f1-score": 0.6454502654174845,
+        "support": 255.0
+      }
+    },
+    "Gradient Boosting": {
+      "Eyes-closed rest": {
+        "precision": 0.8170731707317073,
+        "recall": 0.7127659574468085,
+        "f1-score": 0.7613636363636364,
+        "support": 94.0
+      },
+      "Medium arithmetic": {
+        "precision": 0.3333333333333333,
+        "recall": 0.36,
+        "f1-score": 0.34615384615384615,
+        "support": 50.0
+      },
+      "Hard arithmetic": {
+        "precision": 0.6638655462184874,
+        "recall": 0.7117117117117117,
+        "f1-score": 0.6869565217391305,
+        "support": 111.0
+      },
+      "accuracy": 0.6431372549019608,
+      "macro avg": {
+        "precision": 0.6047573500945093,
+        "recall": 0.5948258897195067,
+        "f1-score": 0.598158001418871,
+        "support": 255.0
+      },
+      "weighted avg": {
+        "precision": 0.6555318444929382,
+        "recall": 0.6431372549019608,
+        "f1-score": 0.6475609727016376,
+        "support": 255.0
+      }
+    },
+    "Vendor Attention": {
+      "Eyes-closed rest": {
+        "precision": 0.3686274509803922,
+        "recall": 1.0,
+        "f1-score": 0.5386819484240688,
+        "support": 94.0
+      },
+      "Medium arithmetic": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 50.0
+      },
+      "Hard arithmetic": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 111.0
+      },
+      "accuracy": 0.3686274509803922,
+      "macro avg": {
+        "precision": 0.12287581699346406,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.1795606494746896,
+        "support": 255.0
+      },
+      "weighted avg": {
+        "precision": 0.13588619761630144,
+        "recall": 0.3686274509803922,
+        "f1-score": 0.19857295353671556,
+        "support": 255.0
+      }
+    }
+  },
+  "bootstrap": {
+    "Gradient Boosting": {
+      "low": 0.5432259080225526,
+      "high": 0.6371774343537818,
+      "unit": "subject cluster bootstrap, descriptive 95% percentile interval"
+    },
+    "Logistic Regression": {
+      "low": 0.5499094539808173,
+      "high": 0.6476013006385897,
+      "unit": "subject cluster bootstrap, descriptive 95% percentile interval"
+    },
+    "Majority baseline": {
+      "low": 0.3333333333333333,
+      "high": 0.3333333333333333,
+      "unit": "subject cluster bootstrap, descriptive 95% percentile interval"
+    },
+    "Random Forest": {
+      "low": 0.5160224089635853,
+      "high": 0.6295889338505538,
+      "unit": "subject cluster bootstrap, descriptive 95% percentile interval"
+    },
+    "Vendor Attention": {
+      "low": 0.3333333333333333,
+      "high": 0.3333333333333333,
+      "unit": "subject cluster bootstrap, descriptive 95% percentile interval"
+    }
+  },
+  "features": [
+    "log_delta",
+    "relative_delta",
+    "log_theta",
+    "relative_theta",
+    "log_alpha",
+    "relative_alpha",
+    "log_beta",
+    "relative_beta",
+    "log_theta_beta",
+    "log_alpha_beta",
+    "log_rms",
+    "log_variance",
+    "spectral_entropy"
+  ],
+  "config": {
+    "fs": 512,
+    "window_s": 4,
+    "step_s": 2,
+    "bandpass": [
+      1,
+      40
+    ],
+    "filter_order": 4,
+    "filter_mode": "causal_sos_reset_each_4s_window",
+    "notch": null,
+    "unit": "device counts; physical units unconfirmed",
+    "fs_status": "nominal MindWave 512 Hz; exact timing not independently verified",
+    "quality_max": 0,
+    "max_abs_counts": 1500,
+    "max_peak_to_peak": 2500,
+    "max_step_counts": 600,
+    "seed": 42
+  },
+  "warning": "Scores uncalibrated. One fixed split; few held-out subjects; overlapping windows within subject; no population-level certainty."
+}

@@ -1,0 +1,1671 @@
+[
+  {
+    "id": "R01",
+    "title": "Introducing dots",
+    "url": "https://openai.com/index/introducing-dots/",
+    "checked": "2026-10-27",
+    "claims": [
+      "独立云电脑；24/7目标；Slack/Teams；后台主动研究只读；auto-review与Custom Rules"
+    ],
+    "limitations": "厂商能力声明，未独立实测；分地区与计划滚动上线",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R02",
+    "title": "Introducing Claude Duet",
+    "url": "https://claude.com/resources/articles/claude-duet",
+    "checked": "2026-10-27",
+    "claims": [
+      "主动简报/跨应用后台执行/独立VM；美国Pro/Max候补研究预览"
+    ],
+    "limitations": "并非10月27日今天发布；官方承认订票弱、紧急度误判、不能展示浏览器",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R03",
+    "title": "How We Designed Muse",
+    "url": "https://introducing.muse.ai/",
+    "checked": "2026-10-27",
+    "claims": [
+      "值得打断才通知；主动性调节；主会话/side chats；Goals/Activity/Memory；确定性审批卡片；onboarding Ideas"
+    ],
+    "limitations": "厂商设计复盘，不是统计留存提升证据",
+    "kind": "primary",
+    "verification": "已从Meta官方发布链接打开原文"
+  },
+  {
+    "id": "R04",
+    "title": "Gemini Spark updates: macOS launch, connected apps and more",
+    "url": "https://blog.google/innovation-and-ai/products/gemini-app/gemini-spark-updates-june-2026/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Mac文件/应用动作、权限、连接器、自定义MCP、实时事件跟踪"
+    ],
+    "limitations": "当时remote tasks是coming soon；本次未逐项测试最新状态",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R05",
+    "title": "What Is Today? An AI Personal Agent for Your Whole Day",
+    "url": "https://today.ai/articles/blog/what-is-today",
+    "checked": "2026-10-27",
+    "claims": [
+      "living memory可读改删；日程首屏；brief/close-out；可选撤销连接；外发前确认"
+    ],
+    "limitations": "更新2026-09-15；厂商自述未测试账户流程",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R06",
+    "title": "Pika Agents experiment",
+    "url": "https://pika.me/",
+    "checked": "2026-10-27",
+    "claims": [
+      "当前重定向experiment.pika.art/ai-self；创意人格伙伴；语音视频；Powered by OpenClaw"
+    ],
+    "limitations": "无发布日期；实验页不能证明通用任务可靠性",
+    "kind": "primary",
+    "verification": "已打开并确认重定向"
+  },
+  {
+    "id": "R07",
+    "title": "Omi AI - Wearable Notetaker",
+    "url": "https://www.omi.me/",
+    "checked": "2026-10-27",
+    "claims": [
+      "可穿戴对话采集/记忆/待办；任务及邮件日历同步；MCP；官网声明软硬件开源"
+    ],
+    "limitations": "未独立验证硬件与所有连接器；不引用营销用户数作为实证",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R08",
+    "title": "Alexa+ now available to everyone in the US—and free for Prime members",
+    "url": "https://www.aboutamazon.com/news/devices/alexa-plus-available-free-prime-members-us",
+    "checked": "2026-10-27",
+    "claims": [
+      "美国全面可用；Prime包含；语音/网页/应用；家庭日历/服务任务"
+    ],
+    "limitations": "官方标注9月1日2026更新；当前其他地区不在本页核实范围",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R09",
+    "title": "Can Replika be my virtual assistant?",
+    "url": "https://help.replika.com/hc/en-us/articles/5040453297293-Can-Replika-be-my-virtual-assistant",
+    "checked": "2026-10-27",
+    "claims": [
+      "同理陪伴定位；明确不能控制其他应用或完成外部任务；实用任务有局限"
+    ],
+    "limitations": "无发布日期；不外推其他实验功能",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R10",
+    "title": "Smarter Memory for Smarter Chats",
+    "url": "https://blog.character.ai/memory/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Story Memory/Facts/Memory Usage；可编辑事实与钉住剧情"
+    ],
+    "limitations": "不作为当前公司经营状况或外部行动能力证明",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R11",
+    "title": "Cola Supported platforms",
+    "url": "https://docs.colaos.ai/en/platforms/",
+    "checked": "2026-10-27",
+    "claims": [
+      "桌面执行器与本地文件/记忆/历史",
+      "移动端与渠道依赖桌面常开，Cloud Chat除外"
+    ],
+    "limitations": "官方技术说明，未安装实测",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R12",
+    "title": "About Alice",
+    "url": "https://alice.miyang.cn/en/about/",
+    "checked": "2026-10-27",
+    "claims": [
+      "关系型生产力Agent、桌面macOS/Windows、local-first",
+      "记忆可修改删除，认知判断可推翻",
+      "关系与生产力同时作为设计重点"
+    ],
+    "limitations": "厂商自定义的Personal Agent标准不等于行业共识；未实测主动性、可靠性、隐私实现",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R13",
+    "title": "猫箱 App Store developer listing",
+    "url": "https://apps.apple.com/cn/app/id6475000292",
+    "checked": "2026-10-27",
+    "claims": [
+      "AI角色故事、语音/文字互动",
+      "Beijing Chuntian Zhiyun Technology开发者上架",
+      "存在App内购买"
+    ],
+    "limitations": "没有据此认定跨应用代办、个人记忆治理；未采用评分/排名等易变数据",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R14",
+    "title": "面向AIOS时代 ColorOS17正式发布",
+    "url": "https://www.oppo.com/cn/newsroom/press/549/",
+    "checked": "2026-10-27",
+    "claims": [
+      "系统级记忆/主动服务/Agent生态的官方产品方向"
+    ],
+    "limitations": "日期来自官方新闻索引；准确率、规模和数量系厂商口径，不作可靠性评测成绩",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R15",
+    "title": "Neurosity Calm API",
+    "url": "https://docs.neurosity.co/docs/api/calm/",
+    "checked": "2026-10-27",
+    "claims": [
+      "alpha7.5—12.5Hz相关概率分数",
+      "闭眼、静止、呼吸等会影响评分"
+    ],
+    "limitations": "文档较旧，本轮仍可读取；不把分数等同真实情绪/诊断",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R16",
+    "title": "BrainFlow Supported Boards",
+    "url": "https://brainflow.readthedocs.io/en/stable/SupportedBoards.html",
+    "checked": "2026-10-27",
+    "claims": [
+      "支持具体Muse/Crown/OpenBCI型号",
+      "Synthetic与Playback Board",
+      "MuseS Athena存在型号专属命令和光学通道"
+    ],
+    "limitations": "支持列表不保证本机/固件兼容；不能把光学通道直接称已验证认知状态",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R17",
+    "title": "mem0ai/mem0 — official current README and repository metadata",
+    "url": "https://github.com/mem0ai/mem0",
+    "checked": "2026-10-27",
+    "claims": [
+      "Apache2；library/self-hosted server/cloud分层。",
+      "README明确当前benchmark分数来自含私有优化managed platform，不保证OSS同分。"
+    ],
+    "limitations": "vendor benchmark非独立评测；记忆抽取/embedding/model/storage可能另计费用；未注册账号。",
+    "kind": "official_github",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R18",
+    "title": "NousResearch/hermes-agent — official current README and repository metadata",
+    "url": "https://github.com/NousResearch/hermes-agent",
+    "checked": "2026-10-27",
+    "claims": [
+      "确认NousResearch官方Hermes Agent，MIT。",
+      "memory/skills/session search、messaging gateway、多个terminal backends；BYO provider或Portal。"
+    ],
+    "limitations": "self-improving/only agent等是厂商自述，不是独立唯一性证据；VPS报价不代表总运行成本；未执行安装脚本。",
+    "kind": "official_github",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R19",
+    "title": "openclaw/openclaw — official current README and repository metadata",
+    "url": "https://github.com/openclaw/openclaw",
+    "checked": "2026-10-27",
+    "claims": [
+      "MIT；Gateway/channel/device nodes/state/tools与可替换model/harness。",
+      "README写主session工具默认host执行，sandbox需配置。"
+    ],
+    "limitations": "可部署不等于默认安全；渠道、设备、model依赖与权限不同；未验证国内渠道或团队账户。",
+    "kind": "official_github",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R20",
+    "title": "mastra-ai/mastra — official current README and repository metadata",
+    "url": "https://github.com/mastra-ai/mastra",
+    "checked": "2026-10-27",
+    "claims": [
+      "TS agents/workflows/memory/Studio/eval生态。",
+      "LICENSE.md说明非ee目录Apache2，ee目录另企业许可，第三方组件保留原许可。"
+    ],
+    "limitations": "GitHub license detection为NOASSERTION，不能因此写无许可或MIT；托管与模型另计。",
+    "kind": "official_github",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R21",
+    "title": "ClawHunt Shanghai official event notice",
+    "url": "https://clawhunt.store/articles/clawhunt-shanghai-hackathon",
+    "checked": "2026-10-28",
+    "claims": [
+      "2026-10-30至11-01；10-30 release challenges；code/assets须赛中产生。",
+      "demo25/value20/technology20/innovation15/business10/presentation10，最多5 bonus。",
+      "赛事日程、评分、比赛期间代码素材产出要求",
+      "赞助模型额度默认不含ZDR协议；公告要求不输入公司业务信息或敏感个人数据"
+    ],
+    "limitations": "具体可复用依赖与准备材料范围须主办最终规则。；当前官网公告，现场正式题目与具体复用细则仍需核对",
+    "kind": "official_documentation",
+    "verification": "本轮重开官方正文；重点复核日程、赛中资产规则和赞助数据条款"
+  },
+  {
+    "id": "R22",
+    "title": "LangGraph interrupts",
+    "url": "https://docs.langchain.com/oss/python/langgraph/interrupts",
+    "checked": "2026-10-27",
+    "claims": [
+      "interrupt等待外部输入，checkpointer+thread_id用于恢复；resume时node从开头重跑。"
+    ],
+    "limitations": "副作用须幂等；并非整个workflow magically exactly once。",
+    "kind": "official_documentation",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R23",
+    "title": "Introducing Automations: Put Repetitive Work on Autopilot",
+    "url": "https://manus.im/blog/introducing-automations",
+    "checked": "2026-10-27",
+    "claims": [
+      "定时/连接器事件/Advanced(beta)、同任务延续、Updates、Test run/Approval required"
+    ],
+    "limitations": "具体连接器授权和商业资格未逐个核实；公开示例非独立实测",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R24",
+    "title": "Personal Computer for Mac",
+    "url": "https://www.perplexity.ai/en-GB/personal-computer",
+    "checked": "2026-10-27",
+    "claims": [
+      "Mac原生app/文件夹、24h Macmini、iPhone远程、Comet、设备授权、macOS15+"
+    ],
+    "limitations": "无完整当前订阅/地区/审批矩阵；不能推断个性化质量",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R25",
+    "title": "SecondBrain",
+    "url": "https://www.genspark.ai/helpcenter/secondbrain",
+    "checked": "2026-10-27",
+    "claims": [
+      "个人知识记忆层、授权连接器、Super Agent调用；Note硬件可选"
+    ],
+    "limitations": "隐私与认证为厂商声明，未独立审计",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R26",
+    "title": "日程",
+    "url": "https://docs.coze.cn/cozespace_job",
+    "checked": "2026-10-27",
+    "claims": [
+      "Heartbeat/定时、后台推送、状态、暂停/终止、消耗积分"
+    ],
+    "limitations": "页面无发布日期；仅扣子Agent可在线可视化；未登录操作",
+    "kind": "primary",
+    "verification": "已打开官方原文"
+  },
+  {
+    "id": "R27",
+    "title": "Muse Developers",
+    "url": "https://choosemuse.com/pages/developers",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R28",
+    "title": "About EEG Data and Muse Biofeedback，2026-10-19",
+    "url": "https://choosemuse.my.site.com/s/article/About-EEG-Data-and-Muse-Biofeedback",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R29",
+    "title": "BrainFlow docs",
+    "url": "https://brainflow.readthedocs.io/en/stable/index.html",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R30",
+    "title": "5.22.0 release",
+    "url": "https://brainflow.org/2026-05-08-muse-anthena/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R31",
+    "title": "OpenBCI FAQ，2026-06-29 更新",
+    "url": "https://docs.openbci.com/FAQ/HardFAQ/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R32",
+    "title": "Ganglion 商店",
+    "url": "https://shop.openbci.com/products/ganglion-board",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R33",
+    "title": "Cyton 商店",
+    "url": "https://shop.openbci.com/products/cyton-biosensing-board-8-channel",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R34",
+    "title": "数据类型",
+    "url": "https://developer.neurosky.com/docs/doku.php?id=mindset_data_types",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R35",
+    "title": "ThinkGear 协议",
+    "url": "https://developer.neurosky.com/docs/doku.php?id=thinkgear_communications_protocol",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R36",
+    "title": "Cortex Getting Started",
+    "url": "https://emotiv.gitbook.io/cortex-api",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R37",
+    "title": "Data Subscription",
+    "url": "https://emotiv.gitbook.io/cortex-api/data-subscription",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R38",
+    "title": "Offline Support",
+    "url": "https://emotiv.gitbook.io/cortex-api/overview-of-api-flow/offline-support",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R39",
+    "title": "BrainCo 官方 GitHub",
+    "url": "https://github.com/BrainCoTech",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R40",
+    "title": "开发入口",
+    "url": "https://developers.brainco.tech/login/?redirect=%2Fdocs%2Fcrimson-sdk%2F",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R41",
+    "title": "FocusCalm FAQ",
+    "url": "https://focuscalm.com/pages/support",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R42",
+    "title": "arXiv 2603.03212",
+    "url": "https://arxiv.org/abs/2603.03212",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "original_preprint",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R43",
+    "title": "官方 paper/limitations",
+    "url": "https://neuroskill.com/paper",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R44",
+    "title": "官方 GitHub",
+    "url": "https://github.com/NeuroSkill-com",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R45",
+    "title": "WebSocket API",
+    "url": "https://neuroskill.com/api",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R46",
+    "title": "PMC 原文",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12229444/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "original_peer_reviewed",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R47",
+    "title": "NeuroPilot arXiv 2510.20958",
+    "url": "https://arxiv.org/abs/2510.20958",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "original_preprint",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R48",
+    "title": "arXiv 2509.10046",
+    "url": "https://arxiv.org/abs/2509.10046",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "original_preprint",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R49",
+    "title": "Muse 2",
+    "url": "https://choosemuse.com/products/muse-2",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R50",
+    "title": "Muse S Athena",
+    "url": "https://choosemuse.com/products/muse-s-athena",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "未实机测试；访问受限页仅读取登录入口，不证明受限能力",
+    "kind": "official_primary",
+    "verification": "已读取原文或论文摘要；详见对应证据段的读取范围与限制"
+  },
+  {
+    "id": "R51",
+    "title": "Furbo Nanny — plans and AI-powered alerts",
+    "url": "https://furbo.com/us/pages/furbo-nanny",
+    "checked": "2026-10-27",
+    "claims": [
+      "AI-powered pet alerts, multiple cameras and video history are existing paid features",
+      "Standard and Premium paid plans exist"
+    ],
+    "limitations": "Vendor feature and price claims; not independent alert-accuracy, retention or conversion evidence. Promotions, region and renewal prices differ.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R52",
+    "title": "Petcube Care — monitoring, video history and plans",
+    "url": "https://petcube.com/care/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Sound or motion triggered notifications, cloud replay, daily highlights, schedule and geofence activation",
+      "Monthly Optimal USD 9.99 and Premium USD 16.99; annual billing shown as USD 4.99 and 11.99 per month"
+    ],
+    "limitations": "Current displayed US prices are not China willingness to pay or actual paid-user counts; vendor testimonials are not controlled evidence.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R53",
+    "title": "Tractive Help Center — What health features does Tractive track?",
+    "url": "https://help.tractive.com/hc/en-us/articles/360011024119-What-health-features-does-Tractive-track",
+    "checked": "2026-10-27",
+    "claims": [
+      "Activity and sleep monitoring, with additional vital-sign or behavior features varying by pet and tracker model",
+      "Tractive explicitly says it is not a medical device and does not diagnose health conditions"
+    ],
+    "limitations": "Do not generalize features to all models; trend monitoring does not establish illness or emotional state.",
+    "kind": "vendor_official_help",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R54",
+    "title": "Casio Moflin — official AI companion overview",
+    "url": "https://www.casio.com/us/moflin/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Moflin uses movement, sound and interactions to express a developing personality",
+      "MofLife app displays the robot's feelings and interaction history"
+    ],
+    "limitations": "The feelings shown are the robot's modeled state, not measurement of the owner's emotion. Comfort and stress-relief wording is vendor positioning, not independently established therapeutic efficacy.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page_and_targeted_sections"
+  },
+  {
+    "id": "R55",
+    "title": "LOVOT official Japanese pricing",
+    "url": "https://lovot.life/pricing",
+    "checked": "2026-10-27",
+    "claims": [
+      "LOVOT 3.0 listed base body price JPY 577500",
+      "Minimum service tier listed JPY 9900 per month, with different maintenance and repair coverage across tiers"
+    ],
+    "limitations": "Price proves an offer exists, not mass-market demand, market size or attainable startup conversion. Region and plan conditions apply.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R56",
+    "title": "Muse Help Center — Comparing Muse Experiences",
+    "url": "https://choosemuse.my.site.com/s/article/Comparing-Muse-Experiences",
+    "checked": "2026-10-27",
+    "claims": [
+      "Muse app translates real-time brain and body signals from headband sensors into sound feedback",
+      "EEG Mind feedback and fNIRS Strength feedback are distinct experiences; compatibility varies"
+    ],
+    "limitations": "InteraXon Muse is a headband brand, distinct from Meta Muse. Vendor calm/active labels do not independently validate emotional-state inference. Device support and SDK availability need model-level checking.",
+    "kind": "vendor_official_help",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R57",
+    "title": "Consumer-Grade Neurofeedback With Mindfulness Meditation: Meta-Analysis",
+    "url": "https://www.jmir.org/2025/1/e68204/",
+    "checked": "2026-10-27",
+    "claims": [
+      "16 training randomized controlled trials involved 763 unique participants, with 5 additional within-participant designs",
+      "Small psychological-distress effect g=-0.16; no detected advantage for cognition, mindfulness or physiological health",
+      "No included consumer-grade trial used sham neurofeedback and target brain-modulation mechanism was not established",
+      "Dry electrode signal can be affected by muscle activity; spectral signals do not straightforwardly map to psychological processes"
+    ],
+    "limitations": "Small samples, intervention heterogeneity and short study duration constrain certainty. Abstract/body differ on the additional within-participant total, so that count is not quoted.",
+    "kind": "peer_reviewed_systematic_review_meta_analysis",
+    "verification": "opened_full_page_and_discussion"
+  },
+  {
+    "id": "R58",
+    "title": "AI Companions Reduce Loneliness",
+    "url": "https://arxiv.org/abs/2407.19096",
+    "checked": "2026-10-27",
+    "claims": [
+      "Authors report a one-week longitudinal study with reductions in loneliness",
+      "Feeling heard is explored as an explanation of companion benefits"
+    ],
+    "limitations": "This read used the original author abstract, not independent reanalysis. Short-term results do not establish long-term safety, clinical efficacy, hardware or EEG superiority, retention or willingness to pay.",
+    "kind": "author_research_preprint",
+    "verification": "opened_original_abstract"
+  },
+  {
+    "id": "R59",
+    "title": "ElliQ official FAQs",
+    "url": "https://elliq.com/pages/faqs",
+    "checked": "2026-10-27",
+    "claims": [
+      "Designed for people 60 and older who live alone or spend most of their day alone",
+      "Proactive companionship, wellness routines and caregiver connection",
+      "Membership bundles leased device, software, support, updates and warranty; active membership is required"
+    ],
+    "limitations": "Page includes stale generic store fragments; rely on the specific FAQ body, not unpopulated price widgets. Vendor benefit language is not independent outcome evidence.",
+    "kind": "vendor_official_help",
+    "verification": "opened_full_page_and_subscription_section"
+  },
+  {
+    "id": "R60",
+    "title": "Omi official product overview",
+    "url": "https://www.omi.me/pages/product",
+    "checked": "2026-10-27",
+    "claims": [
+      "Wearable audio capture, conversation memory, summaries, tasks and application connections",
+      "Official page states open-source and local-running options"
+    ],
+    "limitations": "User counts, integration counts, accuracy and security statements are vendor claims not independently audited here; full feature parity and licensing require repository-level verification. Audio capture is not brain sensing.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page_and_feature_sections"
+  },
+  {
+    "id": "R61",
+    "title": "Plaud Note Pro official product page",
+    "url": "https://global.plaud.ai/products/plaud-note-pro",
+    "checked": "2026-10-27",
+    "claims": [
+      "One-press recording for in-person conversations and phone calls",
+      "AI transcription, summaries and professional/custom templates",
+      "Hardware and free/paid processing plans are offered"
+    ],
+    "limitations": "Manufacturer claims about convenience, range and accuracy are not independent comparative tests. Existing meeting summarization does not by itself establish unmet task-resumption demand.",
+    "kind": "vendor_official",
+    "verification": "opened_full_page_and_FAQ"
+  },
+  {
+    "id": "R62",
+    "title": "Transforming Care for Older Adults Across the State of New York — Three Years of Success with ElliQ and NYSOFA",
+    "url": "https://aging.ny.gov/transforming-care-older-adults-three-years-success-ny-older-adults-living-elliq",
+    "checked": "2026-10-27",
+    "claims": [
+      "By May 2025, 834 older adults had joined through agency screening and more than 3500 had applied",
+      "Program has public budget support and uses anonymous device usage plus participant-reported outcomes"
+    ],
+    "limitations": "Report is copyrighted by Intuition Robotics and hosted by NYSOFA. It is not an independent randomized trial or evidence of self-pay consumer conversion; enrolled cohort is screened.",
+    "kind": "vendor_program_report_hosted_by_government",
+    "verification": "opened_9_page_PDF_text"
+  },
+  {
+    "id": "R63",
+    "title": "How AI and Human Behaviors Shape Psychosocial Effects of Extended Chatbot Use",
+    "url": "https://arxiv.org/abs/2503.17473",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Abstract of v2 read; randomized conditions did not show significant effects; voluntary use associations do not establish causality.",
+    "kind": "original_research",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R64",
+    "title": "Investigating Affective Use and Emotional Well-being on ChatGPT",
+    "url": "https://arxiv.org/abs/2504.03888",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Abstract read; platform analysis and RCT; not evidence for efficacy of this proposed product.",
+    "kind": "original_research",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R65",
+    "title": "Brick official product and operation overview",
+    "url": "https://getbrick.com/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Physical tap and Bluetooth space based app blocking; not tested by us; effectiveness claims not adopted.",
+    "kind": "vendor_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R66",
+    "title": "Opal official focus products",
+    "url": "https://opalapp.com/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Rules, timer, cross device focus and rewards; effects and ratings not adopted.",
+    "kind": "vendor_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R67",
+    "title": "Finch developer App Store listing",
+    "url": "https://apps.apple.com/us/app/finch-self-care-pet/id1528595748",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Developer description read; self care goals, journal, breathing, mood, pet progression; changing rankings and ratings excluded.",
+    "kind": "developer_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R68",
+    "title": "Muse EEG headband app",
+    "url": "https://choosemuse.com/pages/app",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Real time physiological audio feedback and individual sessions; not compatibility or efficacy evidence for our hardware.",
+    "kind": "vendor_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R69",
+    "title": "Rover questions for prospective sitter",
+    "url": "https://support.rover.com/hc/en-us/articles/206197523-What-questions-should-I-ask-my-prospective-sitter",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Care handover questions; basic AI checklists are not a blank category.",
+    "kind": "vendor_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R70",
+    "title": "Paying Attention to Interruption: A Human Centered Approach",
+    "url": "https://www.microsoft.com/en-us/research/video/paying-attention-to-interruption-a-human-centered-approach-to-intelligent-interruption-management/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Task breakpoints as lower interruption cost moments; historic mechanism evidence, not a current quantified product effect.",
+    "kind": "research_institution_primary",
+    "verification": "original_page_read"
+  },
+  {
+    "id": "R71",
+    "title": "Finch 官方页面",
+    "url": "https://finchcare.com/about-finch",
+    "checked": "2026-10-27",
+    "claims": [
+      "虚拟养宠结合目标、反思、呼吸和习惯"
+    ],
+    "limitations": "能力为厂商描述；客群与转化为研究推断；未安装实测",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R72",
+    "title": "Project Astra 官方页面",
+    "url": "https://deepmind.google/models/project-astra/",
+    "checked": "2026-10-27",
+    "claims": [
+      "摄像头、环境理解与无手交互"
+    ],
+    "limitations": "能力为厂商描述；客群与转化为研究推断；未安装实测",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R73",
+    "title": "原生HTML/CSS/SVG；可选React",
+    "url": "https://react.dev/",
+    "checked": "2026-10-27",
+    "claims": [
+      "现有组件与动画机制"
+    ],
+    "limitations": "技术路线建议，未完成集成",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R74",
+    "title": "FastAPI＋Pydantic；SQLite",
+    "url": "https://fastapi.tiangolo.com/",
+    "checked": "2026-10-27",
+    "claims": [
+      "HTTP、schema与数据库"
+    ],
+    "limitations": "技术路线建议，未完成集成",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R75",
+    "title": "BrainFlow/NumPy；必要时MNE",
+    "url": "https://brainflow.readthedocs.io/en/stable/Examples.html",
+    "checked": "2026-10-27",
+    "claims": [
+      "滤波、频段与伪迹工具"
+    ],
+    "limitations": "技术路线建议，未完成集成",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R76",
+    "title": "ESP-IDF＋WebSocket；显示可选LVGL",
+    "url": "https://docs.espressif.com/projects/esp-protocols/esp_websocket_client/docs/latest/index.html",
+    "checked": "2026-10-27",
+    "claims": [
+      "板卡、协议与图形框架"
+    ],
+    "limitations": "技术路线建议，未完成集成",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R77",
+    "title": "一个可用模型HTTP API；语音P1",
+    "url": "https://www.anthropic.com/research/building-effective-agents",
+    "checked": "2026-10-27",
+    "claims": [
+      "统一调用、结构输出和预算"
+    ],
+    "limitations": "技术路线建议，未完成集成",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮或同日研究已读取；深度见限制"
+  },
+  {
+    "id": "R78",
+    "title": "KnowU-Bench: interactive, proactive and personalized mobile-agent evaluation",
+    "url": "https://arxiv.org/abs/2604.08455",
+    "checked": "2026-10-28",
+    "claims": [
+      "研究包含偏好获取、同意协商与拒绝后的克制评测"
+    ],
+    "limitations": "原记录将pytest/Playwright工具能力误绑定于论文，现更正；论文不证明本团队效果",
+    "kind": "官方资料/原始研究",
+    "verification": "本轮重读arXiv摘要；未重现评测"
+  },
+  {
+    "id": "R79",
+    "title": "RSC-64RS系列_202603(1).pdf",
+    "url": "assets/rsc-rental-spec.pdf",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Not a rental bill of materials；API support not equivalent to raw SDK entitlement or sample-level timing contract；Wet-state cap mentioned; dry electrode support not stated；5G WiFi wording not cellular 5G guarantee；Stim section in extraction is misleading; visual reading used",
+    "kind": "user_provided_manufacturer_brochure",
+    "verification": "14 physical pages extracted, rendered and visually inspected"
+  },
+  {
+    "id": "R80",
+    "title": "Quanlan manufacturer homepage",
+    "url": "https://www.eegion.com/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "SPA shell does not expose SDK docs；No matching RSC-64RS/API/SDK text in small app bundle examined; absence not proof no SDK exists",
+    "kind": "official_site",
+    "verification": "Direct HTML shell and public app JS read without execution"
+  },
+  {
+    "id": "R81",
+    "title": "Quanlan RSC-64R product",
+    "url": "https://www.eegion.com/researchC64r",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Different RSC-64R model; its 110g/3.5h/registration claims not transferred to RSC-64RS；No new RSC-64RS technical spec asserted",
+    "kind": "official_product_indexed",
+    "verification": "Search-index content readable; direct open returned JS shell"
+  },
+  {
+    "id": "R82",
+    "title": "Quanlan research system page",
+    "url": "https://www.eegion.com/research01",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "No raw SDK, license, platform, protocol or security details verified",
+    "kind": "official_product_indexed",
+    "verification": "Direct open returned JS shell; indexed product label located"
+  },
+  {
+    "id": "R83",
+    "title": "Single-Channel EEG Dataset for Task-Based Mental Workload Analysis v1",
+    "url": "https://data.mendeley.com/datasets/gy4sbnn389/1",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "No actual sampling rate, reference montage or amplitude conversion in metadata；Labels are instructed tasks, not spontaneous distraction or affect；No original raw data downloaded by this hardware-review agent",
+    "kind": "original_dataset_metadata",
+    "verification": "Direct metadata page read"
+  },
+  {
+    "id": "R84",
+    "title": "Brain Bookmark public README",
+    "url": "https://github.com/Dililianxice/Dililianxice.github.io/tree/main/brain-bookmark",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "No model binary, training scripts or split manifest available in public folder；This agent did not independently reproduce model score；Teammate reports 51 raw IDs versus dataset metadata 50 subjects; unresolved",
+    "kind": "project_primary_source",
+    "verification": "Teammate fetched public source; this agent directly read saved README, source details cross-checked with teammate"
+  },
+  {
+    "id": "R85",
+    "title": "Brain Bookmark public page",
+    "url": "https://dililianxice.github.io/brain-bookmark/",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "No new site behavior asserted beyond saved primary README and teammate source audit",
+    "kind": "project_primary_source",
+    "verification": "Direct web tool access failed; separately inspected by teammate, source README locally read by this agent"
+  },
+  {
+    "id": "R86",
+    "title": "MNE Raw.resample documentation",
+    "url": "https://mne.tools/stable/generated/mne.io.Raw.html#mne.io.Raw.resample",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Library docs are design guidance, not tested RSC SDK compatibility；No MNE import or offline filtering claimed as real-time implementation",
+    "kind": "official_docs",
+    "verification": "Direct full documentation and relevant resample section read"
+  },
+  {
+    "id": "R87",
+    "title": "Brain Bookmark public source snapshot",
+    "url": "https://github.com/Dililianxice/Dililianxice.github.io/tree/994202d72f665a40279a7f6a5eb8d0853fa404ad/brain-bookmark",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "README/app.js/demo-data.json/index read; five files only; metrics declared, training artifacts unavailable.",
+    "kind": "primary_source_code",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R88",
+    "title": "dsh-pet original README pinned",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/README.md",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Original current repository; code MIT versus assets noncommercial stated separately; not official DeepSeek pet.",
+    "kind": "primary_community_repository",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R89",
+    "title": "dsh-pet package metadata",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/dsh-pet/package.json",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "0.3.8, Node >=22.12.0, DSH compatibility map read; no installation tested.",
+    "kind": "primary_package_metadata",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R90",
+    "title": "dsh-pet npm registry latest",
+    "url": "https://registry.npmjs.org/dsh-pet/latest",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "GET metadata only; observed 0.3.8; not package install or execution.",
+    "kind": "primary_registry_metadata",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R91",
+    "title": "dsh-pet HTTP API",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/API.md",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "API docs, OpenAPI and route source read; lock/broadcast/anim/playback/state exist; no runtime verification.",
+    "kind": "primary_api_contract",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R92",
+    "title": "dsh-pet Cordis API",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/CORDIS.md",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Same name exists in two containers with different members; not cross process bus.",
+    "kind": "primary_api_contract",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R93",
+    "title": "dsh-pet session event implementation",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/dsh-pet/src/host/plugin/session-watch.ts",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Reads agent task lifecycle, not EEG or user emotion.",
+    "kind": "primary_source_code",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R94",
+    "title": "dsh-pet LICENSE",
+    "url": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/LICENSE",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "MIT software license; README asset restriction also applies and is not resolved by top-level badge.",
+    "kind": "primary_license_text",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R95",
+    "title": "DeepSeek Harness brand guidelines",
+    "url": "https://github.com/deepseek-ai/deepseek-harness/blob/22ddee3792402c3e70ec5f86a63c3e3e895a2f60/BRAND_GUIDELINES.md",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "Accurate affiliation description allowed; avoid implying official endorsement.",
+    "kind": "primary_brand_guidelines",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R96",
+    "title": "Earlier offline fork",
+    "url": "https://github.com/oyang666/dsh-plugin-pet-offline",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "0.2.5 and 97 assets old description; excluded from current original capability conclusions.",
+    "kind": "primary_fork_source",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R97",
+    "title": "DeepSeek Harness official repository",
+    "url": "https://github.com/deepseek-ai/deepseek-harness",
+    "checked": "2026-10-27",
+    "claims": [],
+    "limitations": "README developer preview, Cordis architecture and MIT; no install or credentials inspected.",
+    "kind": "official_source_repository",
+    "verification": "actual_original_content_read"
+  },
+  {
+    "id": "R98",
+    "title": "The Psychophysiology of Real-Time Financial Risk Processing",
+    "url": "https://web.mit.edu/Alo/www/Papers/lo_repin2002.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "10 professional traders, live trading physiological recordings",
+      "Electrodermal and cardiovascular changes around certain market events",
+      "High/low experience subgroups each n=5, classified from supervisor interviews"
+    ],
+    "limitations": "Not an EEG emotion classifier; small observational professional sample; no demonstrated intervention or profitability guarantee.",
+    "kind": "peer_reviewed_author_hosted_fulltext",
+    "verification": "opened_full_PDF_and_experience_subgroups"
+  },
+  {
+    "id": "R99",
+    "title": "Fear and Greed in Financial Markets: A Clinical Study of Day-Traders",
+    "url": "https://web.mit.edu/Alo/www/Papers/AERPub.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "80 volunteers from a five-week trading training program",
+      "Daily self-reported emotions and P&L; stronger reactions associated with poorer performance",
+      "Only 33 valid final questionnaire responses"
+    ],
+    "limitations": "Emotion self-report, not EEG. Training cohort, attrition and association prevent claims that making a signal calm causes profit.",
+    "kind": "peer_reviewed_author_hosted_fulltext",
+    "verification": "opened_full_PDF_including_attrition"
+  },
+  {
+    "id": "R100",
+    "title": "Endogenous steroids and financial risk taking on a London trading floor",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/18413617/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Male traders studied under working conditions using endogenous steroid sampling",
+      "Morning testosterone related to daily profitability and cortisol related to volatility in market or results"
+    ],
+    "limitations": "Hormonal study, not EEG; does not validate real-time consumer emotion inference or a profitable intervention. Report does not quote sample count because full methods were not obtained.",
+    "kind": "peer_reviewed_original_abstract",
+    "verification": "opened_PubMed_original_abstract; PMC_fulltext_blocked"
+  },
+  {
+    "id": "R101",
+    "title": "Measuring Neural Engagement in High-Stakes Trading",
+    "url": "https://www.nber.org/papers/w35345",
+    "checked": "2026-10-27",
+    "claims": [
+      "16 professional traders at one Chinese A-share proprietary scalping firm; 9544 executions",
+      "Single-channel NeuroSky headset; EI constructed as beta/(alpha+theta)",
+      "Larger immediate pretrade EI increases associated with more successful trades; background EI not positively predictive",
+      "Authors explicitly describe associational evidence and cannot fully exclude opportunity quality or movement artifact explanations"
+    ],
+    "limitations": "Not a consumer emotion-detection product, causal intervention, between-person skill classifier or market alpha test. Repeated trades do not make independent people. Avoid describing the latest July draft as peer reviewed.",
+    "kind": "working_paper_not_peer_reviewed",
+    "verification": "official_PDF_downloaded_via_urllib_and_pdftotext; web_open_returned_403"
+  },
+  {
+    "id": "R102",
+    "title": "Brain activity of professional investors signals future stock performance",
+    "url": "https://pure.eur.nl/ws/portalfiles/portal/184835268/van-brussel-et-al-2024-brain-activity-of-professional-investors-signals-future-stock-performance.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "Analysis of 34 professional investors and 44 historical investment cases using fMRI",
+      "Case-level neural information associated with subsequent performance and cross-validated forecasting",
+      "Authors discuss limited stock cases and possible unconscious recognition"
+    ],
+    "limitations": "fMRI/NAcc, not an EEG headband. Historical anonymized cases, not prospective live deployable alpha or evidence institutions want retail brain data.",
+    "kind": "peer_reviewed_university_hosted_version_of_record",
+    "verification": "opened_university_full_PDF; PMC_fulltext_downloaded_and_read"
+  },
+  {
+    "id": "R103",
+    "title": "Research Note: Digital engagement practices: a trading apps experiment",
+    "url": "https://www.fca.org.uk/publications/fca-research/research-note-digital-engagement-practices-trading-apps-experiment",
+    "checked": "2026-10-27",
+    "claims": [
+      "Online experiment with over 9000 consumers testing flashing prices, push notifications, trader leaderboard, points/prize draw",
+      "Digital engagement practices can alter trading frequency and investment risk"
+    ],
+    "limitations": "UK experiment, not Chinese prevalence, EEG efficacy or a willingness-to-pay study. Different design features and populations can differ.",
+    "kind": "regulator_primary_experimental_research",
+    "verification": "opened_original_page"
+  },
+  {
+    "id": "R104",
+    "title": "TradeZella — AI Trading Partner and Trading Journal",
+    "url": "https://www.tradezella.com/",
+    "checked": "2026-10-27",
+    "claims": [
+      "Site markets sentiment, habit, risk and custom agents",
+      "Sentiment description uses journal entries, click cadence and trading frequency for FOMO/frustration/overconfidence detection",
+      "Site markets real-time rule-break warnings"
+    ],
+    "limitations": "Marketing claims, not independently tested feature availability, classifier accuracy, behavior improvement or returns. Can establish competitor positioning, not therapeutic efficacy.",
+    "kind": "vendor_official",
+    "verification": "opened_original_page_and_agents_sections"
+  },
+  {
+    "id": "R105",
+    "title": "Manual Lockout Is Now on Tradovate Prop",
+    "url": "https://prop.tradovate.com/blogs/manual-lockout-tradovate-prop",
+    "checked": "2026-10-27",
+    "claims": [
+      "Separate Account Lockout and Risk Settings Lock",
+      "Account lockout described as flattening positions, canceling working orders and rejecting new ones",
+      "Risk Settings Lock freezes risk parameters rather than itself pausing trading",
+      "Article explicitly limits these features to simulated evaluation accounts"
+    ],
+    "limitations": "Not evidence every broker or live account supports these controls. A proposed wellbeing reminder must not silently trigger real liquidation or order blocks.",
+    "kind": "vendor_official_product_update",
+    "verification": "opened_full_page_and_limits"
+  },
+  {
+    "id": "R106",
+    "title": "Searching Your Trades and Journal Notes",
+    "url": "https://help.tradervue.com/article/3459-search-your-trades-and-journal-notes",
+    "checked": "2026-10-27",
+    "claims": [
+      "Search notes in trades and journal entries"
+    ],
+    "limitations": "Feature availability does not prove journaling efficacy or customer conversion.",
+    "kind": "vendor_official_help",
+    "verification": "opened_full_page"
+  },
+  {
+    "id": "R107",
+    "title": "中华人民共和国个人信息保护法",
+    "url": "https://www.samr.gov.cn/wljys/gzzd/art/2023/art_3ef1e889c1e644d4b65b5f5c7f432386.html",
+    "checked": "2026-10-27",
+    "claims": [
+      "De-identification and anonymization have distinct definitions in Article 73",
+      "Sensitive processing, providing information to another processor and automated decision making have specific requirements",
+      "Sensitive status and compliance depend on actual data and use, not just removing a name"
+    ],
+    "limitations": "EEG is not separately enumerated by name in the cited article; classification must consider actual purpose, associated data and risks. Consent alone does not resolve all necessity and protection duties.",
+    "kind": "official_law_text",
+    "verification": "opened_articles_23_28_30_55_73"
+  },
+  {
+    "id": "R108",
+    "title": "中国证监会决定修改的规范性文件：证券投资顾问业务暂行规定及荐股软件相关修订文本",
+    "url": "https://www.csrc.gov.cn/csrc/c101950/c1047975/1047975/files/%E9%99%84%E4%BB%B61_%E4%B8%AD%E5%9B%BD%E8%AF%81%E7%9B%91%E4%BC%9A%E5%86%B3%E5%AE%9A%E4%BF%AE%E6%94%B9%E7%9A%84%E8%A7%84%E8%8C%83%E6%80%A7%E6%96%87%E4%BB%B6.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "Software or devices that analyze specific securities, forecast their prices or recommend instruments/timing fall within listed investment-consulting software functions",
+      "Information aggregation or historical statistics without those functions are distinguished",
+      "Economic-benefit investment consulting involves qualifications and conduct requirements"
+    ],
+    "limitations": "Not an individualized legal opinion or a blanket exemption for a product called emotional companionship. Final launch functionality and later rules still need assessment.",
+    "kind": "official_revised_regulatory_text",
+    "verification": "opened_full_PDF_relevant_sections_pages_20_to_30; current_2026_regulatory_reference_found"
+  },
+  {
+    "id": "R109",
+    "title": "脑机接口研究伦理指引",
+    "url": "https://www.most.gov.cn/kjbgz/202402/P020250729548085721952.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "Informed consent, ability to withdraw, neural-data protection and accurate communication",
+      "Augmentative research calls for careful handling of autonomy and socially competitive uses"
+    ],
+    "limitations": "Research ethics guidance, not proof every demo is a medical clinical study. Applicability and review depend on actual study design.",
+    "kind": "official_research_ethics_guidance",
+    "verification": "opened_announcement_and_12_page_guideline"
+  },
+  {
+    "id": "R110",
+    "title": "On the neural substrates of the disposition effect and return performance",
+    "url": "https://mpra.ub.uni-muenchen.de/83354/1/MPRA_paper_83354.pdf",
+    "checked": "2026-10-27",
+    "claims": [
+      "Experimental EEG and HRV sample includes 12 male undergraduates and 5 male professional traders",
+      "Authors report professional group more likely to escape disposition effect",
+      "Higher brainwave activation and HRV positively associated with returns"
+    ],
+    "limitations": "Tiny nonrandom all-male lab sample. Not a universal calm-brain skill test, causal product result or broad retail-user classifier.",
+    "kind": "author_manuscript_corresponding_to_peer_reviewed_article",
+    "verification": "opened_full_author_PDF; publisher_fulltext_blocked"
+  },
+  {
+    "id": "R111",
+    "title": "警惕非法证券咨询活动，保护投资者合法权益",
+    "url": "https://www.csrc.gov.cn/shenzhen/c105614/c7602091/content.shtml",
+    "checked": "2026-10-27",
+    "claims": [
+      "Regulator reiterates verifying investment-consulting qualifications and cautions against guaranteed-return promotion"
+    ],
+    "limitations": "Current enforcement/investor education context, not a detailed legal classification of this proposed concept.",
+    "kind": "current_regulator_investor_protection_notice",
+    "verification": "opened_original_page"
+  },
+  {
+    "id": "R112",
+    "title": "科技薯 好运日历机帖子",
+    "url": "https://www.xiaohongshu.com/discovery/item/69e09d080000000022026d6d",
+    "checked": "2026-10-27",
+    "claims": [
+      "帖子介绍摇杆与小票构成的48h硬件作品，称获硬件赛道二等奖"
+    ],
+    "limitations": "已读取正文与一个视频画面；未独立核奖项/工时、未系统分析视频/评论；只显示04-16",
+    "kind": "用户分享公开文章/帖子",
+    "verification": "原文已读取"
+  },
+  {
+    "id": "R113",
+    "title": "知行AI实验室 银行AI落地观察",
+    "url": "https://mp.weixin.qq.com/s/5YYP4gVZCThfW6XCwtNsyA",
+    "checked": "2026-10-27",
+    "claims": [
+      "银行工作流/客户经理陪练案例线索"
+    ],
+    "limitations": "二手行业汇总，文末介绍作者服务；数字未逐项核实，不证明机构购买股民EEG",
+    "kind": "用户分享公开文章/帖子",
+    "verification": "原文已读取"
+  },
+  {
+    "id": "R114",
+    "title": "飞书 lark-cli：开放接入核查",
+    "url": "https://github.com/larksuite/cli",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "文档、日历等业务工具及用户授权。",
+      "CLI；官方"
+    ],
+    "limitations": "只核帮助和文档；不使用已有用户凭据。文档选择白名单需自建。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R115",
+    "title": "GitHub gh：开放接入核查",
+    "url": "https://cli.github.com/manual/",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "仓库、Issue、PR等开发协作操作。",
+      "CLI；官方"
+    ],
+    "limitations": "不是面向所有C端用户；不以能读PR等同可合并或发布。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R116",
+    "title": "Google Workspace gws：开放接入核查",
+    "url": "https://github.com/googleworkspace/cli",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "Google Workspace接口的命令行调用。",
+      "CLI；googleworkspace仓库项目"
+    ],
+    "limitations": "README明确不是Google官方支持产品；不因组织名省略该限制。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R117",
+    "title": "Microsoft 365 m365：开放接入核查",
+    "url": "https://github.com/pnp/cli-microsoft365",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "Microsoft 365、SharePoint、Teams等工作负载。",
+      "CLI；Microsoft 365 PnP社区"
+    ],
+    "limitations": "社区维护工具；租户管理能力不适合作为C端默认授权范围。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R118",
+    "title": "Apple shortcuts：开放接入核查",
+    "url": "https://support.apple.com/zh-cn/guide/shortcuts-mac/apd455c82f02/mac",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "Mac上运行用户已有快捷指令并收发文件或文本。",
+      "CLI／URL scheme；Apple官方"
+    ],
+    "limitations": "不是任意App的万能读取API；有交互的指令可能等待用户。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R119",
+    "title": "Home Assistant hass-cli：开放接入核查",
+    "url": "https://github.com/home-assistant-ecosystem/home-assistant-cli",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "读实体状态、列服务并调用受支持服务。",
+      "CLI；Home Assistant生态项目"
+    ],
+    "limitations": "长期token权限未必细到单设备，需在我们执行层做白名单。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R120",
+    "title": "米家 Xiaomi Home 集成：开放接入核查",
+    "url": "https://github.com/XiaoMi/ha_xiaomi_home",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "把受支持的小米IoT设备接入Home Assistant。",
+      "HA集成；可经hass-cli；小米官方支持集成"
+    ],
+    "limitations": "本身不是独立米家CLI；不是所有设备和能力都可用或支持本地控制。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R121",
+    "title": "python-miio miiocli：开放接入核查",
+    "url": "https://github.com/rytilahti/python-miio",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "通过miIO相关协议控制支持的小米家电。",
+      "CLI＋Python库；社区"
+    ],
+    "limitations": "与小米官方HA集成是不同路线；兼容、凭据取得和协议变动风险较高。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R122",
+    "title": "Rokid 当前眼镜平台：开放接入核查",
+    "url": "https://open.rokid.com/",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "CXR系列支持相关眼镜及手机应用接入。",
+      "首页区分CXR-L／CXR-S与AR产品线，并提供AIUI Studio工作台"
+    ],
+    "limitations": "公开平台不证明已拿到设备或开发权限；当前不以历史CLI冒充现款支持。；未安装或账户联调。",
+    "verification": "隔离浏览器渲染读取动态首页；未登录或打开开发者工作台"
+  },
+  {
+    "id": "R123",
+    "title": "Rokid rokidos-cli（历史）：开放接入核查",
+    "url": "https://github.com/rokid/rokidos-cli",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "历史RokidOS的配置、安装、构建和测试工具。",
+      "开发CLI；官方历史仓库"
+    ],
+    "limitations": "README历史项目存在不等于支持当下CXR／YodaOS-Sprite；当前优先SDK。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R124",
+    "title": "千问眼镜开放平台（对照）：开放接入核查",
+    "url": "https://device.qianwen.com/docs/qwen/6679322",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "公开平台列出设备能力、Skill与云云／App SDK对接。",
+      "SDK／Skill／OpenAPI；官方平台"
+    ],
+    "limitations": "未核到独立通用眼镜CLI；平台接入不等于所有拍摄／实时流能力无需准入。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R125",
+    "title": "Apple Health／HealthKit：开放接入核查",
+    "url": "https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "按数据类型申请健康数据访问。",
+      "原生SDK；Apple官方"
+    ],
+    "limitations": "普通H5不能直接读取；读取空结果不能区分拒绝与无样本，不等于EEG。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R126",
+    "title": "Oura Cloud：开放接入核查",
+    "url": "https://cloud.ouraring.com/docs/authentication",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "睡眠、活动等用户授权数据。",
+      "OAuth API；官方"
+    ],
+    "limitations": "不是官方CLI；依赖云同步，不当实时脑电或即时情绪。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R127",
+    "title": "Tesla tesla-control＋Fleet API：开放接入核查",
+    "url": "https://github.com/teslamotors/vehicle-command",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "车辆命令协议工具与Fleet数据服务。",
+      "官方CLI＋API；Tesla官方"
+    ],
+    "limitations": "不是全品牌车载接口；公开工具不表示账号已获批准。比赛不做行车控制。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R128",
+    "title": "Android for Cars：开放接入核查",
+    "url": "https://developer.android.com/training/cars/parked",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "按类别与停车／行驶条件构建车载App。",
+      "SDK／开发工具；Google官方"
+    ],
+    "limitations": "开发CLI／adb不是已授权车辆数据或控制API；车机展示与车辆控制不同。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R129",
+    "title": "富途 FutuOpenD：开放接入核查",
+    "url": "https://openapi.futunn.com/futu-api-doc/en/opend/opend-cmd.html",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "命令行启动OpenD，SDK访问行情与获准账户服务。",
+      "命令行网关＋SDK；官方"
+    ],
+    "limitations": "启动网关不是一条完整行情／交易CLI；查行情不自动有持仓或下单权限。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R130",
+    "title": "同花顺 hithink-finance：开放接入核查",
+    "url": "https://fuyao.aicubes.cn/docs/developer-tools/cli/",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "金融数据查询、能力发现及结构化JSON。",
+      "CLI＋API／MCP／SDK；服务方官方文档"
+    ],
+    "limitations": "官网CLI页可读，npm元数据latest为0.1.13；对应GitHub直链本轮404，未安装或验证Key，不保证仓库持续公开。数据查询不等于读个人炒股App或持仓。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R131",
+    "title": "OpenCLI／雪球适配：开放接入核查",
+    "url": "https://github.com/jackwener/opencli/blob/main/docs/adapters/browser/xueqiu.md",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "仓库文档列出行情、自选与讨论等浏览器适配。",
+      "浏览器CLI；社区"
+    ],
+    "limitations": "不是雪球官方OAuth/API授权；协议、限流、平台条款与维护风险独立存在。不提取或分发cookies。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R132",
+    "title": "ComfyUI comfy-cli：开放接入核查",
+    "url": "https://github.com/Comfy-Org/comfy-cli",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "管理ComfyUI并运行工作流。",
+      "CLI；Comfy Org官方"
+    ],
+    "limitations": "图片生成属于输出，不提供用户记忆；许可、模型和素材分别核。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R133",
+    "title": "AWS CLI v2：开放接入核查",
+    "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "操作AWS云服务资源与服务API。",
+      "CLI；AWS官方"
+    ],
+    "limitations": "运行底座，不是用户生活数据源；云资源可能收费。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R134",
+    "title": "Google Cloud gcloud：开放接入核查",
+    "url": "https://docs.cloud.google.com/sdk/docs/overview",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "管理Google Cloud资源。",
+      "CLI；Google官方"
+    ],
+    "limitations": "不是Google Calendar或Google Ads的通用个人数据CLI；别与gws混淆。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R135",
+    "title": "EvoMap Evolver：开放接入核查",
+    "url": "https://github.com/EvoMap/evolver",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "生成演化提示与审计经验资产，依赖宿主采用。",
+      "CLI；EvoMap项目"
+    ],
+    "limitations": "不是个人资料连接器；输出提示不等于自动修改成功。README有许可迁移提示，核实际版本LICENSE；本次不安装或自改Agent。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R136",
+    "title": "支付宝AI付开发工具：开放接入核查",
+    "url": "https://aipay.alipay.com/",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "提供支付接入Skill、SDK与沙箱路径。",
+      "Skill安装器＋SDK／平台；官方"
+    ],
+    "limitations": "安装Skill的npx命令不等于有通用支付执行CLI，更不等于能读取个人账单。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R137",
+    "title": "dsh-pet：开放接入核查",
+    "url": "https://github.com/PC2005-cloud/dsh-pet",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "角色文本、动画与播放回执等本机展示。",
+      "本地HTTP／插件；社区"
+    ],
+    "limitations": "不是独立通用CLI；动画素材许可与代码分开；不暴露管理端口。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R138",
+    "title": "Flowith：开放接入核查",
+    "url": "https://flowith.io/updates/",
+    "checked": "2026-10-27",
+    "kind": "维护方／厂商公开资料",
+    "claims": [
+      "已读官网产品更新及文档入口。",
+      "公开CLI未确认；产品方公开网站"
+    ],
+    "limitations": "搜索中的Flow CLI可能是另一款类型检查器，不冒认。未找到不代表产品没有未公开接口。；未安装或账户联调。",
+    "verification": "已读原始文档／仓库"
+  },
+  {
+    "id": "R139",
+    "title": "EventKit access levels",
+    "url": "https://developer.apple.com/documentation/eventkit/accessing-calendar-using-eventkit-and-eventkitui",
+    "checked": "2026-10-27",
+    "kind": "primary",
+    "claims": [
+      "原生日历访问层级；写入不等于读取"
+    ],
+    "limitations": "接口说明与版本元数据不是实际连接成功证据",
+    "verification": "已读官方Markdown正文"
+  },
+  {
+    "id": "R140",
+    "title": "飞书CLI接入",
+    "url": "https://open.larksuite.com/document/mcp_open_tools/feishu-cli-let-ai-actually-do-your-work-in-feishu",
+    "checked": "2026-10-27",
+    "kind": "primary",
+    "claims": [
+      "应用配置、身份与scope条件"
+    ],
+    "limitations": "接口说明与版本元数据不是实际连接成功证据",
+    "verification": "已读官方正文"
+  },
+  {
+    "id": "R141",
+    "title": "同花顺CLI公开npm元数据",
+    "url": "https://registry.npmjs.org/@hithink-tech%2fhithink-finance-cli",
+    "checked": "2026-10-27",
+    "kind": "primary",
+    "claims": [
+      "本轮latest元数据0.1.13；只查询元数据，未安装"
+    ],
+    "limitations": "接口说明与版本元数据不是实际连接成功证据",
+    "verification": "已读取公开registry JSON"
+  }
+]

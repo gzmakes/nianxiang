@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-28",
+  "python_unit_tests": 21,
+  "python_result": "PASS",
+  "game_node_checks": "PASS",
+  "schema_validation": "PASS",
+  "browser_demo_synthetic_checks": {
+    "high_shows": true,
+    "low_hides": true,
+    "invalid_hides": true
+  },
+  "browser_console_errors": 0,
+  "live_hardware_check": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Script ran on page and returned:\n```json\n[{\"live\":true,\"rate\":512.4,\"total\":3213,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":512.4,\"total\":3497,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":512.4,\"total\":3740,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":532.5,\"total\":4019,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":532.5,\"total\":4263,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":532.5,\"total\":4542,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":532.5,\"total\":4816,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":495.5,\"total\":5066,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":495.5,\"total\":5337,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":495.5,\"total\":5588,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":495.5,\"total\":5877,\"bad\":0,\"monotonic\":true,\"bounded\":true},{\"live\":true,\"rate\":506.5,\"total\":6096,\"bad\":0,\"monotonic\":true,\"bounded\":true}]\n```"
+      }
+    ]
+  },
+  "windows_actual_execution": false,
+  "csharp_compilation": false,
+  "personal_model_trained_on_user": false,
+  "emotion_model_available": false,
+  "notes": [
+    "Synthetic training fixture tests software only, no user accuracy claim",
+    "Independent browser used; in-app automation runtime unavailable",
+    "Real link earlier exhibited corrupt packets; display history retained. Final short live check does not guarantee uninterrupted RF link."
+  ]
+}

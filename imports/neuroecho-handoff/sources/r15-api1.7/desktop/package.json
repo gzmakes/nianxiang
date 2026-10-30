@@ -1,0 +1,15 @@
+{
+  "name": "xinji-echo-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "念响 · 具身个人伙伴桌面壳（Electron）",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "electron": "43.3.0"
+  },
+  "productName": "回响"
+}

@@ -1,0 +1,25 @@
+# Private local data and credentials
+.env
+.env.*
+!.env.example
+server/model-settings.json
+server/data.db*
+server/*.sqlite*
+server/*.server.lock
+# Dependencies and per-developer build state
+.venv/
+.syntax-venv/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+native/ios/.build/
+native/ios/DerivedData/
+**/xcuserdata/
+native/android/.gradle/
+native/android/.gradle-user-home/
+native/android/**/build/
+native/android/local.properties
+# Local desktop artifacts; source and official Gradle wrapper remain tracked
+dist/

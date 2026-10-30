@@ -1,0 +1,39 @@
+MindLink HTTP API v1
+
+固定地址：http://127.0.0.1:8876，仅本机访问。Windows/Linux使用同样接口。
+GET /api/v1/state?source=esense 或 source=personal，缺省取启动参数。
+attention与relaxation结构：value(number|null), valid(bool), source, age_ms, updated_at_unix, reason, unit, model。
+来源：neurosky_esense 或 personal_model。relaxation当前始终来自eSense，不做情绪解释。
+调用方须同时检查 live==true、attention.valid==true、value非null、age_ms<=2500。
+请求超时或断线也必须撤回内容/暂停控制，不能无限保持最后高分。
+source=personal但未载入模型时返回无效；不偷偷回退到eSense。
+sequence是接收包计数，同一个分数可能跨多个包重复；不是评分更新序号。
+updated_at_unix、age_ms可判断分数新鲜度；原始帧没有硬件时间戳。
+api_version当前1.0；兼容客户端忽略未知新增字段。
+
+GET /api/v1/events?source=esense：SSE event: metrics，data与state一致，每0.5秒推送。
+GET /api/v1/health仅说明服务存在，不代表当前有有效EEG。
+GET /api/v1/schema：JSON Schema。
+GET /api/state：浏览器完整状态，含原始波形，不是推荐的长期第三方接口。
+
+POST /api/v1/recording/start：开始显式本地记录；重复调用返回当前记录。
+POST /api/v1/recording/stop：停止并flush。
+POST /api/v1/markers JSON：{"label":"focus"}。
+允许focus,mind_wandering,relaxed,fixation,thinking,unlabelled,emotion_rating。
+情绪示例：{"label":"emotion_rating","valence":7,"arousal":4}，1..9自报量表。
+未开始记录返回409，标签错误400，外站Origin返回403。
+标签为“当前时刻开始”的状态；情绪回顾评分必须在后续实验设计中明确对应刺激起止区间，不能直接当过去窗口标签。
+原生Python/C#不受浏览器CORS限制。外部网页可启动时 --allow-origin http://localhost:实际端口，只放行指定来源。
+
+SDK
+python sdk/mindlink_client.py：读取分数、持续>=60约2秒触发展示，<45或无效撤回。
+dotnet run --project sdk/AttentionClient.csproj：.NET8控制台示例，展示/撤回逻辑需接入你的UI方法。
+/demo：同源网页示例，SSE实时控制内容卡片，有2秒持续门槛、45/60迟滞与失联保护。
+这些阈值为演示交互参数，不是科学或临床标准。Unity可复用HTTP契约，示例本身非Unity工程。
+
+录制JSONL
+metadata: recording_id,server_session_id,fs=512,unit=ADC counts。
+samples.rows每行：[session_seconds,raw_original,poor_signal,display_masked,segment_id,sample_index]。
+掩蔽点仍保留真实raw；gap说明中断，禁止跨gap拼接训练窗口。
+marker保存人给定标签；scores保存设备输出用于比较，不用于默认个人模型监督标签。
+文件只在本地保存。分发Windows包不包含个人录制。

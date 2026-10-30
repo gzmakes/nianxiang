@@ -1,0 +1,27 @@
+{
+  "release_id": "2026.10.30-round15-integrated",
+  "recorded_at_utc": "2026-10-30T05:24:41.963834+00:00",
+  "actual_package": "/Users/yuntun/Documents/Codex/2026-10-29/goal-clawhunt-https-mp-weixin-qq/outputs/念响-第15轮交付/回响-macOS-arm64-R15.app",
+  "initial_open": true,
+  "native_url": "http://127.0.0.1:18829/?desktop=1",
+  "actual_controls_seen": [
+    "homepage and continuous conversation",
+    "settings page",
+    "real settings connection entry",
+    "trusted local connection chooser file page"
+  ],
+  "composer_test": "synthetic unsent own-space text entered; no send",
+  "verified_connection_result": "first explicit metadata verify timed out; independent service HTTP GET was200; later CUA action timed out/reset, no success claim",
+  "selection_record_exists_at_readonly_check": false,
+  "actual_shared_connect_or_return": false,
+  "navigation_close_reopen": "NOT_COMPLETED: user requested wrap-up; preserve exact boundary",
+  "screenshot": {
+    "file": "Mac-R15实际首页.png",
+    "sha256": "6106f08e396d170dbf6c20365f26c1da716370c0637bc19bc47c0f420ea9ab21"
+  },
+  "no_account_or_model_calls_for_gui": true,
+  "app_process_seen": 29171,
+  "owned_backend_process_seen": 29187,
+  "owned_port": 18829,
+  "automation_failures_not_claimed_as_app_failure": true
+}

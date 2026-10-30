@@ -1,0 +1,170 @@
+{
+  "scope": "native/ios three-way integrated candidate only",
+  "validation": "40 Foundation + 23 host Store groups + host SwiftUI typecheck; actual host URLSession contract1.2/missing-and-stale-stop/own-once-followup; real bubbles/daily/pending stop NOT_COVERED; no iOS runtime",
+  "files": [
+    {
+      "file": ".gitignore",
+      "sha256": "5e520c4086d701eab26ac819f26c9c41d8703d99302ea14a4a73057d1e3ef9eb"
+    },
+    {
+      "file": "ACCEPTANCE-ROUND8.md",
+      "sha256": "c3ec28d8d599d70e704c98a1899b3f498c64db5f865970f1d56f8222922bcfe6"
+    },
+    {
+      "file": "App/ActionViews.swift",
+      "sha256": "265b7f1c119729da3a7a8d8c130575a4411a2fd8417cdd7c7a41ea5a96e91464"
+    },
+    {
+      "file": "App/Assets.xcassets/Contents.json",
+      "sha256": "10e3b5dc202f1cd9fad1f688c8fc9fe9e9669bf3f8295e67d216b10fd99b6f49"
+    },
+    {
+      "file": "App/ConnectionViews.swift",
+      "sha256": "d8a73debe75c1fe72d917953217032084c62f712db36d119f47cb8b1d7032200"
+    },
+    {
+      "file": "App/Design.swift",
+      "sha256": "688023788825198c69f128779cb90fff53273b0c9a927603d3d2d7c752fac825"
+    },
+    {
+      "file": "App/EchoApp.swift",
+      "sha256": "4a50d9028853b8c694fa4727defc9b067f44b0c73edaff1afce211f13c0580b3"
+    },
+    {
+      "file": "App/EchoStore.swift",
+      "sha256": "d964ad7189cf79681bd52db7cf16b1c17be30fd4e79b5ca3cbc2b014577217e2"
+    },
+    {
+      "file": "App/Info.plist",
+      "sha256": "f10921e2ec754a2f8c2343e4092f0f8209a1a0a13367e51601582f8edce131a5"
+    },
+    {
+      "file": "App/MemoryViews.swift",
+      "sha256": "3af6e132cfd6f5a670dfb48fbea4394356863a2f1bc4e276db50dc122c377810"
+    },
+    {
+      "file": "App/RootViews.swift",
+      "sha256": "63d63ca0e15c8481faec5fb30ba1f8905aa54d61b50254279ed4d42db55b7579"
+    },
+    {
+      "file": "App/SettingsView.swift",
+      "sha256": "90675aa5ddf6f5b98c0deb657c7444567b2b195119f12e07f4bfdedeb228ef81"
+    },
+    {
+      "file": "App/SharedDesign.generated.swift",
+      "sha256": "1d190738280c28d2a6bb0415d00560bd92916f62ba6744582b7e697778a433cf"
+    },
+    {
+      "file": "Checks/ContractChecks.swift",
+      "sha256": "4faa4c738d236483f7d95251030ba1a092034098b85ab70ec4ec43b09d20a50c"
+    },
+    {
+      "file": "Echo.xcodeproj/project.pbxproj",
+      "sha256": "a843b57faaff62e2016b9ccf617f9e794178e99c3cd73948ae7b0b8e240a5c25"
+    },
+    {
+      "file": "Echo.xcodeproj/xcshareddata/xcschemes/Echo.xcscheme",
+      "sha256": "356a3e839158e70871c584cf671fb09dd0fdae22fb5ddd5afc3bd2636e9bb95e"
+    },
+    {
+      "file": "HOST-API-SMOKE.log",
+      "sha256": "8e03b8e4914f78d7a981f976946cc8d85f0640e314bf212ae09e6d3dd70d40c1"
+    },
+    {
+      "file": "HOST-INTEGRATION-ROUND8.log",
+      "sha256": "d2a86867804000abd8aed8f1b30a1463b852d879a0c0428254266bdb683299f9"
+    },
+    {
+      "file": "HOST-LIFECYCLE.log",
+      "sha256": "679f383b40ec5ba85b270d7cd1f1437cc97fb2c64120a8bf33de9072f0ee6888"
+    },
+    {
+      "file": "HOST-LIVE-INCREMENTAL-ROUND8.log",
+      "sha256": "be2fe81a1be345efcc49bac6e3647a1d12e870e43c3174fcf6361bdb2bd20e4d"
+    },
+    {
+      "file": "HOST-ROUND8-MERGE.log",
+      "sha256": "9cab6cdd52ffadd45b26b90868bcc6565fdfec53593087b95423cfd8162b45aa"
+    },
+    {
+      "file": "HOST-ROUND8.log",
+      "sha256": "d90b393afe042e8e85354c4078df37621fd14440b5d939ae2f4fc1e4a5c01726"
+    },
+    {
+      "file": "HOST-TYPECHECK-round8.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "HOST-TYPECHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "HostChecks/IncrementalSmoke.swift",
+      "sha256": "54a3453b681fb1b9752732796f1f8256193ef2eaaf4dc722602989565a96ee80"
+    },
+    {
+      "file": "HostChecks/IntegrationSmoke.swift",
+      "sha256": "6907b7548087a7617a64df329c47f5054c1b06ecf982e89847668698dc817791"
+    },
+    {
+      "file": "HostChecks/StoreLifecycleChecks.swift",
+      "sha256": "f4ae8fec73f5fff75b151ccc0441145be276a3630d39fabb1368839721eda250"
+    },
+    {
+      "file": "Package.swift",
+      "sha256": "03e9b7820dff13a88e69e9802283ed77c4d2efb3e1e38293b9f21a31cd01f281"
+    },
+    {
+      "file": "README.md",
+      "sha256": "9c3984e268938a4ad4498cbde7eb07efb1828e275c95edee586987795cd9d702"
+    },
+    {
+      "file": "ROUND8-MERGE.md",
+      "sha256": "444ca623a7a7b982d991758985b877bc8207cc36d34a1034b3d330dfb0781a27"
+    },
+    {
+      "file": "Sources/EchoCore/APIClient.swift",
+      "sha256": "ed0db03fec6e4a2cf092efa294ab1996270c0c6b07d30bfc52d87b5130688e98"
+    },
+    {
+      "file": "Sources/EchoCore/Models.swift",
+      "sha256": "a2b14805df14f089ed97a867c79977e9e0505871347e6f88f1ec257a7254e5ef"
+    },
+    {
+      "file": "Sources/EchoCore/Workspace.swift",
+      "sha256": "a03f5cfb847ad4cf81c6dd373b9410abe9668ecd2d4d06ac31077db629026f30"
+    },
+    {
+      "file": "VALIDATION-round8-merge.log",
+      "sha256": "79997365058a0ede04ca15cf3e3dc166603a7f8d9df3aa5b7a6c52a4e6f2746e"
+    },
+    {
+      "file": "VALIDATION-round8.log",
+      "sha256": "0d6a446bc87792b6f91a6df244525d3541aaecb8a880101434f54eb648767254"
+    },
+    {
+      "file": "VALIDATION.log",
+      "sha256": "c73464f1a9824484b378da22003c0c8b08016e46d733daa5de047e806cf7d33c"
+    },
+    {
+      "file": "XcodeTests/EchoCoreTests.swift",
+      "sha256": "46014378618c189c0b4a1af34eeba24c9490ba4547f486f31672753b0c0e1575"
+    },
+    {
+      "file": "generate_project.py",
+      "sha256": "8c1bb2e4b2247f93a3e17346b14f29f5100d0bd866b5889d4d708384e17e992d"
+    },
+    {
+      "file": "sync_shared.py",
+      "sha256": "38014d97043ecca7a916d6e965e2c861d905b11fd17740d2d30618cd34f8fe29"
+    },
+    {
+      "file": "validate.sh",
+      "sha256": "725b8554081568cd0f0cdd6350e935ec1935ca9d8af8523aa933eb5d7ba4309a"
+    },
+    {
+      "file": "validate_host.sh",
+      "sha256": "875b10f558f64a97ab57c27f10d5e856358322a3e954c57d13768fe29354aa6a"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+.echo-user-dialog { color: #1b2433; background: rgba(255,255,255,.98); border: 1px solid #fff; border-radius: 26px; padding: 28px; width: min(500px,calc(100vw - 40px)); max-height: calc(100dvh - 48px); overflow: auto; box-shadow: 0 24px 80px #1b24332b; font: 16px/1.55 -apple-system,'PingFang SC',system-ui,sans-serif; }
+.echo-user-dialog::backdrop { background: #1b243340; }
+.echo-user-dialog h2 { font-size: 22px; line-height: 1.35; margin: 0 0 12px; }
+.echo-user-dialog p { color: #56627a; white-space: pre-wrap; margin: 0 0 20px; }
+.echo-dialog-field { display: grid; gap: 8px; }
+.echo-dialog-field[hidden] { display: none; }
+.echo-dialog-field textarea { box-sizing: border-box; width: 100%; padding: 14px; border: 1px solid #bac7e0; border-radius: 16px; background: #f8faff; color: #1b2433; font: inherit; resize: vertical; min-height: 100px; }
+.echo-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.echo-dialog-actions button { min-height: 44px; min-width: 88px; padding: 10px 20px; border: 0; border-radius: 24px; background: #1b243312; color: #1b2433; font: 500 15px/1.5 -apple-system,'PingFang SC',system-ui,sans-serif; cursor: pointer; }
+.echo-dialog-actions [data-confirm] { background: #1b2433; color: white; }
+.echo-dialog-actions [data-confirm].danger { background: #b3261e; }
+.echo-user-dialog :focus-visible { outline: 2px solid #1b2433; outline-offset: 3px; }
+@media(max-width:600px) { .echo-user-dialog { padding: 24px 20px; } .echo-dialog-actions button { min-height: 48px; } }

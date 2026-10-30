@@ -1,0 +1,8 @@
+{
+  "tool": "built-in image_gen",
+  "mode": "generate",
+  "status": "industrial_design_concept_not_existing_hardware",
+  "generated_at": "2026-10-27",
+  "file": "assets/hardware-concept.png",
+  "prompt": "Use case: product-mockup. Asset type: industrial design concept image for an interactive Chinese Personal Agent product requirements document. Primary request: a refined, believable concept photograph of two separate pieces of assistive consumer hardware, a small circular desktop AI companion terminal with a softly illuminated round display, tactile rotary rim and one physical silence button, alongside a lightweight noninvasive dry-electrode EEG headband resting beside it. The circular display shows a very minimal abstract orb character made of two eyes and a soft arc, no text, no numeric brain scores. They are connected conceptually through one very subtle dotted visual trail, not a real cable. Warm ivory tabletop, quiet home studio, a partly visible laptop in the background, matte off-white polymer, brushed aluminum edge, pale cobalt accents. Product editorial photography, close three-quarter perspective, natural soft side light, tactile realistic materials, clean generous negative space, wide landscape composition. No logos, no branding, no labels, no text, no brain-reading visualization, no medical imagery, no speculative transparent components, no humanoid robot, no real pet, no people. This is a design intention, not an existing product."
+}

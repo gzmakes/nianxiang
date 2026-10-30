@@ -1,0 +1,21 @@
+{
+  "release_id": "2026.10.30-companion-reconcile",
+  "kind": "isolated_source_candidate",
+  "base": "R14 frozen source; R9 privacy safeguards and settings Lab semantically merged",
+  "contract_version": "1.8.0",
+  "verification": {
+    "python_before_contract_version_bump": "869 passed; 40 subtests passed; 2 deselected due sandbox TCP bind restriction",
+    "web_and_desktop_node": "663 passed (synthetic)",
+    "shared_checks": "16 passed; API and resource snapshots match",
+    "native": "host and syntax checks only; see R15 report"
+  },
+  "live_service_updated": false,
+  "real_model_revalidated": false,
+  "real_external_sources_revalidated": false,
+  "ios_sdk_build_verified": false,
+  "android_sdk_build_verified": false,
+  "phone_or_hardware_verified": false,
+  "real_pairing_verified": false,
+  "browser_candidate_verified": false,
+  "notes": "Historical release and evidence retained separately; this source candidate is not the running service."
+}

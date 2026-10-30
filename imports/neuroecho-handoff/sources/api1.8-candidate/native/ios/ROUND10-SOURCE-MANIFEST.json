@@ -1,0 +1,290 @@
+{
+  "scope": "native/ios R10 isolated integration candidate only",
+  "generated_at_utc": "2026-10-29T19:33:03.601667+00:00",
+  "validation": {
+    "foundation_synthetic": "54/54; R9 49 retained",
+    "host_r9_store_synthetic": "30/30",
+    "host_mood_store_synthetic": "13/13",
+    "host_swiftui_typecheck": "passed macOS only; no UIKit/iOS SDK",
+    "real_host_mood_http": "21 requests / 4 groups; fresh temporary service stopped",
+    "real_host_r9_http_regression": "18 requests / 4 groups against same 1.4 sealed backend; fresh temporary service stopped",
+    "ios_sdk_simulator_device": "NOT_RUN: user deferred SDK installation"
+  },
+  "backend_seal": {
+    "sealed_at": "2026-10-29T19:24:30.787674+00:00",
+    "sha256": "0f1dee11d867f8e9b276f80be966b2a5677ed4108f1458ca31b60b2b2121df38",
+    "server_files_verified": 40,
+    "contract_version": "1.4.0"
+  },
+  "historical_evidence": "R8/R9 logs/manifests are historical; only named R10 evidence applies to this candidate",
+  "files": [
+    {
+      "file": ".gitignore",
+      "sha256": "5e520c4086d701eab26ac819f26c9c41d8703d99302ea14a4a73057d1e3ef9eb"
+    },
+    {
+      "file": "ACCEPTANCE-ROUND10.md",
+      "sha256": "1275044ce186be38b5eb3ed3f7c0db3b7614c9ef58eb0bca20cfbccc915950f2"
+    },
+    {
+      "file": "ACCEPTANCE-ROUND8.md",
+      "sha256": "c3ec28d8d599d70e704c98a1899b3f498c64db5f865970f1d56f8222922bcfe6"
+    },
+    {
+      "file": "ACCEPTANCE-ROUND9.md",
+      "sha256": "5095d0d9d3d58c801b50da08838a05da6bfc8c512d9ef1089d6fb673073a557b"
+    },
+    {
+      "file": "App/ActionViews.swift",
+      "sha256": "b06e2f813fbd02a1aded950b56a5e87f2f87c8601f3ce7dcf1df23324761170b"
+    },
+    {
+      "file": "App/Assets.xcassets/Contents.json",
+      "sha256": "10e3b5dc202f1cd9fad1f688c8fc9fe9e9669bf3f8295e67d216b10fd99b6f49"
+    },
+    {
+      "file": "App/BoundaryViews.swift",
+      "sha256": "4bb08ec2e5f7251a8194feadeb11f4871ab3d5d82cf9dce0200d375f03bd5530"
+    },
+    {
+      "file": "App/ConnectionViews.swift",
+      "sha256": "9f2fbdde82bfa87155138f610befc0a17ac02dcc4d1ecf02bfade6bf9748978b"
+    },
+    {
+      "file": "App/Design.swift",
+      "sha256": "688023788825198c69f128779cb90fff53273b0c9a927603d3d2d7c752fac825"
+    },
+    {
+      "file": "App/EchoApp.swift",
+      "sha256": "4a50d9028853b8c694fa4727defc9b067f44b0c73edaff1afce211f13c0580b3"
+    },
+    {
+      "file": "App/EchoStore.swift",
+      "sha256": "9357632f83fed968d6c34eb4085615e95f744ce6ac6fe3596869293bd1f72368"
+    },
+    {
+      "file": "App/Info.plist",
+      "sha256": "f10921e2ec754a2f8c2343e4092f0f8209a1a0a13367e51601582f8edce131a5"
+    },
+    {
+      "file": "App/MemoryViews.swift",
+      "sha256": "3af6e132cfd6f5a670dfb48fbea4394356863a2f1bc4e276db50dc122c377810"
+    },
+    {
+      "file": "App/MoodStore.swift",
+      "sha256": "0dd499832a1d0100eaf1063312b0a22c698087fa2a8fbc39fcc1c22ba964cf66"
+    },
+    {
+      "file": "App/MoodViews.swift",
+      "sha256": "a69146691fab376be201eaa7a3456e77b7519ecbf033354a0bd4e7e476628b92"
+    },
+    {
+      "file": "App/RootViews.swift",
+      "sha256": "9fb11ff3679f77d534222bf9ca46de14b376baa878e05ab5e64d44c68bf10136"
+    },
+    {
+      "file": "App/SettingsView.swift",
+      "sha256": "e458bac900bf28470f218c801e0128e117cb7f95d7f2bd07c9eb6a7390ec94b1"
+    },
+    {
+      "file": "App/SharedDesign.generated.swift",
+      "sha256": "a25c5f60f4d795c6d1ff74dca2fc237c32534f795b91b000eeee6c85915d6269"
+    },
+    {
+      "file": "Checks/ContractChecks.swift",
+      "sha256": "57b5bff95874e5cc88bcbd351541e611762e0eebae7f03a72b5637425ee356e3"
+    },
+    {
+      "file": "Echo.xcodeproj/project.pbxproj",
+      "sha256": "0d67b124acd96a138f86ed0d9f883b728faa85186b2f78bc113493fd8fa7b000"
+    },
+    {
+      "file": "Echo.xcodeproj/xcshareddata/xcschemes/Echo.xcscheme",
+      "sha256": "356a3e839158e70871c584cf671fb09dd0fdae22fb5ddd5afc3bd2636e9bb95e"
+    },
+    {
+      "file": "HOST-API-SMOKE.log",
+      "sha256": "8e03b8e4914f78d7a981f976946cc8d85f0640e314bf212ae09e6d3dd70d40c1"
+    },
+    {
+      "file": "HOST-INTEGRATION-ROUND8.log",
+      "sha256": "d2a86867804000abd8aed8f1b30a1463b852d879a0c0428254266bdb683299f9"
+    },
+    {
+      "file": "HOST-LIFECYCLE.log",
+      "sha256": "679f383b40ec5ba85b270d7cd1f1437cc97fb2c64120a8bf33de9072f0ee6888"
+    },
+    {
+      "file": "HOST-LIVE-INCREMENTAL-ROUND8.log",
+      "sha256": "be2fe81a1be345efcc49bac6e3647a1d12e870e43c3174fcf6361bdb2bd20e4d"
+    },
+    {
+      "file": "HOST-LIVE-MOODS-ROUND10.log",
+      "sha256": "4e46db41def0793f1267f0afadf07a0bb1eb86d22000057b3fd5abc459007d26"
+    },
+    {
+      "file": "HOST-LIVE-R9-REGRESSION-ROUND10.log",
+      "sha256": "a3da500a41acebc87c8034625417018a536f0c7d1ce0a2826fadafce2a7fe10e"
+    },
+    {
+      "file": "HOST-LIVE-ROUND9.log",
+      "sha256": "7c4a8b5fc8d251228c35fc073f24005bc3075ab3686342b9b367944e3348fe13"
+    },
+    {
+      "file": "HOST-MOODS-ROUND10.log",
+      "sha256": "1afdd06cedb153c80bab822be7f1930e3adeba1d5eb407254c0a6b0e93eccf13"
+    },
+    {
+      "file": "HOST-ROUND10.log",
+      "sha256": "41105b95b8fccfd0f37fa2e3de32b17c419e08539d0ec4982b71608d9c719e9e"
+    },
+    {
+      "file": "HOST-ROUND8-MERGE.log",
+      "sha256": "9cab6cdd52ffadd45b26b90868bcc6565fdfec53593087b95423cfd8162b45aa"
+    },
+    {
+      "file": "HOST-ROUND8.log",
+      "sha256": "d90b393afe042e8e85354c4078df37621fd14440b5d939ae2f4fc1e4a5c01726"
+    },
+    {
+      "file": "HOST-ROUND9.log",
+      "sha256": "ccd02cf4238374512d3fd3910d48350b854e7842c235bf83b01d679b6d39e848"
+    },
+    {
+      "file": "HOST-TYPECHECK-ROUND10.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "HOST-TYPECHECK-round8.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "HOST-TYPECHECK-round9.log",
+      "sha256": "35886cf2f5dac4576b9e47f87e1966726f273d5b821beeb94951a214996d75f9"
+    },
+    {
+      "file": "HOST-TYPECHECK.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "HostChecks/IncrementalSmoke.swift",
+      "sha256": "54a3453b681fb1b9752732796f1f8256193ef2eaaf4dc722602989565a96ee80"
+    },
+    {
+      "file": "HostChecks/IntegrationSmoke.swift",
+      "sha256": "6907b7548087a7617a64df329c47f5054c1b06ecf982e89847668698dc817791"
+    },
+    {
+      "file": "HostChecks/MoodLifecycleChecks.swift",
+      "sha256": "9dbb2a27e69b8e168d4b72832bfc23cd3c2f988c70095257e08af098a7151c3b"
+    },
+    {
+      "file": "HostChecks/Round10MoodSmoke.swift",
+      "sha256": "119ccba2e4d343e4e3ba7f9876dc1d042e84c1d067405eb92a610ae4e108eef6"
+    },
+    {
+      "file": "HostChecks/Round9Smoke.swift",
+      "sha256": "85867d9064ce98904166e0171d3244333835d82f52c23dece109569e0e5862de"
+    },
+    {
+      "file": "HostChecks/StoreLifecycleChecks.swift",
+      "sha256": "dfc9408aadc18b2e1049ece39c3550fa806bfc4819ac11b2ca266ce8c111565e"
+    },
+    {
+      "file": "HostChecks/run_round10_mood_smoke.py",
+      "sha256": "507cf70e173490657865a9335a941fdf7ae5c9df8d1ad3a388c2dc304a9faebb"
+    },
+    {
+      "file": "HostChecks/run_round9_smoke.py",
+      "sha256": "1378d57db94d7ad005543466c855449df36aadcdd5446ebc654850f0a72fadbe"
+    },
+    {
+      "file": "Package.swift",
+      "sha256": "03e9b7820dff13a88e69e9802283ed77c4d2efb3e1e38293b9f21a31cd01f281"
+    },
+    {
+      "file": "README.md",
+      "sha256": "8712b20fbf84bde00ce2d77bc74658c36c6acc3537798af4fbc132895521fd8e"
+    },
+    {
+      "file": "ROUND10-MERGE.md",
+      "sha256": "c98600d6c5dd8ef890b13745a46656048c422b918e26f504c627410f7c498f72"
+    },
+    {
+      "file": "ROUND8-MERGE.md",
+      "sha256": "444ca623a7a7b982d991758985b877bc8207cc36d34a1034b3d330dfb0781a27"
+    },
+    {
+      "file": "ROUND8-SOURCE-MANIFEST.json",
+      "sha256": "2f71ef3466e3004c9504fe6284f2183bb7c8a36f748c79f25d3f8a1349b210aa"
+    },
+    {
+      "file": "ROUND9-MERGE.md",
+      "sha256": "004ea7a9c4b0ad10a748afa292640bb51a7bb7cebc1af3526daa20be938525e3"
+    },
+    {
+      "file": "ROUND9-SOURCE-MANIFEST.json",
+      "sha256": "aaec64a8e3e0964dcb93fdebe100b7ecca8db3480f62dbaef96091db9f18e22a"
+    },
+    {
+      "file": "Sources/EchoCore/APIClient.swift",
+      "sha256": "b5b4c412f9784e9f72a979b80a65cbce2f74d94f7f7ad0bb56f997724535bbb3"
+    },
+    {
+      "file": "Sources/EchoCore/Boundaries.swift",
+      "sha256": "af980364b5f7bec9b95a6eb159675da0615b4d1529f9994757ca5cb658f6f517"
+    },
+    {
+      "file": "Sources/EchoCore/Models.swift",
+      "sha256": "17fb4f20a21c041cfbf36fd4d6528bc3eb491c9785b3486817caa9b97f0aadab"
+    },
+    {
+      "file": "Sources/EchoCore/Moods.swift",
+      "sha256": "31b8230350a1e378dfda1fdcb0f6085e583f6e7dfe0d3c5edcc8c8981f09c1d7"
+    },
+    {
+      "file": "Sources/EchoCore/Workspace.swift",
+      "sha256": "a03f5cfb847ad4cf81c6dd373b9410abe9668ecd2d4d06ac31077db629026f30"
+    },
+    {
+      "file": "VALIDATION-ROUND10.log",
+      "sha256": "c8f0318b392a3ea6d0e1a5304a6c37b96aaf48aeb274480fbb9649d21ad21313"
+    },
+    {
+      "file": "VALIDATION-round8-merge.log",
+      "sha256": "79997365058a0ede04ca15cf3e3dc166603a7f8d9df3aa5b7a6c52a4e6f2746e"
+    },
+    {
+      "file": "VALIDATION-round8.log",
+      "sha256": "0d6a446bc87792b6f91a6df244525d3541aaecb8a880101434f54eb648767254"
+    },
+    {
+      "file": "VALIDATION-round9.log",
+      "sha256": "bdfe26cc534e49d074927661caa4f45f4a659c9d76d1e12b58ef4299e0aabaaf"
+    },
+    {
+      "file": "VALIDATION.log",
+      "sha256": "c73464f1a9824484b378da22003c0c8b08016e46d733daa5de047e806cf7d33c"
+    },
+    {
+      "file": "XcodeTests/EchoCoreTests.swift",
+      "sha256": "7cd907fd0bcdff6a5ac2313191c520bbf1d0c7253f1bc14de7fa740597fdedf2"
+    },
+    {
+      "file": "generate_project.py",
+      "sha256": "8c1bb2e4b2247f93a3e17346b14f29f5100d0bd866b5889d4d708384e17e992d"
+    },
+    {
+      "file": "sync_shared.py",
+      "sha256": "38014d97043ecca7a916d6e965e2c861d905b11fd17740d2d30618cd34f8fe29"
+    },
+    {
+      "file": "validate.sh",
+      "sha256": "725b8554081568cd0f0cdd6350e935ec1935ca9d8af8523aa933eb5d7ba4309a"
+    },
+    {
+      "file": "validate_host.sh",
+      "sha256": "a0211569a6c5059d601ba7a978b7447920290961f52a7e6e797c37ac8aa0362f"
+    }
+  ]
+}
