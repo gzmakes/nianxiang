@@ -468,3 +468,15 @@ html[data-reduce-motion=true] .mood-card .mood-point::after{animation:none}
 #app .msg .emoji-react-btn{right:-40px}
 #app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
 body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none}
+/* Web 改版 8 (2026-10-31，产品要求)：搜索弹层里任何元素聚焦都不画描边（不依赖 :has）；标语更浅更小；右侧面板按钮统一成小号、同高、对齐。 */
+.design-search :focus,.design-search :focus-visible,.design-search:focus,.design-search:focus-visible,.design-search-card:focus,.design-search-card:focus-visible{outline:none!important;outline-offset:0!important}
+.design-search-head input:focus,.design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18)!important;box-shadow:0 6px 18px rgba(80,100,170,.14)!important;background:#fff!important}
+@media(min-width:900px){#app .echo-slogan{font-size:18px;color:#56627A;-webkit-text-fill-color:#56627A;opacity:1}}
+/* 右侧面板：所有按钮统一 12px / 32px 高 / 16px 圆角；页签同高；标题行与按钮居中对齐；按钮行间距 8px */
+#app .context .tabs .tab{min-height:32px;height:32px;padding:6px 10px;font-size:12px;line-height:20px;border-radius:16px}
+#app .context button:not(.tab):not(.context-close):not(.icon-btn):not(.mood-date),#app .context .btn{font-size:12px!important;line-height:20px;min-height:32px;min-width:0;padding:6px 12px!important;border-radius:16px;font-weight:500}
+#app .context .mini-btn.confirm,#app .context .mood-save{font-weight:600}
+#app .context .today-head,#app .context .followup-head,#app .context .mood-intro,#app .context .mem-group-label,#app .context .panel-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#app .context .today-head h3,#app .context .followup-head b,#app .context .panel-title-row h3{margin:0}
+#app .context .row,#app .context .today-footer-actions,#app .context .action-row,#app .context .mood-actions,#app .context .design-shortcuts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#app .context .followup-card>.text-btn,#app .context .today-app-list>.text-btn{margin-top:4px}
