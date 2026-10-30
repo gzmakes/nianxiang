@@ -9,6 +9,7 @@
   let raf = 0;
   const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; all(); }); };
   for (const type of ['input', 'change', 'pointermove', 'pointerup', 'keyup', 'click']) document.addEventListener(type, schedule, { capture: true, passive: true });
-  const start = () => { all(); new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true }); };
+  // mood.js 直接改 .value（读回记录、恢复草稿、拖平面）不会触发事件，所以卡片在时每 300ms 对一次。
+  const start = () => { all(); new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true }); setInterval(() => { if (document.querySelector('.mood-sliders')) all(); }, 300); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

@@ -425,7 +425,7 @@ html[data-reduce-motion=true] .presence-light-core,html[data-reduce-motion=true]
 /* Web 改版 7 (2026-10-31，产品要求)：标语加深；眼睛跟鼠标（orb-face.js 写 --gaze-x/--gaze-y）；搜索框去掉黑色选中框；
    emoji 回应按钮与语音图标同尺寸、同一条线；心情记录卡的平面、坐标标签和滑杆重做（mood-polish.js 写滑杆填充）；
    回复语音自动播放（message-voice.js）。 */
-@media(min-width:900px){#app .echo-slogan{background:linear-gradient(100deg,#111826 0%,#2A3447 55%,#4C5872 100%);-webkit-background-clip:text;background-clip:text}}
+@media(min-width:900px){#app .echo-slogan{filter:none;font-size:20px;letter-spacing:.1em;color:#1B2433;background:none;-webkit-background-clip:border-box;background-clip:border-box;-webkit-text-fill-color:#1B2433;opacity:.88}}
 :root{--gaze-x:0%;--gaze-y:0%}
 .presence-light-core::before,.presence-light-core::after{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf);transition:transform .3s cubic-bezier(.2,.8,.2,1),height .4s ease,width .4s ease,top .4s ease,left .4s ease,border-radius .4s ease,background .3s ease,opacity .3s ease}
 @keyframes orb-blink{0%,90%,100%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}93%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(.08)}96%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}}
@@ -452,7 +452,7 @@ body:has(#app) .design-search-head input:focus,body:has(#app) .design-search-hea
 .mood-card .mood-sliders label{font-size:13px;color:var(--ink-mute);margin:16px 0 4px}
 .mood-card .mood-sliders input[type=range]{-webkit-appearance:none;appearance:none;height:40px;margin:0;padding:0;background:transparent;border:0;border-radius:0;
   --track-a:#9DB4FF;--track-b:#FFB38A;--track-dim-a:rgba(157,180,255,.35);--track-dim-b:rgba(255,179,138,.35);--thumb:#C2602F}
-.mood-card .mood-sliders input[data-mood-y]{--track-a:#C9D2E6;--track-b:#FFC95C;--track-dim-a:rgba(201,210,230,.45);--track-dim-b:rgba(255,201,92,.35);--thumb:#1B2433}
+.mood-card .mood-sliders input[data-mood-y]{--thumb:#1B2433}
 .mood-card .mood-sliders input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;
   background:linear-gradient(90deg,var(--track-a),var(--track-b)) 0 0/var(--p,50%) 100% no-repeat,linear-gradient(90deg,var(--track-dim-a),var(--track-dim-b))}
 .mood-card .mood-sliders input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:#fff;border:2.5px solid var(--thumb);box-shadow:0 2px 8px rgba(27,36,51,.25);cursor:grab;transition:transform .15s}
@@ -467,3 +467,4 @@ html[data-reduce-motion=true] .mood-card .mood-point::after{animation:none}
 #app .msg [data-voice-clip]{min-width:32px;right:-40px}
 #app .msg .emoji-react-btn{right:-40px}
 #app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
+body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none}
