@@ -1,0 +1,58 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies and caches
+node_modules/
+.pnpm-store/
+.yarn/
+.npm/
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# Build and coverage output
+dist/
+build/
+out/
+coverage/
+.tmp/
+tmp/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# Java / Android
+gradle/
+.gradle/
+local.properties
+*.apk
+*.aab
+
+# Generated archives and binaries
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.exe
+*.dll
