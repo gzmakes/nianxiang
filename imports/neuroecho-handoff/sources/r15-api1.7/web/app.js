@@ -1397,11 +1397,23 @@
     stopButton: $("#stop-btn"), busy: () => !!activeTurn,
     onError: error => toast(error?.message || "消息发送状态暂时无法确认，请稍后核对")});
   function renderMessages(forceBottom = false) {
+    function decorateAssistantMessage(message) {
+      if (message?.role !== "assistant" || typeof message.text !== "string") return message;
+      const parser = globalThis.XinjiResponseParser;
+      if (!parser?.parse) return message;
+      if (message._bubblesSource === message.text && Array.isArray(message.bubbles) && message.bubbles.length) return message;
+      const parsed = parser.parse(message.text);
+      if (!parsed || !Array.isArray(parsed.messages) || !parsed.messages.length) return message;
+      message.bubbles = parsed.messages;
+      message._bubblesSource = message.text;
+      return message;
+    }
     memoryProposal.sync();
     const empty = state.messages.filter((m) => m.role === "user").length === 0;
     $("#chat-empty")?.classList.toggle("is-hidden", !(empty && state.session?.mode === "empty"));
     const lastAssistant = [...state.messages].reverse().find((m) => m.role === "assistant");
     const visibleMessages = empty && state.session?.mode === "empty" ? [] : state.messages;
+    visibleMessages.forEach(decorateAssistantMessage);
     const sessionChanged = renderedChatSession !== state.session?.id;
     const newMessage = !sessionChanged && visibleMessages.some(message => !String(message.id).startsWith("local-") && !renderedMessageIds.has(message.id));
     chatScroll.render(() => { els.messages.innerHTML = visibleMessages
