@@ -125,3 +125,79 @@ html[data-reduce-motion=true] .notification-settings summary::after{transition:n
 .m-topic-toolbar .companion-boundary button{font-size:13px;padding:8px;color:var(--ink-mute)}
 #m-app>.content-update-line:not([data-update-state=pending]):not([data-update-state=offline]):not([data-update-state=unsupported]):not([data-update-state=identity]){display:none}
 #m-app>.memory-preference-toggle{padding:4px 16px}
+/* Web 改版 2 (2026-10-30，产品要求)：宽屏(≥900)字号缩小、去左侧栏、去顶栏卡片、品牌居中于对话栏、话题条变扁、
+   顶栏操作统一为 icon+文字、侧栏“＋”改“连接”、卡片半透磨砂玻璃。只作用于 index.html(#app)，不影响 H5 与手机布局。 */
+.ui-icon{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.topbar-actions .text-btn{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:899px){.topbar .action-label{display:none}.topbar-actions .text-btn .ui-icon{width:18px;height:18px}}
+@media(min-width:900px){
+  /* 顶栏：去卡片，只留右侧操作；品牌移到对话栏 */
+  #app .topbar{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;min-height:40px;margin:0;padding:0 4px;justify-content:flex-end}
+  #app .topbar::before,#app .topbar::after{display:none}
+  #app .topbar .brand,#app .topbar-center,#app .topbar-actions #apps-btn{display:none}
+  #app .topbar-actions{gap:4px}
+  #app .topbar-actions .text-btn{font-size:13px;min-height:36px;padding:6px 12px;border-radius:18px;color:var(--ink-mute)}
+  #app .topbar-actions .text-btn:hover{color:var(--ink);background:rgba(255,255,255,.55)}
+  html[data-desktop=true] #app .topbar{margin-top:10px}
+  html[data-desktop=true][data-native-platform=win32] #app .topbar{margin:8px 150px 0 12px}
+  /* 去左侧栏 */
+  #app .design-rail{display:none}
+  #app .layout{grid-template-columns:minmax(0,1fr)}
+  /* 品牌：光球在上、名字胶囊在下，居中于对话栏 */
+  #app .conversation-head{justify-content:center;padding:0 0 4px;min-height:0}
+  #app .conversation-persona{flex-direction:column;align-items:center;gap:0;text-align:center}
+  #app .conversation-persona .persona-face{display:grid;place-items:center;width:64px;height:64px;position:relative;z-index:1;margin:0 auto -12px}
+  #app .conversation-persona .persona-face .presence-light{width:64px;height:64px}
+  #app .conversation-persona h2{display:inline-block;margin:0;padding:15px 30px 6px;border-radius:999px;font-size:15px;font-weight:600;line-height:1.3;color:var(--ink);
+    background:linear-gradient(135deg,rgba(255,255,255,.7),rgba(255,255,255,.35));border:1px solid rgba(255,255,255,.8);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 #fff,0 6px 18px rgba(80,100,170,.12)}
+  #app .companion-status{margin:6px 0 0;font-size:12px;justify-content:center}
+  #app .quiet-hint{display:none}
+  /* 空状态：光球已在顶部，空状态不再重复；文字居中 */
+  #app .chat-empty-orb{display:none}
+  #app .chat-empty-heading{justify-content:center;text-align:center}
+  #app .chat-empty-intro{text-align:center}
+  #app .chat-chips{justify-content:center}
+  /* 话题条变扁，与右侧安静开关同高 */
+  #app .topic-tabs{padding:2px;border-radius:17px}
+  #app .topic-chip{min-height:30px;padding:4px 14px;font-size:12px;border-radius:15px}
+  #app .conversation-toolbar{padding:0 8px}
+  #app .conversation>.composer{margin-inline:8px;width:auto}
+  #app .conversation>.resume-banner,#app .conversation>.carryover-banner{margin-inline:8px}
+  #app .resume-banner,#app .carryover-banner{border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,227,211,.45);color:var(--ink-mute);font-size:12px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+  #app .conversation-toolbar .companion-boundary button{min-height:32px;padding:4px 8px;font-size:12px}
+  /* 字号整体缩小，接近 macOS 常规界面 */
+  #app .msg .bubble{font-size:14px;line-height:1.6}
+  #app #input{font-size:14px}
+  #app .chat-hello{font-size:12px}
+  #app .chat-empty h3{font-size:22px;line-height:1.35}
+  #app .chat-empty-intro{font-size:13px;margin:10px 0 14px}
+  #app .chat-chips button,#app .response-choices button{font-size:12px;min-height:34px;padding:6px 14px}
+  #app .companion-source b{font-size:13px}
+  #app .context h3,#app .today-head h3{font-size:17px}
+  #app .mood-intro h3,#app .followup-head h3{font-size:15px}
+  #app .mood-open,#app .context .mini-btn{font-size:12px}
+  #app .notification-settings summary{font-size:13px}
+  #app .today-card b,#app .panel b,#app .app-card b{font-size:14px}
+  #app .today-hello b{font-size:17px}
+  #app .topbar-actions #export-btn{display:inline-flex}
+  #app .composer .btn{min-height:36px}
+  /* 卡片：半透磨砂玻璃 */
+  #app .context{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.65);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+  #app .tabs{background:rgba(255,255,255,.5)}
+  #app .companion-source,#app .mood-card,#app .followup-card,#app .context .today-card,#app .context .panel,#app .context .data-block,#app .context .mem-item,#app .context .mem-card,#app .context .bookmark-card,#app .context .app-card,#app .context .next-step{
+    background:rgba(255,255,255,.34)!important;border:1px solid rgba(255,255,255,.75)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)!important}
+}
+@media(min-width:1200px){
+  #app .layout{grid-template-columns:minmax(0,1fr) 392px}
+  html[data-panel-collapsed=true] #app .layout{grid-template-columns:minmax(0,1fr)}
+  html:not([data-panel-collapsed=true]) #app #design-panel-toggle{display:none}
+}
+@media(min-width:900px) and (max-width:1199px){
+  html[data-desktop=true] #app .layout{grid-template-columns:minmax(0,1fr) 392px}
+  html:not([data-desktop=true]) #app .context{background:rgba(248,250,255,.86)}
+}
+html[data-reduce-transparency=true] #app .context,html[data-reduce-transparency=true] #app .conversation-persona h2,html[data-reduce-transparency=true] #app .companion-source,html[data-reduce-transparency=true] #app .mood-card,html[data-reduce-transparency=true] #app .followup-card,html[data-reduce-transparency=true] #app .context .today-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+@media(prefers-reduced-transparency:reduce){#app .context,#app .conversation-persona h2,#app .companion-source,#app .mood-card,#app .followup-card,#app .context .today-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
