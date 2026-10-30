@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MindLink metrics v1",
+  "type": "object",
+  "required": [
+    "api_version",
+    "session_id",
+    "sequence",
+    "timestamp_unix",
+    "connected",
+    "live",
+    "signal_quality",
+    "attention",
+    "relaxation",
+    "capabilities"
+  ],
+  "properties": {
+    "api_version": {
+      "const": "1.0"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "integer"
+    },
+    "timestamp_unix": {
+      "type": "number"
+    },
+    "connected": {
+      "type": "boolean"
+    },
+    "live": {
+      "type": "boolean"
+    },
+    "signal_quality": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "attention": {
+      "type": "object",
+      "required": [
+        "value",
+        "valid",
+        "source",
+        "age_ms",
+        "reason"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "neurosky_esense",
+            "personal_model"
+          ]
+        },
+        "age_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "updated_at_unix": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "const": "score_0_100"
+        },
+        "model": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "valid": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "relaxation": {
+      "type": "object",
+      "required": [
+        "value",
+        "valid",
+        "source",
+        "age_ms",
+        "reason"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "neurosky_esense",
+            "personal_model"
+          ]
+        },
+        "age_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "updated_at_unix": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "const": "score_0_100"
+        },
+        "model": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "valid": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "public_task": {
+      "type": "object"
+    },
+    "recording": {
+      "type": "object"
+    },
+    "capabilities": {
+      "type": "object"
+    }
+  }
+}

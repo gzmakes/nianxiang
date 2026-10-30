@@ -1,0 +1,3 @@
+# Test runner version used for this release; runtime packages remain separate.
+-r requirements.txt
+pytest==9.2.0

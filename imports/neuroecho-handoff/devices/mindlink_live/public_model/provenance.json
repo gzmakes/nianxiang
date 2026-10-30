@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "source": "/home/lilab4090_02/Desktop/\u9ed1\u5ba2\u677e/brain-bookmark/models/best.joblib",
+      "copy": "best.joblib",
+      "sha256": "1d73dcf80fe650eb7ad5515c4ab6a601453547b8fc002f9a0f4a1a3f80827d25"
+    },
+    {
+      "source": "/home/lilab4090_02/Desktop/\u9ed1\u5ba2\u677e/brain-bookmark/src/config.py",
+      "copy": "src/config.py",
+      "sha256": "ea9b90c4d5f3850db092a0f903b4da7622993046fe8421ed9a9a9e866cb98f4c"
+    },
+    {
+      "source": "/home/lilab4090_02/Desktop/\u9ed1\u5ba2\u677e/brain-bookmark/src/features/__init__.py",
+      "copy": "src/features/__init__.py",
+      "sha256": "21d5e356c87da99163c30f726a9d3844d915f523c73ea197c24cda945635b265"
+    },
+    {
+      "source": "/home/lilab4090_02/Desktop/\u9ed1\u5ba2\u677e/brain-bookmark/src/preprocessing/__init__.py",
+      "copy": "src/preprocessing/__init__.py",
+      "sha256": "718b6abc67e849265092608514c720036e25de7bbff9c967aa132a91e4c9d964"
+    },
+    {
+      "source": "/home/lilab4090_02/Desktop/\u9ed1\u5ba2\u677e/brain-bookmark/reports/model_results.json",
+      "copy": "model_results.json",
+      "sha256": "2458eec4d482161f4bde59c7dee163c998cf7d9279aa0823c41bff2f733fce8d"
+    }
+  ],
+  "task_labels": [
+    "Eyes-closed rest",
+    "Medium arithmetic",
+    "Hard arithmetic"
+  ],
+  "live_domain_validated": false,
+  "no_attention_or_relaxation_classifier": true
+}

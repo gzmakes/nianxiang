@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#EDF1FF" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>念响 · 移动端</title>
+<link rel="manifest" href="/static/manifest.webmanifest" />
+<link rel="stylesheet" href="/static/m.css?v=c9e1175006f1722f" />
+<link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
+<link rel="stylesheet" href="/static/design-system.css?v=a843089739648179" />
+<link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
+<link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
+<link rel="stylesheet" href="/static/lab.css?v=e7a794801788b770" />
+<link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
+<link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
+</head>
+<body>
+<div class="grain"></div>
+
+<!-- 引导 -->
+<section id="m-onboard" class="onboard is-hidden" role="dialog" aria-modal="true" aria-label="连接你选择的资料" aria-hidden="true" tabindex="-1">
+  <button class="onboarding-return btn ghost is-hidden" id="m-onboarding-return" type="button">返回当前对话</button>
+  <div class="onboard-top">
+    <div class="eyebrow">回响 · 个人伙伴</div>
+    <h1>让生活的小片段，<br /><em>慢慢被记住。</em></h1>
+    <p class="lede" id="m-lede">想从哪一面开始？只连接你愿意分享的内容。</p>
+  </div>
+
+  <div id="m-wz-2" class="is-hidden">
+    <h1 class="m-hero">多一点了解，<br /><em>也由你慢慢选择。</em></h1>
+    <p class="lede" id="m-wz2-sub">我会用你连接的数据，构建关于你的记忆。只读取你选择的内容，可从当前对话移除。</p>
+    <div id="m-reco" class="m-connectors"></div>
+    <button class="btn ghost wide" id="m-skip">先直接聊聊</button>
+  </div>
+
+  <div id="m-wz-3" class="is-hidden">
+    <button class="m-back" id="m-back-2">← 返回</button>
+    <h2 id="m-wz3-title">确认读取</h2>
+    <div id="m-read-head"></div>
+    <div class="m-section-label">将读取</div>
+    <div id="m-read-items"></div>
+    <div id="m-read-scope" class="scope-row"></div>
+    <button class="btn primary wide" id="m-read-btn">开始读取</button>
+  </div>
+
+  <div id="m-wz-4" class="is-hidden">
+    <div class="eyebrow">UNDERSTANDING</div>
+    <h2 id="m-wz4-title">先核对这份资料</h2>
+    <div id="m-insights"></div>
+    <div class="m-section-label">理解卡</div>
+    <div id="m-under"></div>
+    <div class="m-actions">
+      <button class="btn ghost" id="m-wz-edit">先改一条</button>
+      <button class="btn primary" id="m-wz-start">开始对话</button>
+    </div>
+  </div>
+
+</section>
+
+<!-- 主界面 -->
+<div id="m-app" class="app is-hidden">
+  <header class="m-top">
+    <div class="m-brand"><span class="mark" data-design-light></span><span>回响<small id="m-design-state">安静陪着</small></span></div>
+    <div class="m-top-actions"><button type="button" id="m-design-search" aria-label="搜索对话和记忆">⌕</button><button type="button" id="m-design-settings" aria-label="打开设置与连接">⚙</button></div>
+    <div class="m-chips" style="display:none">
+      <span id="m-engine" class="chip">在线</span>
+      <span id="m-device-chip" class="chip">设备未开</span>
+    </div>
+  </header>
+
+  <div class="m-topic-toolbar"><div id="m-design-topics" class="topic-tabs" aria-label="话题视图"></div><p class="topic-description">未标记归「日常」，仅本设备视图。</p></div>
+  <div class="chat-viewport">
+  <main id="m-main" class="m-main">
+    <div id="m-chat-empty" class="m-chat-empty">
+      <div data-design-light aria-hidden="true"></div>
+      <div class="m-greet">今天，也留一点空间给自己。</div>
+      <p>我是回响。想说一件小事，或慢慢理一理心情，<br class="m-greeting-break">都可以从这里开始。</p>
+      <div class="m-chips-row" aria-label="选择一句话开始聊天">
+        <button type="button" data-prompt="今天想和你聊聊，">说说今天</button>
+        <button type="button" data-prompt="帮我梳理一下，">一起梳理</button>
+        <button type="button" data-prompt="先听我说，">先听我说</button>
+      </div>
+      <div class="m-connect-invite">
+        <div class="m-entry-heading"><b>让回响多了解你一点</b><span>随时可以，慢慢来</span></div>
+        <div class="m-entry-grid" aria-label="选择资料或了解设备">
+          <button type="button" class="m-entry" data-m-entry="feishu"><span class="m-entry-icon feishu-icon" aria-hidden="true">↗</span><span><b>飞书</b><small>选一篇文档</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+          <button type="button" class="m-entry" data-m-entry="rokid"><span class="m-entry-icon rokid-icon" aria-hidden="true">⌁</span><span><b>Rokid 眼镜</b><small>待联调 · 看看设想</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+          <button type="button" class="m-entry" data-m-entry="apple_calendar"><span class="m-entry-icon calendar-icon" aria-hidden="true">▦</span><span><b>日历</b><small>未来 7 天 · 先确认</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+          <button type="button" class="m-entry" data-m-entry="local_files"><span class="m-entry-icon local-icon" aria-hidden="true">⌂</span><span><b>本机电脑</b><small>只选需要的文件</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+        </div>
+        <p>先聊聊也很好。资料读取前，都会请你确认。</p>
+        <button type="button" class="text-btn" id="m-open-connect">看看其他连接</button>
+        <button type="button" class="text-btn" id="m-skip-connect">现在先聊聊</button>
+      </div>
+    </div>
+    <div id="m-messages" class="messages"></div>
+    <div id="m-next" class="next-card is-hidden"></div>
+  </main>
+  <button type="button" id="m-chat-new-messages" class="chat-new-messages is-hidden">新消息 ↓</button>
+  </div>
+
+  <div id="m-carryover" class="m-carryover is-hidden">
+    <div id="m-carryover-text" class="carryover-content"></div>
+    <span style="display:flex;gap:6px;flex:none">
+      <button class="mini-btn" id="m-carry-accept">带进这次</button>
+      <button class="mini-btn" id="m-carry-dismiss">不用</button>
+    </span>
+  </div>
+
+  <div id="m-starters" class="m-starters is-hidden"></div>
+
+  <div id="m-memory-proposal" class="is-hidden" role="status" style="padding:10px 14px; background:#f6f3eb; border-radius:12px; margin:6px 12px; font-size:13px"></div>
+  <label class="memory-preference-toggle"><input type="checkbox" id="m-memory-proposal-enabled"> 偶尔提议记住我的原话（由我决定）</label>
+  <p id="m-chat-error" class="chat-error is-hidden" role="status"></p>
+  <button type="button" id="m-chat-recover" class="text-btn is-hidden">核对发送状态</button>
+  <button type="button" id="m-chat-stop-pending" class="text-btn is-hidden">请求停止这条回复</button>
+  <div id="m-source-uncertain-notice" class="m-source-uncertain is-hidden" role="status">
+    <span>之前的来源接入结果未确认。请先核对已接入资料，避免重复接入。</span>
+    <span><button type="button" class="text-btn" id="m-source-uncertain-history">核对已接入资料</button>
+      <button type="button" class="text-btn" id="m-source-uncertain-dismiss">已核对，关闭</button></span>
+  </div>
+  <section class="companion-boundary" data-companion-boundary aria-label="陪伴与安静"></section>
+  <div class="content-update-line" data-content-update><span data-update-status role="status" aria-live="polite"></span><button type="button" class="text-btn" data-update-check data-copy-key="connection.sync.check">检查更新</button></div>
+  <div class="response-choices" aria-label="选择回应方式">
+    <span>希望回响</span>
+    <button type="button" data-response-choice="listen">先听我说</button>
+    <button type="button" data-response-choice="reflect">一起梳理</button>
+    <button type="button" data-response-choice="auto">自然聊</button>
+    <span class="response-choices-hint">加入草稿，发送后生效；随时可换</span>
+  </div>
+  <form id="m-composer" class="composer">
+    <textarea id="m-input" rows="1" placeholder="说点什么……"></textarea>
+    <button type="button" class="mic is-hidden" id="m-meme">表情</button>
+    <button type="button" class="mic" id="m-mic">语音</button>
+    <button type="button" class="mic is-hidden" id="m-stop">停止</button>
+    <button type="submit" class="send">发送</button>
+  </form>
+
+  <nav class="m-tabbar" aria-label="主要导航">
+    <button class="m-tab" data-mtab="today"><span aria-hidden="true">◌</span><span data-copy-key="nav.today">回响</span></button>
+    <button class="m-tab active" data-mtab="chat"><span aria-hidden="true">⌁</span><span data-copy-key="nav.chat">对话</span></button>
+    <button class="m-tab" data-mtab="understand"><span aria-hidden="true">▤</span><span data-copy-key="nav.memory">记忆</span></button>
+  </nav>
+</div>
+
+<!-- 底部弹层 -->
+<div id="m-sheet" class="sheet is-hidden">
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-card">
+    <div class="sheet-head">
+      <h3 id="m-sheet-title">理解</h3>
+      <button class="close" data-close>关闭</button>
+    </div>
+    <div id="m-sheet-body" class="sheet-body"></div>
+  </div>
+</div>
+
+<div id="m-action" class="m-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="m-action-title">
+  <div class="m-modal-card">
+    <div class="eyebrow">我打算这样做</div>
+    <ol class="plan-steps"><li>只处理下方核对过的内容。</li><li>默认保存在本机，消息草稿不发送。</li><li>系统写入需另行勾选；写入后不能承诺自动撤回。</li></ol>
+    <h3 id="m-action-title">创建提醒</h3>
+    <p id="m-action-detail" class="note"></p>
+    <label class="m-action-field"><span>标题</span><input id="m-action-name" maxlength="200" autocomplete="off" placeholder="给这件事起个名字" /></label>
+    <p id="m-action-result" class="note is-hidden" role="status"></p>
+    <label class="check-row is-hidden" id="m-action-message-row">
+      <span id="m-action-content-label">内容</span>
+      <textarea id="m-action-message" rows="3" placeholder="消息草稿（不会自动发送）"></textarea>
+    </label>
+    <label class="check-row is-hidden" id="m-action-when-row">
+      <span>时间</span>
+      <input type="datetime-local" id="m-action-when" />
+    </label>
+    <label class="check-row is-hidden" id="m-action-real-row">
+      <input type="checkbox" id="m-action-real" />
+      尝试写入系统提醒事项（需权限）
+    </label>
+    <div class="m-actions">
+      <button class="btn ghost" id="m-action-cancel">取消</button>
+      <button class="btn primary" id="m-action-confirm">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="m-meme-modal" class="m-modal is-hidden" role="dialog" aria-modal="true" aria-label="本机表情图库">
+  <div class="m-modal-card">
+    <div class="apps-head"><h3>斗图</h3><button class="icon-btn" id="m-meme-close">×</button></div>
+    <p class="synthetic">回响自带表情；也可使用你本机已有的表情。</p>
+    <div id="m-meme-grid" class="meme-grid"></div>
+  </div>
+</div>
+
+<div id="m-auth" class="m-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="m-auth-title" aria-hidden="true" tabindex="-1">
+  <div class="m-modal-card">
+    <div class="eyebrow">FEISHU · AUTHORIZATION</div>
+    <h3 id="m-auth-title">连接飞书</h3>
+    <p id="m-auth-hint" class="synthetic">正在唤起飞书授权…</p>
+    <a id="m-auth-url" class="btn primary wide is-hidden" target="_blank" rel="noopener">在飞书中打开授权</a>
+    <p id="m-auth-status" class="synthetic">等待你在飞书中确认…</p>
+    <button class="btn ghost wide is-hidden" id="m-auth-fix">了解并更改凭据存储</button>
+    <p class="note">关闭此窗口不会撤销已发起的授权；授权链接可能在有效期内继续生效。</p><div class="m-actions"><button class="btn ghost" id="m-auth-cancel">关闭</button></div>
+  </div>
+</div>
+
+<dialog id="m-rokid-outline" class="m-rokid-dialog" aria-labelledby="m-rokid-title" aria-describedby="m-rokid-description">
+  <button type="button" class="m-welcome-close" data-m-rokid-close aria-label="关闭 Rokid 介绍">×</button>
+  <span class="m-rokid-badge">Rokid · 待联调</span>
+  <h2 id="m-rokid-title">把一句陪伴，带到眼前。</h2>
+  <p id="m-rokid-description">我们计划让你主动选择的简短提示，出现在 Rokid 眼镜里。比如一条自己确认过的提醒，或一句想带走的话。</p>
+  <div class="m-rokid-scope"><b>现在可以做什么</b><p>先在回响里聊聊、核对记忆和保存提醒。</p><b>还需要完成什么</b><p>具体型号、手机连接方式与真机显示仍待联调。当前不会连接眼镜，也不会请求设备权限。</p></div>
+  <button type="button" class="btn primary wide" data-m-rokid-close>明白了，先回到聊天</button>
+</dialog>
+
+<div id="m-toast" class="toast is-hidden"></div>
+<script src="/static/startup-guard.js?v=fb9700ea37a70d76"></script>
+<script src="/static/action-cards.js?v=dbe0125a989a3987"></script>
+<script src="/static/memory-proposal.js?v=2b762001652794c3"></script>
+<script src="/static/companion-choices.js?v=f8fddd4115b6e179"></script>
+<script src="/static/contact-contract.js?v=feaef733761dc498"></script>
+<script src="/static/companion-boundary.js?v=9f7064ef5da3f82e"></script>
+<script src="/static/proactive-contact.js?v=1b420ff27a413139"></script>
+<script src="/static/mood.js?v=127121994941f5e6"></script>
+<script src="/static/followups.js?v=5b2e33e357d5472a"></script>
+<script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
+<script src="/static/file-picker.js?v=4423da3d970bf429"></script>
+<script src="/static/chat-transport.js?v=0cb85f853d5850f2"></script>
+<script src="/static/generated-shared.js?v=279e6e0bf8a3189a"></script>
+<script src="/static/client-sync.js?v=9de5b62c3f9b5f46"></script>
+<script src="/static/companion-welcome.js?v=6aaed23ecb72760e"></script>
+<script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
+<script src="/static/lab.js?v=2cab1a42f2a11c03"></script>
+<script src="/static/design-system.js?v=7dc7d736e9075954"></script>
+<script src="/static/paired-devices.js?v=8641114376d41d40"></script>
+<script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
+<script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
+<script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
+<script src="/static/m.js?v=74aea5ef69b46157"></script>
+</body>
+</html>

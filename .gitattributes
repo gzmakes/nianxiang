@@ -1,0 +1,2 @@
+# Preserve imported bytes so SHA256 verification is portable across platforms.
+imports/** -text

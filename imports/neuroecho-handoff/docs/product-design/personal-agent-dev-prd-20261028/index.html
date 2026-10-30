@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>念响 · 开发执行PRD</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:#f6f5f1;color:#26332f;font:16px/1.85 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}a{color:#3d597e;text-underline-offset:4px;overflow-wrap:anywhere}button,input{font:inherit}button,a,summary,input{-webkit-tap-highlight-color:transparent}button{cursor:pointer;border:1px solid #cfd7d1;background:#fff;color:#304d40;border-radius:30px;padding:8px 16px;font-size:13px;line-height:1.5}button:hover{background:#eef3ef}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #b78339;outline-offset:4px}.reading-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;border-bottom:1px solid #dfe4df;background:#f6f5f1f5;backdrop-filter:blur(10px);padding:13px max(24px,calc((100vw - 960px)/2));line-height:1.4;font-size:12px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;white-space:nowrap;color:#283e32;font-weight:650}.brand span{display:grid;place-items:center;width:32px;height:32px;border:1px solid #839686;border-radius:50%;font-size:14px}#read-status{margin-left:auto;white-space:nowrap;color:#62766a}main{max-width:960px;margin:auto;padding:0 24px 60px}.hero{padding:66px 0 34px}.eyebrow{font-size:10px;letter-spacing:.15em;color:#6b7b6d}h1,h2,h3{line-height:1.4;letter-spacing:-.025em}h1{font-size:clamp(36px,5.5vw,58px);margin:18px 0 20px;font-weight:650}h1 span{color:#597b64}.lede{font-size:20px;max-width:650px}.draft{display:inline-block;font-size:12px;padding:5px 12px;background:#f2e7d3;border-radius:25px;color:#79572a}.hero-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin:25px 0}.hero-actions a{font-size:14px}.primary{display:inline-block;border-radius:30px;background:#365943;color:#fff;text-decoration:none;padding:11px 19px}.meta,small{font-size:12px;color:#6c7a70}.gates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 28px}.gates>div{padding:20px;border:1px solid #d9ddd4;border-radius:20px;background:#eeefe8}.gate-number{display:grid;place-items:center;width:29px;height:29px;border-radius:50%;border:1px solid #adbaaa;font-size:12px}.gates h3{font-size:16px;margin:12px 0 8px}.gates p{font-size:13px;line-height:1.6}.gates small{display:block;line-height:1.65}.chapter-nav{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:18px}.chapter-nav a{font-size:12px;border:1px solid #d7ded6;border-radius:25px;padding:7px 13px;text-decoration:none;background:#fff}.chapter{border-top:1px solid #d5ddd3;padding:34px 0 40px;scroll-margin-top:12px}.section-title{display:flex;align-items:center;gap:14px;margin-bottom:24px}.section-title>span{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid #9eafa2;border-radius:50%;font-size:12px;color:#5a7560}.section-title h2{font-size:26px;margin:0}p{margin:0 0 18px}li{margin:0 0 13px}ol{padding-left:26px}strong,b{font-weight:650}.read-check{display:flex;align-items:center;gap:10px;font-size:12px;color:#6b796f;padding-top:16px}.read-check input{accent-color:#365943;width:17px;height:17px}.feature{background:#fff;border:1px solid #dce2dc;border-radius:22px;padding:25px;margin:17px 0}.feature header{display:flex;gap:15px}.feature-id{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:50%;background:#eaf0e9;color:#45634d;font-size:12px}.feature h3{font-size:20px;margin:0 0 8px}.feature header p{font-size:14px;color:#68786b;margin-bottom:16px}.done{background:#f1f5ee;padding:15px 18px;border-radius:14px;font-size:14px;line-height:1.8}.done b{font-size:12px;color:#4c6f52}.feature details{border-top:1px solid #e5e9e4;padding-top:12px;font-size:14px}.feature details p{padding-top:12px;margin-bottom:5px}.feature summary{cursor:pointer;font-size:12px;color:#6b796f}.table-wrap{overflow:auto;border:1px solid #dce2dc;border-radius:16px;margin:22px 0}table{width:100%;border-collapse:collapse;background:#fff;font-size:13px;min-width:600px}th{background:#eaf0e9;text-align:left;color:#3e5a45}th,td{padding:13px 15px;border-bottom:1px solid #e3e8e1;vertical-align:top}tr:last-child td{border-bottom:0}td:first-child{width:17%}.case-preview{border:1px solid #d9dccc;border-radius:18px;padding:20px;background:#f1f1e8;margin:22px 0}.case-preview>summary{cursor:pointer;font-size:14px}.case-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 15px}.case-buttons button[aria-pressed=true]{background:#365943;color:#fff}.case-result{font-size:14px}.case-result h3{font-size:17px;margin:10px 0}.case-result p{margin:8px 0}.case-label{font-size:11px;color:#7a673d}.empty-case{color:#6b776c}.scope-info{font-size:12px;border-left:3px solid #a8b69b;padding-left:12px;color:#6c7867}footer{padding-top:22px;border-top:1px solid #d5ddd3;display:flex;gap:15px;align-items:center;flex-wrap:wrap;font-size:12px;color:#6b796f}footer p{width:100%;margin-bottom:3px}@media(max-width:620px){main{padding:0 19px 40px}.reading-bar{padding:10px 16px;gap:10px;font-size:10px}.brand{font-size:11px;gap:7px}.brand span{width:27px;height:27px}#next-section{font-size:10px;padding:8px 10px}.hero{padding-top:38px}.hero h1{font-size:37px}.lede{font-size:17px}.draft{font-size:10px}.hero-actions{gap:16px}.hero-actions a{font-size:12px}.gates{grid-template-columns:1fr;gap:10px}.gates>div{padding:15px 17px;display:grid;grid-template-columns:30px 1fr;gap:0 12px}.gates h3{margin:2px 0 7px}.gates p,.gates small{grid-column:2;margin:0 0 4px}.chapter{padding:26px 0}.section-title h2{font-size:23px}.feature{padding:18px;margin:13px 0}.feature header{gap:11px}.feature h3{font-size:18px}.feature-id{flex-basis:32px;height:32px}.feature header p{font-size:13px}.done{font-size:13px;padding:13px}.feature details{font-size:13px}.read-check{min-height:45px}.case-preview{padding:16px}.case-buttons button{font-size:11px;min-height:40px}body{font-size:15px;line-height:1.9}.meta{font-size:11px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{body{background:#fff;font-size:10pt;color:#111}.reading-bar,.hero-actions,.chapter-nav,.read-check,button,.case-preview{display:none!important}main{max-width:none;padding:0}.hero{padding:0 0 20px}h1{font-size:30pt}.gates{grid-template-columns:repeat(3,1fr)}.chapter{padding:16px 0}.feature{break-inside:avoid;padding:14px}.feature details{font-size:9pt}.table-wrap{overflow:visible}table{min-width:0;font-size:9pt}th,td{padding:8px}.section-title h2{font-size:18pt}a{color:#222}.done{font-size:10pt}footer{display:none}}
+</style></head><body><div class="reading-bar"><a class="brand" href="#top"><span>回</span>开发执行稿</a><span aria-live="polite" id="read-status">阅读进度 0/5</span><button id="next-section">继续读下一节 ↓</button></div><main><header class="hero" id="top"><span class="eyebrow">ADHD FRIENDLY · PRD 0.2 · 2026.10.28</span><h1>念响<br/><span>开发执行 PRD</span></h1><p class="lede">有上下文的私人陪伴。先听你讲完，记住你确认的事，下次以你希望的方式回应。</p><p class="draft">主场景已确认 · 私人陪伴 · 接入与用户效果待验</p><div class="hero-actions"><a class="primary" href="#s1">从一页定义开始 ↓</a><a download="" href="开发执行PRD.md">下载文字稿 ↗</a><a href="../personal-agent-prd-20261027/index.html">研究附件 ↗</a></div><p class="meta">先读总览约3分钟，工程细节按需展开。勾选仅记录本机阅读进度，不表示开发完成。</p></header><aside aria-label="一个已定场景与两个接入门槛" class="gates"><div><span class="gate-number">1</span><h3>主场景已确认</h3><p>有上下文的私人陪伴</p><small>用户确认；产品落实负责 · 可据此拆功能；受挫交流后的一段倾诉为首个验证情境</small></div><div><span class="gate-number">2</span><h3>验到真实硬件能力</h3><p>RSC系列已选，接口/配置待验</p><small>脑机＋硬件负责 · 真实设备驱动与实时演示承诺</small></div><div><span class="gate-number">3</span><h3>锁定授权与模型路线</h3><p>待应用负责人核定</p><small>应用负责 · 真实账户读取和模型处理；可先做非敏感模拟</small></div></aside><nav aria-label="文档章节" class="chapter-nav"><a href="#s1">1 产品定义</a><a href="#s2">2 用户流程</a><a href="#s3">3 五项功能</a><a href="#s4">4 技术分工</a><a href="#s5">5 验收开工</a></nav><section class="chapter" id="s1"><div class="section-title"><span>01</span><h2>先读这一页</h2></div><p><strong>为谁、何时：</strong> 首批验证对象是有具体经历想讲、愿意对私人AI表达的成年人。首个验证情境：一次受挫交流后，想把话讲完，不想再解释背景或立刻被说教。不是按职业泛称“所有白领”。</p>
+<p><strong>解决什么：</strong> 旧聊天要重讲背景；AI常直接给建议；本人纠正后下次仍照旧；主动提醒可能越界。这些是待真实用户验证的痛点。</p>
+<p><strong>交付什么：</strong> 一段可选择倾听/梳理的交流，以及本人确认的经历与回应偏好；下次能接着聊，只有获准才轻问。用户已明确选这个主场景，工作书签与交易者移出首期。</p>
+<p><strong>已确定：</strong> 软硬件＋BCI方向、RSC系列租赁、Today式连接冷启动；Rokid为眼镜主候选。型号/SDK/实体输出待验，眼镜不进入首期必做。</p>
+<p><strong>本期只验证：</strong> 一份资料能否让人更容易开口；一次纠正能否使下一次先听再建议；硬件/EEG有无增益且佩戴成本是否值得。</p>
+<div id="case-room"></div><label class="read-check"><input data-read="s1" type="checkbox"/>我读完了这一节</label></section><section class="chapter" id="s2"><div class="section-title"><span>02</span><h2>用户只走一条路</h2></div><ol>
+<li><strong>带入背景：</strong> 选择一份自我说明/近期记录，或手动讲一件事。</li>
+<li><strong>得到回应：</strong> 一句有依据的开场；选择“先听我说 / 一起梳理”。</li>
+<li><strong>纠正理解：</strong> 讲完后纠正理解，选择是否记住；不把推测当经历。</li>
+<li><strong>自主体验：</strong> 自愿开启硬件反馈，随时暂停/停止。</li>
+<li><strong>再次回来：</strong> 采用新回应偏好续聊；若本人允许，在约定窗口轻问一次。</li>
+</ol>
+<p>不会要求先连接两个来源、先填人格问卷或一直戴着脑电帽。</p>
+<p><strong>体验例：</strong> 用户说“刚才那次交流有点难受，先别帮我想办法”；伙伴回应“好，我先听”。结束时本人确认“下次先问我要倾听还是建议”；再次进入采用这个偏好，未经同意不追问旧事。</p>
+<label class="read-check"><input data-read="s2" type="checkbox"/>我读完了这一节</label></section><section class="chapter" id="s3"><div class="section-title"><span>03</span><h2>只做这五项</h2></div><p>先看每张卡的“完成条件”，实现方式按需展开。五项围绕一段私人陪伴：有背景地开始、按本人意图回应、记对、能停、下次更合宜。</p><article class="feature"><header><span class="feature-id">F1</span><div><h3>连接后马上有内容</h3><p>从自我说明或近期记录开始，先问一个与本人有关的问题。</p></div></header><p class="done"><b>做到什么算完成</b><br/>授权后首卡能定位真实原文；缺资料不编造；用户只连一个也能推进。</p><details><summary>工程细节 · 应用＋产品</summary><p><b>输入</b> 本人选定的一份非敏感自我说明/近期记录；从飞书读取，也可手动输入。</p><p><b>行为</b> 首屏保留手表/日历/飞书入口。飞书授权后只读选定记录，展示事实、待确认理解和一个问题，例如“你想先讲完，再一起想办法吗？”</p><p><b>边界</b> 首期只实现飞书真实连接；手表/日历标“稍后支持”。不扫全库，不把登录成功说成读懂了。</p><p><b>失败</b> 取消、过期、无权限、空内容分别提示；可换资料/手动输入，连接验收仍记未通过。</p><p class="meta">追溯到长版需求：F01, F21, F22</p></details></article><article class="feature"><header><span class="feature-id">F2</span><div><h3>先弄清要倾听还是梳理</h3><p>用户不用面对空白框，也不被迫接受建议。</p></div></header><p class="done"><b>做到什么算完成</b><br/>用户说“先听”后不再给方案；用户主动改意图才转梳理；旧回复不会抢答。</p><details><summary>工程细节 · 产品/设计＋应用</summary><p><b>输入</b> 首张卡与用户当前发言。</p><p><b>行为</b> 提供“先听我说 / 一起梳理”；合并连发回合，新输入取消未展示的旧回复。每轮只推进一个问题。</p><p><b>边界</b> 不机械拆成很多气泡；倾听时不排任务。“今天先别问”覆盖后续主动提议。</p><p><b>失败</b> 模型超时保留用户输入，允许重试；不伪装已得到结论。</p><p class="meta">追溯到长版需求：F07, F08</p></details></article><article class="feature"><header><span class="feature-id">F3</span><div><h3>记错可以改，下次真的变</h3><p>事实、推测分开；本人确认后才成为长期记忆。</p></div></header><p class="done"><b>做到什么算完成</b><br/>纠正后重开仍采用新版本；删除后不再检索；未确认推测不进入确认记忆。</p><details><summary>工程细节 · 应用</summary><p><b>输入</b> 带来源的理解卡，以及用户确认/纠正。</p><p><b>行为</b> 保存本人确认的一条经历或偏好、来源、有效期与版本；再次进入用最新版。提供编辑、删除、导出。</p><p><b>边界</b> 临时状态不写成人格；角色虚构状态不作用户事实。换模型不清空用户记忆。</p><p><b>失败</b> 保存失败显示未保存；断开来源后停读，并清理对应缓存及派生记忆，迟到结果作废。</p><p class="meta">追溯到长版需求：F09, F14, F23</p></details></article><article class="feature"><header><span class="feature-id">F4</span><div><h3>真实硬件在场，随时能停</h3><p>实体键一按进入陪伴；自愿开启RSC相对反馈，不佩戴也能聊天。</p></div></header><p class="done"><b>做到什么算完成</b><br/>日志能追到真实帧与实物变化；停止在拟议2秒内生效。回放不能算实时验收通过。</p><details><summary>工程细节 · 脑机＋硬件；应用协作</summary><p><b>输入</b> 实际RSC帧、时间、质量和本次采集授权。</p><p><b>行为</b> 实体键启动/暂停/结束，圆形终端提供低干扰在场反馈；用户自选固定灯效或有效EEG的有限相对映射。坏质量回中性，命令需有回执。</p><p><b>边界</b> 只记录，不刺激。EEG不决定聊什么、是否存记忆或主动追问；不推断情绪原因。原始EEG不送模型，历史/合成/实时明确标记。</p><p><b>失败</b> 断流、坏质量、撤销立即停映射；云端不可用仍能本地停止。SDK未知时只能验接口模拟。</p><p class="meta">追溯到长版需求：F02, F03, F04, F05, F06, F16, F20</p></details></article><article class="feature"><header><span class="feature-id">F5</span><div><h3>下次记得，也知道什么时候不问</h3><p>留下一张本人确认的陪伴记录；主动跟进默认关闭。</p></div></header><p class="done"><b>做到什么算完成</b><br/>重开记得本人确认的内容且回应方式已变；未同意不主动问，约定范围最多一次，拒绝后保持安静。</p><details><summary>工程细节 · 产品＋应用</summary><p><b>输入</b> 确认的经历摘要、回应偏好，以及是否/何时允许再问。</p><p><b>行为</b> 保存一个陪伴记录对象。用户再进入同一话题时采用新偏好；仅在本人约定的时间窗、话题和App在线条件内轻问一次。</p><p><b>边界</b> “先听、不建议”继续生效；拒绝或静默优先。不在线则不补发过期提醒；首期不做后台跨端通知。</p><p><b>失败</b> 未确认不保存；保存失败不报完成。拒绝/断开使排队和迟到提议失效，重复事件不重复追问。</p><p class="meta">追溯到长版需求：F07, F09, F10, F11, F12</p></details></article><label class="read-check"><input data-read="s3" type="checkbox"/>我读完了这一节</label></section><section class="chapter" id="s4"><div class="section-title"><span>04</span><h2>技术与建设顺序</h2></div><p><strong>建议基线：</strong> H5界面＋本地采集/CLI桥＋FastAPI服务＋SQLite＋一个模型接口。确定状态机起步；不要先叠多个Agent框架。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>顺序</th>
+<th>产物</th>
+<th>复用 / AI可辅助</th>
+<th>必须人工验</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 接口与状态</td>
+<td>事件、来源、记忆、结果四类契约</td>
+<td>AI写schema/页面/模拟适配器</td>
+<td>字段语义、权限和失败状态</td>
+</tr>
+<tr>
+<td>② 两条输入</td>
+<td>一份文档＋一段真信号</td>
+<td>官方飞书CLI；厂商SDK/RSCAdapter</td>
+<td>真实授权、资源范围、质量/时序</td>
+</tr>
+<tr>
+<td>③ 一个交互闭环</td>
+<td>来源卡→纠正→确认记忆</td>
+<td>AI写受控状态机/存储/回归用例</td>
+<td>自然交流、重开、删除传播</td>
+</tr>
+<tr>
+<td>④ 一个实际结果</td>
+<td>一张陪伴记录＋实体反馈</td>
+<td>AI写结果卡与显示协议</td>
+<td>真实记忆、回应变化、反馈/停止</td>
+</tr>
+<tr>
+<td>⑤ 比较和展示</td>
+<td>对照记录与单Case演示</td>
+<td>AI辅助日志整理、图表</td>
+<td>用户收益、佩戴成本、来源真实性</td>
+</tr>
+</tbody>
+</table></div>
+<p>客户端/应用负责F1—F3；脑机/硬件负责F4；产品与应用共同负责F5，产品负责验收。正式排期按可用人时填写，设备等待不算代码工时。</p>
+<p><strong>四类最小数据：</strong> Source保留对象/位置/版本/模式；Memory保留原话/确认状态/有效期/修订；Sensor保留设备/时间/质量；Result保留批准版本/幂等键/对象ID/状态，以及允许再问的话题、时间窗、次数与拒绝失效标记。既有详细契约放附件，凭据留服务端。</p>
+<p><strong>数据边界：</strong> 仅记录，原始EEG留本地；非敏感测试文档先验链。模型处理范围与保留政策先核定；无合适条件不发送私人/公司/生理数据。网页不得提交任意shell命令。</p>
+<label class="read-check"><input data-read="s4" type="checkbox"/>我读完了这一节</label></section><section class="chapter" id="s5"><div class="section-title"><span>05</span><h2>开工与完成条件</h2></div><p><strong>主场景已定，仍有两个接入门槛：</strong> 脑机/硬件确认到手能力；应用锁授权与模型路线。产品/应用现在可以按五张卡拆任务；未取得真实接口前只验模拟，不宣称真实接入。实际参赛代码/素材使用遵守赛事规则，赛前资料不默认可直接交付。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>验收</th>
+<th>必须看到</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1 授权与撤销</td>
+<td>未授权不读；取消无首卡；断开后迟到结果不生效。</td>
+<td>未测</td>
+</tr>
+<tr>
+<td>T2 理解与自然回合</td>
+<td>来源可核对；纠正改变下一轮；先听时不说教，新输入取消旧回复。</td>
+<td>未测</td>
+</tr>
+<tr>
+<td>T3 持久记忆</td>
+<td>重开仍用最新确认版；未确认不记为事实；删除后不再检索。</td>
+<td>未测</td>
+</tr>
+<tr>
+<td>T4 真实信号与停止</td>
+<td>真帧、质量与实物可追踪；断流/撤销停映射；离线能停止。</td>
+<td>未测</td>
+</tr>
+<tr>
+<td>T5 有分寸的再次联系</td>
+<td>重开先听不说教；未同意不追问，同意后窗口内最多一次；拒绝/过期/离线不补发。</td>
+<td>未测</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>用户价值单独测：</strong> 先观察原办法，再比较同内容的软件、实体反馈、实体＋真实EEG；记录纠正后再犯、误打扰、是否主动再用，以及设置/佩戴/清洁成本；按参与者保留原始分母。小样本只作探索，不预填提升百分比。</p>
+<p><strong>完成定义：</strong> 五组关键验收有真实结果，主要失败链可解释；同一话题重开后仍记得本人确认的内容，用户能停止、纠正和删除。网页演示通过、曲线有变化、模型会聊天均不单独算完成。</p>
+<p><strong>首期不做：</strong> 工作书签与交易者产品线；多端同步/全库RAG/OS；日记漫画/角色市场；自动交易/付款/刺激；多种家居/眼镜/车载同时接入。自然交流、长期经历和多端分发保留方向，首期先做最薄链。</p>
+<p>研究依据、96项追溯、竞品、连接器与开源许可：<a href="../personal-agent-prd-20261027/index.html">完整研究PRD</a>。开发只读这份执行稿，遇到具体依赖再查附件。</p>
+<label class="read-check"><input data-read="s5" type="checkbox"/>我读完了这一节</label></section><footer><p>主场景B已由用户确认，selected_case已同步；实际责任人与接入验收另记。阅读标记不代表开发完成。</p><a download="" href="prd.json">结构化开发范围 ↗</a><button id="reset-reading">重置阅读标记</button><button id="print">打印文档</button></footer></main><script>const PRD={"version": "0.2", "date": "2026-10-28", "status": "primary_scene_confirmed_implementation_dependencies_pending", "selected_case": "B", "case_authority": "User explicitly selected contextual private companionship on 2026-10-28. This confirms the product scene, not device integration, user-market validation or team staffing.", "features": [{"id": "F1", "name": "连接后马上有内容", "summary": "从自我说明或近期记录开始，先问一个与本人有关的问题。", "owner": "应用＋产品", "input": "本人选定的一份非敏感自我说明/近期记录；从飞书读取，也可手动输入。", "behavior": "首屏保留手表/日历/飞书入口。飞书授权后只读选定记录，展示事实、待确认理解和一个问题，例如“你想先讲完，再一起想办法吗？”", "boundary": "首期只实现飞书真实连接；手表/日历标“稍后支持”。不扫全库，不把登录成功说成读懂了。", "failure": "取消、过期、无权限、空内容分别提示；可换资料/手动输入，连接验收仍记未通过。", "done": "授权后首卡能定位真实原文；缺资料不编造；用户只连一个也能推进。", "refs": ["F01", "F21", "F22"]}, {"id": "F2", "name": "先弄清要倾听还是梳理", "summary": "用户不用面对空白框，也不被迫接受建议。", "owner": "产品/设计＋应用", "input": "首张卡与用户当前发言。", "behavior": "提供“先听我说 / 一起梳理”；合并连发回合，新输入取消未展示的旧回复。每轮只推进一个问题。", "boundary": "不机械拆成很多气泡；倾听时不排任务。“今天先别问”覆盖后续主动提议。", "failure": "模型超时保留用户输入，允许重试；不伪装已得到结论。", "done": "用户说“先听”后不再给方案；用户主动改意图才转梳理；旧回复不会抢答。", "refs": ["F07", "F08"]}, {"id": "F3", "name": "记错可以改，下次真的变", "summary": "事实、推测分开；本人确认后才成为长期记忆。", "owner": "应用", "input": "带来源的理解卡，以及用户确认/纠正。", "behavior": "保存本人确认的一条经历或偏好、来源、有效期与版本；再次进入用最新版。提供编辑、删除、导出。", "boundary": "临时状态不写成人格；角色虚构状态不作用户事实。换模型不清空用户记忆。", "failure": "保存失败显示未保存；断开来源后停读，并清理对应缓存及派生记忆，迟到结果作废。", "done": "纠正后重开仍采用新版本；删除后不再检索；未确认推测不进入确认记忆。", "refs": ["F09", "F14", "F23"]}, {"id": "F4", "name": "真实硬件在场，随时能停", "summary": "实体键一按进入陪伴；自愿开启RSC相对反馈，不佩戴也能聊天。", "owner": "脑机＋硬件；应用协作", "input": "实际RSC帧、时间、质量和本次采集授权。", "behavior": "实体键启动/暂停/结束，圆形终端提供低干扰在场反馈；用户自选固定灯效或有效EEG的有限相对映射。坏质量回中性，命令需有回执。", "boundary": "只记录，不刺激。EEG不决定聊什么、是否存记忆或主动追问；不推断情绪原因。原始EEG不送模型，历史/合成/实时明确标记。", "failure": "断流、坏质量、撤销立即停映射；云端不可用仍能本地停止。SDK未知时只能验接口模拟。", "done": "日志能追到真实帧与实物变化；停止在拟议2秒内生效。回放不能算实时验收通过。", "refs": ["F02", "F03", "F04", "F05", "F06", "F16", "F20"]}, {"id": "F5", "name": "下次记得，也知道什么时候不问", "summary": "留下一张本人确认的陪伴记录；主动跟进默认关闭。", "owner": "产品＋应用", "input": "确认的经历摘要、回应偏好，以及是否/何时允许再问。", "behavior": "保存一个陪伴记录对象。用户再进入同一话题时采用新偏好；仅在本人约定的时间窗、话题和App在线条件内轻问一次。", "boundary": "“先听、不建议”继续生效；拒绝或静默优先。不在线则不补发过期提醒；首期不做后台跨端通知。", "failure": "未确认不保存；保存失败不报完成。拒绝/断开使排队和迟到提议失效，重复事件不重复追问。", "done": "重开记得本人确认的内容且回应方式已变；未同意不主动问，约定范围最多一次，拒绝后保持安静。", "refs": ["F07", "F09", "F10", "F11", "F12"]}], "primary_case": {"id": "B", "name": "有上下文的私人陪伴", "user": "受挫交流后愿意找私人伙伴倾诉的成年人", "moment": "想把话讲完，不想马上被说教", "pain": "重复解释背景、被误解，纠正后对方仍立即给建议", "result": "确认的经历＋下次怎样回应的偏好", "metric": "纠正后再犯次数、打扰感、是否主动再用"}, "archived_cases": [{"id": "A", "name": "工作/创作续接", "user": "独自写长文、方案或设计的成年人", "moment": "被打断后回来，不知道接哪里", "pain": "重建目标、原文位置和取舍；要向聊天工具重讲背景", "result": "能恢复的书签＋本人确认的下一步", "metric": "正确恢复耗时及错误次数；与普通书签比较"}, {"id": "C", "name": "交易者自订约定与陪伴", "user": "有个人交易纪律的成年交易者", "moment": "连续亏损后想冲动操作，又不想被打扰", "pain": "情绪独自消化，事前约定难在当时想起", "result": "本人约定的一次轻提醒＋复盘", "metric": "提醒合宜性与误打扰；不以盈利作效果指标"}], "gates": [{"id": "G1", "title": "主场景已确认", "status": "有上下文的私人陪伴", "owner": "用户确认；产品落实", "evidence": "2026-10-28用户明确选择B，更贴近原始构想。", "blocks": "可据此拆功能；受挫交流后的一段倾诉为首个验证情境"}, {"id": "G2", "title": "验到真实硬件能力", "status": "RSC系列已选，接口/配置待验", "owner": "脑机＋硬件", "evidence": "实际子型号、实时SDK、真帧/质量、实体停止与反馈。", "blocks": "真实设备驱动与实时演示承诺"}, {"id": "G3", "title": "锁定授权与模型路线", "status": "待应用负责人核定", "owner": "应用", "evidence": "飞书应用/必要scope、只读范围、处理方与允许发送的数据。", "blocks": "真实账户读取和模型处理；可先做非敏感模拟"}], "tests": [{"id": "T1", "scene": "授权与撤销", "expected": "未授权不读；取消无首卡；断开后迟到结果不生效。", "result": null}, {"id": "T2", "scene": "理解与自然回合", "expected": "来源可核对；纠正改变下一轮；先听时不说教，新输入取消旧回复。", "result": null}, {"id": "T3", "scene": "持久记忆", "expected": "重开仍用最新确认版；未确认不记为事实；删除后不再检索。", "result": null}, {"id": "T4", "scene": "真实信号与停止", "expected": "真帧、质量与实物可追踪；断流/撤销停映射；离线能停止。", "result": null}, {"id": "T5", "scene": "有分寸的再次联系", "expected": "重开先听不说教；未同意不追问，同意后窗口内最多一次；拒绝/过期/离线不补发。", "result": null}], "implementation_status": "specification_only_no_real_integrations", "long_reference": "../personal-agent-prd-20261027/index.html"};
+(()=>{'use strict';
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let read={};const key='xinji-dev-prd-reading-v2-companionship';
+try{const saved=JSON.parse(localStorage.getItem(key)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))read=saved}catch{}
+function renderRead(){let count=0;document.querySelectorAll('[data-read]').forEach(c=>{c.checked=read[c.dataset.read]===true;if(c.checked)count++});$('read-status').textContent=`阅读进度 ${count}/5`;$('next-section').textContent=count===5?'回到待定事项 ↑':'继续读下一节 ↓'}
+document.querySelectorAll('[data-read]').forEach(c=>c.addEventListener('change',()=>{read[c.dataset.read]=c.checked;try{localStorage.setItem(key,JSON.stringify(read))}catch{}renderRead()}));
+$('next-section').addEventListener('click',()=>{const next=[...document.querySelectorAll('[data-read]')].find(c=>!c.checked);(next?next.closest('section'):document.querySelector('.gates')).scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})});
+$('reset-reading').addEventListener('click',()=>{read={};try{localStorage.removeItem(key)}catch{}renderRead()});renderRead();
+const c=PRD.primary_case;
+$('case-room').innerHTML=`<article class="case-preview" id="confirmed-case"><span class="case-label">主场景B · 用户已确认 · 2026-10-28</span><div class="case-result"><h3>${esc(c.user)}</h3><p><b>时刻：</b>${esc(c.moment)}</p><p><b>痛点：</b>${esc(c.pain)}</p><p><b>交付：</b>${esc(c.result)}</p><p><b>验证：</b>${esc(c.metric)}</p><p class="scope-info">工作书签与交易者只留研究档案，本期不开发。具体痛点和效果仍需实测。</p></div></article>`;
+let printOpen=[];window.addEventListener('beforeprint',()=>{printOpen=[...document.querySelectorAll('.feature details')].filter(d=>d.open);document.querySelectorAll('.feature details').forEach(d=>d.open=true)});window.addEventListener('afterprint',()=>document.querySelectorAll('.feature details').forEach(d=>d.open=printOpen.includes(d)));$('print').addEventListener('click',()=>window.print());
+})();
+</script></body></html>

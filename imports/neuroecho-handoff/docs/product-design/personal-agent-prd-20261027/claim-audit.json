@@ -1,0 +1,128 @@
+[
+  {
+    "id": "A01",
+    "claim": "赛事时间与赛中代码/素材",
+    "reading_depth": "本轮重开官方正文",
+    "source": "https://clawhunt.store/articles/clawhunt-shanghai-hackathon",
+    "checked_at": "2026-10-28",
+    "supported": "公开公告支持；现场最终细则优先",
+    "limit": "未声称赛前HTML/图可直接参赛"
+  },
+  {
+    "id": "A02",
+    "claim": "赞助Token默认无ZDR",
+    "reading_depth": "本轮重开官方赞助条款",
+    "source": "https://clawhunt.store/articles/clawhunt-shanghai-hackathon",
+    "checked_at": "2026-10-28",
+    "supported": "不输入公司业务或敏感个人数据",
+    "limit": "不能默认真实Feishu内容/生理摘要可送中转"
+  },
+  {
+    "id": "A03",
+    "claim": "KnowU-Bench同意/拒绝后的克制",
+    "reading_depth": "本轮arXiv摘要",
+    "source": "https://arxiv.org/abs/2604.08455",
+    "checked_at": "2026-10-28",
+    "supported": "摘要支持评测主题；未复现成绩",
+    "limit": "更正R78错误工具引用"
+  },
+  {
+    "id": "A04",
+    "claim": "ProEvent事件/取消/时机",
+    "reading_depth": "本轮arXiv摘要",
+    "source": "https://arxiv.org/abs/2607.17701",
+    "checked_at": "2026-10-28",
+    "supported": "摘要支持事件维护评测主题",
+    "limit": "不拿论文成绩作本团队分数"
+  },
+  {
+    "id": "A05",
+    "claim": "VitaBench 2.0跨次偏好更新",
+    "reading_depth": "本轮arXiv摘要",
+    "source": "https://arxiv.org/abs/2605.27141",
+    "checked_at": "2026-10-28",
+    "supported": "摘要支持持续偏好与主动获取信息的任务",
+    "limit": "不声称已全文重现"
+  },
+  {
+    "id": "A06",
+    "claim": "RSC系列与本次交付",
+    "reading_depth": "重读原资料核查；附件规格",
+    "source": "assets/rsc-rental-spec.pdf",
+    "checked_at": "2026-10-27",
+    "supported": "系列选定，通道/子型号/SDK/成套交付未知",
+    "limit": "厂商参数不是实测，文件名不是64通道订单"
+  },
+  {
+    "id": "A07",
+    "claim": "Brain Bookmark实时分心能力",
+    "reading_depth": "现有源码核查复审；非本轮重跑训练",
+    "source": "https://github.com/Dililianxice/Dililianxice.github.io/tree/994202d72f665a40279a7f6a5eb8d0853fa404ad/brain-bookmark",
+    "checked_at": "2026-10-27",
+    "supported": "公开3任务历史回放，成绩为自报",
+    "limit": "不能改名实时分心分类器"
+  },
+  {
+    "id": "A08",
+    "claim": "股民脑波越稳越高手",
+    "reading_depth": "前轮原论文全文核查记录复审",
+    "source": "https://www.nber.org/papers/w35345",
+    "checked_at": "2026-10-27",
+    "supported": "工作论文中16交易者、9544执行的关联，不支持跨人技能排名",
+    "limit": "本轮网页403；未把未能重开写成论文不存在或重现成功"
+  },
+  {
+    "id": "A09",
+    "claim": "大型演唱会市场",
+    "reading_depth": "上轮原始报告图页与政府转载核查复审",
+    "source": "../personal-agent-20261027/演唱会市场口径与机会.md",
+    "checked_at": "2026-10-27",
+    "supported": "2025近3800万观演人次/2496场为事件口径，非软件TAM",
+    "limit": "未取得去重人数、软件需求率与愿付费比例；本轮不刷新成新数据"
+  },
+  {
+    "id": "A10",
+    "claim": "dsh-pet代码与素材许可",
+    "reading_depth": "前轮锁定源码核查复审",
+    "source": "https://github.com/PC2005-cloud/dsh-pet/blob/b78e3fcf92ac78cee569aed7cc27eeb2a8d51757/README.md",
+    "checked_at": "2026-10-27",
+    "supported": "代码MIT与素材禁止商用分开；106段仅快照",
+    "limit": "未安装、未把整包素材当自由商用"
+  },
+  {
+    "id": "A11",
+    "claim": "Today截图与CLI授权",
+    "reading_depth": "用户截图＋前轮官方CLI文档核查",
+    "source": "https://github.com/larksuite/cli",
+    "checked_at": "2026-10-27",
+    "supported": "截图展示登录，不能推断内部CLI或全库授权",
+    "limit": "本文原型为模拟；没有真实OAuth完成证据"
+  },
+  {
+    "id": "A12",
+    "claim": "Rokid当前产品与历史CLI",
+    "reading_depth": "前轮平台与原仓核查复审",
+    "source": "https://open.rokid.com/",
+    "checked_at": "2026-10-27",
+    "supported": "当前SDK/工作台与历史rokidos-cli分开",
+    "limit": "到手型号、准入与成功显示均未知"
+  },
+  {
+    "id": "A13",
+    "claim": "三个问题提升30%留存",
+    "reading_depth": "用户思考/会议口述，非外部因果证据",
+    "source": null,
+    "checked_at": "2026-10-28",
+    "supported": "没有核准研究，不作为增长事实",
+    "limit": "可以设计实验，但不能预填结果"
+  },
+  {
+    "id": "A14",
+    "claim": "33产品/25连接器/141来源",
+    "reading_depth": "当前本地结构化记录清点",
+    "source": null,
+    "checked_at": "2026-10-28",
+    "supported": "是样本/混合能力/记录的数量",
+    "limit": "不等于全市场、25现款官方CLI或141个独立证据"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "metadata_url": "https://api.github.com/repos/adoptium/temurin17-binaries/releases/latest",
+  "release_name": "jdk-17.0.21+9",
+  "release_url": "https://github.com/adoptium/temurin17-binaries/releases/tag/jdk-17.0.21%2B9",
+  "asset": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.21_9.tar.gz",
+  "name": "OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.21_9.tar.gz",
+  "size": 186192554,
+  "checksum_url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.21_9.tar.gz.sha256.txt",
+  "official_sha256": "78b08c7f5a0598242d5719c022e19479cb4a3aa45c37c19726a757a469ed1c15",
+  "downloaded_archive_sha256": "78b08c7f5a0598242d5719c022e19479cb4a3aa45c37c19726a757a469ed1c15",
+  "java_version_verified": "Temurin-17.0.21+9",
+  "global_installation": false,
+  "android_sdk_license_accepted": false
+}

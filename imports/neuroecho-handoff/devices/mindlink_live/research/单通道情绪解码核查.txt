@@ -1,0 +1,51 @@
+单通道 EEG 情绪解码：能研究，但不能把当前分数直接称为心情（2026-10-28）
+
+结论
+存在单通道情绪分类论文，与你的额部MindLink较接近的是MindWave/Fp1研究。
+已有结果主要是受控刺激、短时情绪标签；不等于日常连续心情识别，更不等于抑郁/焦虑诊断。
+本项目目前没有经过验证的情绪模型；Meditation也不是“开心”的读数。
+
+1. Quesada-Tabares et al., 2017, Emotions Detection based on a Single-electrode EEG Device.
+PhyCS, 89–95. DOI:10.5220/0006476300890095
+全文：https://www.scitepress.org/Papers/2017/64763/64763.pdf
+7人，MindWave额部Fp1、512Hz，60张IAPS图片形成3组情绪刺激，提取频带/复杂度等特征，C5.0决策树。
+报告平均准确率80.71%。这是小样本、按被试建模的图像组分类，不能当MindLink跨人或日常情绪准确率。
+论文将图片内窗特征平均；不能仅看到重叠窗口就断言其一定发生窗口泄漏。跨日泛化仍未证明。
+
+2. Athavipach et al., 2019, A Wearable In-Ear EEG Device for Emotion Monitoring.
+Sensors 19(18):4014. DOI:10.3390/s19184014
+全文：https://pmc.ncbi.nlm.nih.gov/articles/PMC6767669/
+13人，耳内单通道EEG，图像诱发、自报评价、SVM，被试内交叉验证。
+效价71.07%、唤醒72.89%、四象限53.72%。电极位置与额部不同，不能直接移植性能。
+尤其二分类分数与四情绪分类分数不可混着比较。
+
+3. Taran & Bajaj, 2019, Emotion recognition from single-channel EEG signals using a two-stage correlation and instantaneous frequency-based filtering method.
+Computer Methods and Programs in Biomedicine 173:157–165. DOI:10.1016/j.cmpb.2019.03.015
+摘要：https://pubmed.ncbi.nlm.nih.gov/31046991/
+摘要报告单双极通道、happy/fear/sad/relax四分类90.63%。本轮只核验到摘要，未核实完整样本和切分细节；不作为当前项目预期精度。
+
+4. Li et al., 2023, An innovative EEG-based emotion recognition using a single channel-specific feature from the brain rhythm code method.
+Frontiers in Neuroscience 17:1221512. DOI:10.3389/fnins.2023.1221512
+全文：https://pmc.ncbi.nlm.nih.gov/articles/PMC10397731/
+从DEAP/MAHNOB/SEED多通道数据挑选通道相关特征，与预先固定一个Fp1传感器并不是同一条件。
+选通道/选特征也必须限制在训练集，不能根据全体或测试结果选最好的通道后声称可泛化。
+
+为什么盯着一点可能分数较高
+可能同时存在持续注意和更少眼动/眨眼/面肌活动。认真心算也能改变EEG，但并非所有专注都对应同一频谱。
+单额部通道难分离这些因素。该解释是基于测量位置和伪迹研究的推断，不是对你这次信号的因果鉴定。
+单通道眼动控制研究：https://pmc.ncbi.nlm.nih.gov/articles/PMC8400812/
+因此已经分别保留fixation与thinking标签，不自动将其变成focus真值。
+
+可执行下一步
+A. 先做个人专注模型：同样睁眼、同一注视位置，交替做任务与休息/走神自报；采集反应时/正确率作为额外参照。
+   分开记录注视本身、思考、主观专注；不能用eSense高低作训练标签再宣称得到独立验证。
+B. 情绪先拆两条轴：效价(不愉快到愉快)、唤醒(平静到激动)，每段用1–9自报，并记录刺激起止时间。
+   当前emotion_rating接口提供即时标记；正式实验需增加trial_id、刺激区间和回顾评分映射。
+C. 固定额部位置、睁闭眼、光照与声音条件；避免标签之间同时改变大量眼动/讲话/姿势。
+   至少分3个不同日期采集，最终一天封存测试；这是起步设计，不保证统计效力。
+D. 先比较简单基线：频带相对功率/对数功率、谱熵+正则化逻辑回归或SVM。全部标准化/调参只在训练会话中做。
+   交叉验证以会话/试次分组；重叠窗不能随机分到训练测试。报告平衡准确率、混淆矩阵、每类试次数与不确定性。
+E. 要控制眼电：检查眨眼/大幅度段、与仅用伪迹幅度的基线比较；单通道不能照搬多通道ICA或左右额叶不对称。
+F. 只有跨日保留测试优于机会且稳定，才接入实时emotion输出；无效/域外信号返回不可用。
+
+当前训练器只实现自报focus/mind_wandering，不含情绪训练；上述方案是后续实验方案，未宣称已经完成。

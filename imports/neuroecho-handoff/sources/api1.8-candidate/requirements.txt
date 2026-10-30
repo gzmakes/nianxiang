@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.8
+qrcode[pil]>=7.4
+
+# Windows has no system IANA zone database; used by follow-up time zones.
+tzdata; sys_platform == "win32"

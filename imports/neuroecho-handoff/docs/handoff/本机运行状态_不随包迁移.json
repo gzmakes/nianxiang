@@ -1,0 +1,33 @@
+{
+  "recorded_at_utc": "2026-10-30T05:31:17.180673+00:00",
+  "code_work_paused_for_handoff": true,
+  "known_retained_services": [
+    {
+      "port": 18827,
+      "loopback_only": true,
+      "responds": true,
+      "user_messages": 0,
+      "memories": 0,
+      "sources": 0,
+      "model_configured": true,
+      "model_managed_by_environment": true
+    },
+    {
+      "port": 18829,
+      "loopback_only": true,
+      "responds": true,
+      "user_messages": 0,
+      "memories": 0,
+      "sources": 0,
+      "model_configured": false,
+      "model_managed_by_environment": false
+    }
+  ],
+  "qa_processes_stopped": [
+    686,
+    9143
+  ],
+  "original_18787_service_untouched": true,
+  "credentials_or_live_database_in_handoff": false,
+  "mac_gui_synthetic_draft": "Present at last actual GUI observation; only unsent local text in Mac profile, not copied to handoff."
+}
