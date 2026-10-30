@@ -1,4 +1,4 @@
-/* 光球表情（2026-10-31，产品要求）：光球有两只眼睛，表情随你最近一条消息里的情绪关键词变化。
+/* 光球表情（2026-10-31，产品要求）：光球有两只眼睛，表情随你最近一条消息里的情绪关键词变化，眼睛跟着鼠标走。
    关键词与 emoji 回应共用同一套（emoji-reactions.js 的 XinjiEmojiRules），只在本机判断，不发送、不写入记忆，
    也不替你判断情绪——只是「我收到了」的一个眼神。表情保持约 12 秒后回到平时；思考 / 出错 / 先不打扰由对话状态决定，优先于表情。 */
 (() => {
@@ -47,6 +47,27 @@
       if (face) setFace(face);
     }
     if (sawReal) initialized = true;
+  }
+
+  // 眼睛跟着鼠标：以页面上那颗光球为中心，鼠标越远眼睛偏得越多（最多眼睛自身宽度的 90%）；鼠标离开页面就回正。
+  const reducedMotion = () => root.dataset.reduceMotion === 'true' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  let raf = 0, pointer = null;
+  function gaze() {
+    raf = 0;
+    // 页面上可能有几颗光球（顶栏那颗在宽屏下是隐藏的），取第一颗真正显示出来的
+    let rect = null;
+    for (const orb of document.querySelectorAll('.presence-light')) { const box = orb.getBoundingClientRect(); if (box.width) { rect = box; break; } }
+    if (!pointer || !rect || reducedMotion()) { root.style.removeProperty('--gaze-x'); root.style.removeProperty('--gaze-y'); return; }
+    const dx = (pointer.x - (rect.left + rect.width / 2)) / 260, dy = (pointer.y - (rect.top + rect.height / 2)) / 260;
+    const length = Math.hypot(dx, dy), limit = Math.min(1, length) / (length || 1);
+    root.style.setProperty('--gaze-x', `${Math.round(dx * limit * 90)}%`);
+    root.style.setProperty('--gaze-y', `${Math.round(dy * limit * 45)}%`);
+  }
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(gaze); };
+  if (typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches) {
+    document.addEventListener('mousemove', event => { pointer = { x: event.clientX, y: event.clientY }; schedule(); }, { passive: true });
+    document.addEventListener('mouseleave', () => { pointer = null; schedule(); });
+    window.addEventListener('blur', () => { pointer = null; schedule(); });
   }
 
   function start() {

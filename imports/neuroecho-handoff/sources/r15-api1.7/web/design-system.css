@@ -422,3 +422,48 @@ html[data-reduce-motion=true] .presence-light-core,html[data-reduce-motion=true]
 @media(min-width:900px){
   #app .echo-slogan{font-size:19px;letter-spacing:.1em;filter:url(#echo-slogan-thin);background:linear-gradient(100deg,#2E3849 0%,#66728B 55%,#A3AFCB 100%);-webkit-background-clip:text;background-clip:text}
 }
+/* Web 改版 7 (2026-10-31，产品要求)：标语加深；眼睛跟鼠标（orb-face.js 写 --gaze-x/--gaze-y）；搜索框去掉黑色选中框；
+   emoji 回应按钮与语音图标同尺寸、同一条线；心情记录卡的平面、坐标标签和滑杆重做（mood-polish.js 写滑杆填充）；
+   回复语音自动播放（message-voice.js）。 */
+@media(min-width:900px){#app .echo-slogan{background:linear-gradient(100deg,#111826 0%,#2A3447 55%,#4C5872 100%);-webkit-background-clip:text;background-clip:text}}
+:root{--gaze-x:0%;--gaze-y:0%}
+.presence-light-core::before,.presence-light-core::after{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf);transition:transform .3s cubic-bezier(.2,.8,.2,1),height .4s ease,width .4s ease,top .4s ease,left .4s ease,border-radius .4s ease,background .3s ease,opacity .3s ease}
+@keyframes orb-blink{0%,90%,100%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}93%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(.08)}96%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}}
+/* 搜索框：聚焦只是边缘略深、投影略大 */
+body:has(#app) .design-search-head input:focus,body:has(#app) .design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18);box-shadow:0 6px 18px rgba(80,100,170,.14)}
+/* emoji 回应按钮：和语音图标一样 32×32、同一条线 */
+#app .msg .emoji-react-btn{top:28px;width:32px;height:32px;min-width:32px;min-height:32px;border-radius:16px}
+/* 心情记录卡 */
+.mood-card .mood-map-wrap{padding:0;margin:4px 0 0}
+.mood-card .mood-map{height:230px;border:0;border-radius:22px;
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.85) 0,rgba(255,255,255,0) 58%),
+    radial-gradient(circle at 100% 0,#FFC4A0 0,rgba(255,196,160,0) 62%),radial-gradient(circle at 0 0,#D6CCFF 0,rgba(214,204,255,0) 62%),
+    radial-gradient(circle at 0 100%,#B9CCFF 0,rgba(185,204,255,0) 62%),radial-gradient(circle at 100% 100%,#FFE0C8 0,rgba(255,224,200,0) 62%),
+    linear-gradient(140deg,var(--mood-tint,#DCE5FF),#FFE3D3);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.75),0 10px 26px rgba(80,100,170,.12)}
+.mood-card .mood-map:before,.mood-card .mood-map:after{background:rgba(255,255,255,.8)}
+.mood-card .mood-point{width:20px;height:20px;border:3px solid #fff;box-shadow:0 0 0 7px rgba(27,36,51,.08),0 6px 14px rgba(27,36,51,.28);transition:left .22s cubic-bezier(.2,.8,.2,1),top .22s cubic-bezier(.2,.8,.2,1)}
+.mood-card .mood-point::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:2px solid rgba(27,36,51,.22);animation:mood-pulse 2.4s ease-out infinite}
+@keyframes mood-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.mood-card .mood-axis{z-index:2;font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,.78);box-shadow:0 1px 4px rgba(80,100,170,.12);pointer-events:none}
+.mood-card .mood-axis.top{top:10px;color:#1B2433}.mood-card .mood-axis.bottom{bottom:10px;color:#56627A}
+.mood-card .mood-axis.left{left:10px;color:#4A5FA8}.mood-card .mood-axis.right{right:10px;color:#C2602F}
+.mood-card .mood-state{display:table;margin:12px auto 0;padding:6px 14px;border-radius:14px;background:rgba(255,255,255,.8);font-size:13px;color:var(--ink);box-shadow:0 1px 4px rgba(80,100,170,.1)}
+.mood-card .mood-sliders label{font-size:13px;color:var(--ink-mute);margin:16px 0 4px}
+.mood-card .mood-sliders input[type=range]{-webkit-appearance:none;appearance:none;height:40px;margin:0;padding:0;background:transparent;border:0;border-radius:0;
+  --track-a:#9DB4FF;--track-b:#FFB38A;--track-dim-a:rgba(157,180,255,.35);--track-dim-b:rgba(255,179,138,.35);--thumb:#C2602F}
+.mood-card .mood-sliders input[data-mood-y]{--track-a:#C9D2E6;--track-b:#FFC95C;--track-dim-a:rgba(201,210,230,.45);--track-dim-b:rgba(255,201,92,.35);--thumb:#1B2433}
+.mood-card .mood-sliders input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;
+  background:linear-gradient(90deg,var(--track-a),var(--track-b)) 0 0/var(--p,50%) 100% no-repeat,linear-gradient(90deg,var(--track-dim-a),var(--track-dim-b))}
+.mood-card .mood-sliders input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:#fff;border:2.5px solid var(--thumb);box-shadow:0 2px 8px rgba(27,36,51,.25);cursor:grab;transition:transform .15s}
+.mood-card .mood-sliders input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12);cursor:grabbing}
+.mood-card .mood-sliders input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--track-dim-a),var(--track-dim-b))}
+.mood-card .mood-sliders input[type=range]::-moz-range-progress{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--track-a),var(--track-b))}
+.mood-card .mood-sliders input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:2.5px solid var(--thumb);box-shadow:0 2px 8px rgba(27,36,51,.25)}
+.mood-card .mood-sliders input[type=range]:focus-visible{outline:none}
+.mood-card .mood-sliders input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(27,36,51,.12),0 2px 8px rgba(27,36,51,.25)}
+html[data-reduce-motion=true] .mood-card .mood-point::after{animation:none}
+@media(prefers-reduced-motion:reduce){.mood-card .mood-point::after{animation:none}}
+#app .msg [data-voice-clip]{min-width:32px;right:-40px}
+#app .msg .emoji-react-btn{right:-40px}
+#app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
