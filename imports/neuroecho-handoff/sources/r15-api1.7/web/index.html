@@ -307,18 +307,12 @@
 
       <section id="tab-bookmark" class="tab-panel is-hidden">
         <div class="panel-title-row">
-          <h3>任务与书签</h3>
-          <span class="muted small">书签 · 提醒 · 日历 · 草稿</span>
+          <h3>任务</h3>
+          <button class="text-btn" id="create-task-btn" type="button">＋ 创建任务</button>
         </div>
-        <div id="bookmark-card" class="bookmark-card empty">
-          <p class="muted">还没有书签。聊到一个想停下的位置，点「标记此刻」。</p>
-        </div>
-        <button class="btn ghost wide" id="create-bookmark-btn">标记此刻</button>
-        <div class="section-label" style="margin-top:16px">新建一件小事</div>
-        <div class="task-create-actions"><button type="button" class="btn ghost small" data-new-action="message">消息草稿</button><button type="button" class="btn ghost small" data-new-action="reminder">提醒</button><button type="button" class="btn ghost small" data-new-action="calendar">日历</button></div>
-        <div class="section-label" style="margin-top:16px">已保存与待确认</div>
-        <div id="task-actions"></div>
-        <p class="note">书签保存位置、取舍与下一步；动作保留回执，真实写入可选。</p>
+        <div class="task-segment"><button type="button" data-task-view="mine">☷ 我的任务</button><button type="button" class="active" data-task-view="default">◷ 默认任务</button></div>
+        <div id="task-recommendations" class="task-recommendations" data-task-panel="default"></div>
+        <div id="my-task-list" class="task-recommendations" data-task-panel="mine"><p class="my-task-empty">还没有创建任务</p></div>
       </section>
 
       <section id="tab-metrics" class="tab-panel is-hidden">

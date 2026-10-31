@@ -1707,6 +1707,58 @@
     if (commitBtn) commitBtn.onclick = commitBookmark;
   }
 
+  const recommendedTasks = [
+    ["☷", "整理今日重点", "把你今天要做的事情列清楚，排出最值得先完成的一件。"],
+    ["⌧", "拆解一项计划", "把一个目标拆成几步，明确下一步现在就能开始做什么。"],
+    ["✣", "梳理混乱想法", "把你脑中的信息分组整理，提炼出重点、疑问和待决定事项。"],
+    ["≡", "回顾近期进展", "根据我们的对话整理已经完成、暂时卡住和接下来要继续的事情。"],
+    ["◌", "清理待办清单", "合并重复事项，删掉不再重要的内容，把剩下的安排得更清楚。"]
+  ];
+
+  function putTaskPrompt(text) {
+    if (!text || !els.input) return;
+    els.input.value = els.input.value.trim() ? `${els.input.value.trim()}\n${text}` : text;
+    els.input.focus();
+    els.input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function renderTaskRecommendations() {
+    const box = $("#task-recommendations");
+    if (!box) return;
+    box.innerHTML = recommendedTasks.map(([icon, title, prompt], index) => `<article class="task-recommendation" draggable="true" data-task-prompt="${esc(prompt)}"><span class="task-icon">${icon}</span><div class="task-copy"><b>${esc(title)}</b><p>${esc(prompt)}</p></div><button class="task-add" type="button" data-task-add="${index}" aria-label="添加${esc(title)}">＋</button></article>`).join("");
+    box.querySelectorAll("[data-task-add]").forEach((button) => button.addEventListener("click", () => { const task = recommendedTasks[Number(button.dataset.taskAdd)]; putTaskPrompt(task?.[2]); }));
+    box.querySelectorAll(".task-recommendation").forEach((card) => {
+      card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("text/plain", card.dataset.taskPrompt || ""); card.classList.add("is-dragging"); });
+      card.addEventListener("dragend", () => card.classList.remove("is-dragging"));
+    });
+  }
+
+  const taskViews = $$('[data-task-view]');
+  taskViews.forEach((button) => button.addEventListener('click', () => {
+    const view = button.dataset.taskView;
+    taskViews.forEach((item) => item.classList.toggle('active', item === button));
+    $$('[data-task-panel]').forEach((panel) => { panel.style.display = panel.dataset.taskPanel === view ? '' : 'none'; });
+  }));
+  $('#create-task-btn')?.addEventListener('click', () => {
+    const title = window.prompt('任务名称');
+    if (!title?.trim()) return;
+    const detail = window.prompt('任务说明（可选）') || '这是你创建的任务，可以直接在对话中继续。';
+    const list = $('#my-task-list');
+    if (!list) return;
+    list.querySelector('.my-task-empty')?.remove();
+    const card = document.createElement('article');
+    card.className = 'task-recommendation user-task';
+    card.innerHTML = `<span class="task-icon">＋</span><div class="task-copy"><b>${esc(title.trim())}</b><p>${esc(detail)}</p></div><button class="task-add" type="button">＋</button>`;
+    card.querySelector('.task-add').addEventListener('click', () => putTaskPrompt(detail));
+    list.appendChild(card);
+    document.querySelector('[data-task-view="mine"]')?.click();
+  });
+
+  renderTaskRecommendations();
+  els.input?.addEventListener("dragover", (event) => { event.preventDefault(); $("#composer")?.classList.add("task-drop-active"); });
+  els.input?.addEventListener("dragleave", () => $("#composer")?.classList.remove("task-drop-active"));
+  els.input?.addEventListener("drop", (event) => { event.preventDefault(); $("#composer")?.classList.remove("task-drop-active"); putTaskPrompt(event.dataTransfer.getData("text/plain")); });
+
   async function loadPlugins() {
     try {
       const d = await api("/api/plugins");
@@ -2763,7 +2815,7 @@
       }
     });
 
-    $("#create-bookmark-btn").onclick = openBookmarkModal;
+    $("#create-bookmark-btn")?.addEventListener("click", openBookmarkModal);
     $("#modal-cancel").onclick = () => els.modal.classList.add("is-hidden");
     $("#modal-save").onclick = saveBookmark;
     $("#stop-btn").onclick = stopWaiting;

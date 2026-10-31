@@ -766,6 +766,8 @@ textarea:focus, input:focus {
 
 .bookmark-card.empty { border-style: dotted; }
 
+.task-segment{display:grid;grid-template-columns:1fr 1fr;background:rgba(160,183,211,.28);border-radius:12px;padding:4px;margin:12px 0}.task-segment button{border:0;background:transparent;border-radius:9px;padding:8px;color:var(--muted);font:inherit;cursor:pointer}.task-segment button.active{background:rgba(255,255,255,.9);color:var(--ink);box-shadow:0 2px 7px rgba(50,70,100,.12)}.task-recommend-title{font-size:16px;margin:10px 0 8px}.task-category-row{display:flex;gap:7px;overflow:hidden;padding:0 0 12px}.task-category-row button{border:0;border-radius:18px;background:rgba(145,173,204,.3);padding:7px 13px;white-space:nowrap;color:var(--ink);cursor:pointer;font-size:13px;min-width:auto}.task-category-row button.active{background:rgba(255,255,255,.9)}.task-recommendations[data-task-panel="mine"]{display:none}.my-task-empty{padding:28px 12px;text-align:center;color:var(--muted);font-size:13px}.task-recommendations{display:flex;flex-direction:column;gap:10px}.task-recommendation{display:flex;align-items:center;gap:12px;padding:17px 14px 17px 18px;border-radius:24px;background:rgba(255,255,255,.48);border:1px solid rgba(255,255,255,.72);box-shadow:inset 0 1px rgba(255,255,255,.82);cursor:grab}.task-recommendation:nth-child(3n){background:rgba(255,255,255,.42)}.task-recommendation:active{cursor:grabbing}.task-recommendation .task-icon{width:25px;text-align:center;font-size:20px;flex:none}.task-recommendation .task-copy{min-width:0;flex:1}.task-recommendation b{display:block;font-size:16px;font-weight:500;margin-bottom:4px}.task-recommendation p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}.task-recommendation .task-add{border:0;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.78);font-size:22px;cursor:pointer;flex:none}.task-drop-hint{font-size:12px;color:var(--muted);padding:8px 2px}.composer.task-drop-active{outline:2px dashed var(--accent);outline-offset:4px}
+
 .bm-note {
   font-family: var(--serif);
   font-size: 15px;
@@ -1141,7 +1143,7 @@ html, body { background: var(--paper); color: var(--ink); }
 body { background: var(--paper); }
 body::before { display: none; }
 .grain { opacity: .12; }
-.layout { grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; }
+.layout { grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr); gap: 18px; }
 .presence { display: none !important; }
 .topbar { border-bottom: 1px solid rgba(16,24,40,.06); padding: 6px 4px 14px; }
 .brand-avatar {
