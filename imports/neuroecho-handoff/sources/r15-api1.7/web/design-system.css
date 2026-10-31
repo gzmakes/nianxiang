@@ -480,3 +480,91 @@ body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none
 #app .context .today-head h3,#app .context .followup-head b,#app .context .panel-title-row h3{margin:0}
 #app .context .row,#app .context .today-footer-actions,#app .context .action-row,#app .context .mood-actions,#app .context .design-shortcuts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #app .context .followup-card>.text-btn,#app .context .today-app-list>.text-btn{margin-top:4px}
+/* Web 改版 9 (2026-10-31，产品要求)：人格切换（念响 / 小鲸鱼）与模式切换（陪伴 / 工作）。四个空间是本设备的视图（persona-switch.js），
+   换空间就像换了一个对话框；小鲸鱼的光球换成鲸鱼形状和海蓝配色，眼睛、表情、状态变化照旧。 */
+html[data-space-arming] #app #messages{visibility:hidden}
+#app #design-topics{display:none}
+#app .space-modes{flex:none}
+#app .conversation-persona{position:relative}
+#app .conversation-persona h2.persona-name{cursor:pointer;user-select:none;padding-right:22px;position:relative}
+#app .conversation-persona h2.persona-name::after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);opacity:.55}
+#app .conversation-persona h2.persona-name[aria-expanded=true]::after{transform:translateY(-20%) rotate(225deg)}
+#app .conversation-persona h2.persona-name:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+.persona-menu{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:2px;min-width:132px;padding:4px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,.72));border:1px solid rgba(255,255,255,.8);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 10px 28px rgba(80,100,170,.18)}
+.persona-menu[hidden]{display:none}
+.persona-menu button{display:flex;align-items:center;gap:8px;min-height:32px;padding:6px 12px;border:0;border-radius:12px;background:transparent;color:var(--ink);font-size:13px;text-align:left;cursor:pointer}
+.persona-menu button:hover,.persona-menu button:focus-visible{background:rgba(255,255,255,.95);outline:none;box-shadow:0 1px 4px rgba(80,100,170,.14)}
+.persona-menu button[aria-checked=true]{font-weight:600}
+.persona-menu button[aria-checked=true]::after{content:"";margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.persona-dot{width:16px;height:16px;border-radius:50%;flex:none;background:radial-gradient(circle at 30% 25%,#fff 0,rgba(255,255,255,0) 40%),linear-gradient(145deg,#DCE5FF,#A6B9F0);box-shadow:inset -1px -2px 3px rgba(78,98,165,.3)}
+.persona-dot[data-persona-dot=whale]{border-radius:50% 50% 46% 54%/65% 65% 38% 38%;background:radial-gradient(circle at 30% 25%,#fff 0,rgba(255,255,255,0) 40%),linear-gradient(150deg,#BFDAFF,#4F86E8);box-shadow:inset -1px -2px 3px rgba(30,60,140,.35)}
+.space-empty{margin:32px auto 12px;max-width:360px;text-align:center;font-size:13px;line-height:20px;color:var(--ink-mute)}
+.space-empty[hidden]{display:none}
+/* 小鲸鱼：海蓝配色、鲸鱼身形、右侧尾鳍；状态颜色按同一套逻辑换成海蓝系 */
+html[data-persona=whale]{--orb-a:#EEF5FF;--orb-b:#9FC6FF;--orb-c:#4C84E6;--orb-glow:#A9CCFF;--orb-eye:#1C2A48}
+html[data-persona=whale][data-presence-state=input],html[data-persona=whale][data-presence-state=responding]{--orb-a:#E9FBFB;--orb-b:#9BE0E9;--orb-c:#3AAFC6;--orb-glow:#A8E6EE}
+html[data-persona=whale][data-presence-state=thinking]{--orb-a:#F0F2FF;--orb-b:#BCC6FF;--orb-c:#6E8CF2;--orb-glow:#CDD6FF}
+html[data-persona=whale][data-presence-state=failed]{--orb-a:#F3F4F8;--orb-b:#D5DAE6;--orb-c:#A9B2C6;--orb-glow:#D5DAE6}
+html[data-persona=whale]:has([data-companion-boundary] [data-b-resume]:not([hidden])){--orb-a:#F3F4F8;--orb-b:#D5DAE6;--orb-c:#A9B2C6;--orb-glow:#D5DAE6}
+html[data-persona=whale] .presence-light-core,html[data-persona=whale][data-presence-state] .presence-light-core{width:100%;height:74%;margin-top:6%;border-radius:52% 48% 46% 54%/68% 68% 36% 36%;
+  background:radial-gradient(circle at 30% 22%,#fff 0,rgba(255,255,255,.95) 8%,rgba(255,255,255,0) 30%),
+    radial-gradient(ellipse at 50% 108%,rgba(255,255,255,.85) 0,rgba(255,255,255,.4) 28%,rgba(255,255,255,0) 52%),
+    radial-gradient(circle at 46% 40%,var(--orb-a) 0,var(--orb-b) 52%,var(--orb-c) 100%);
+  box-shadow:inset -4px -6px 12px rgba(30,60,140,.26),inset 3px 4px 8px rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.6),0 12px 18px -8px rgba(30,60,140,.45),0 0 18px var(--orb-glow)}
+html[data-persona=whale] .presence-light::before{content:"";position:absolute;right:-9%;top:38%;width:30%;height:28%;z-index:-1;background:linear-gradient(160deg,var(--orb-b),var(--orb-c));
+  clip-path:polygon(0 50%,100% 0,74% 50%,100% 100%);transform:rotate(-8deg);transform-origin:0 50%;opacity:calc(.4 + .6 * var(--echo-light-intensity));transition:background .6s ease}
+html[data-persona=whale] .presence-light-core::before{left:27%;top:38%}
+html[data-persona=whale] .presence-light-core::after{left:51%;top:38%}
+html[data-persona=whale] #app .conversation-persona h2{color:#2B4A8A}
+html[data-persona=whale] .emoji-orb{font-size:22px}
+/* Web 改版 10 (2026-10-31，产品要求)：人格胶囊文字+箭头整体居中；小鲸鱼头顶小水柱、尾鳍有明暗；右侧面板按钮有按下/悬停反馈 */
+#app .conversation-persona h2.persona-name{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 22px 5px 24px}
+#app .conversation-persona h2.persona-name::after{position:static;transform:translateY(-2px) rotate(45deg);margin-left:0;right:auto;top:auto}
+#app .conversation-persona h2.persona-name[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+/* 小水柱：三滴，轻轻上下浮；尾鳍：高光 + 下沿阴影 + 轻微透视，下面垫一片柔影 */
+html[data-persona=whale] [data-companion-art]{position:relative}
+html[data-persona=whale] [data-companion-art]::before{content:"";position:absolute;left:50%;top:9%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#5EA6FF;
+  box-shadow:-7px -5px 0 -.5px #7DB8FF,7px -5px 0 -.5px #7DB8FF,0 -8px 0 -1px #9CCBFF;opacity:calc(.5 + .5 * var(--echo-light-intensity));animation:whale-spout 2.8s ease-in-out infinite;pointer-events:none;z-index:2}
+@keyframes whale-spout{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+html[data-persona=whale] .presence-light::before{right:-10%;top:37%;width:32%;height:30%;clip-path:polygon(0 44%,0 56%,100% 0,80% 50%,100% 100%);transform:rotate(-8deg) skewY(-6deg);
+  background:radial-gradient(circle at 28% 32%,rgba(255,255,255,.75) 0,rgba(255,255,255,0) 42%),linear-gradient(to bottom,rgba(255,255,255,0) 50%,rgba(30,60,140,.32) 100%),linear-gradient(160deg,var(--orb-b),var(--orb-c))}
+html[data-persona=whale] [data-companion-art]::after{content:"";position:absolute;right:-4%;top:58%;width:26%;height:12%;border-radius:50%;background:rgba(30,60,140,.22);filter:blur(4px);z-index:-1;pointer-events:none}
+html[data-reduce-motion=true] [data-companion-art]::before{animation:none}
+@media(max-width:899px){html[data-persona=whale] [data-companion-art]::before{width:4px;height:4px;margin-left:-2px;box-shadow:-5px -4px 0 -.5px #A6D2FF,5px -4px 0 -.5px #A6D2FF,0 -6px 0 -1px #BFE0FF}}
+/* 右侧面板：按钮悬停轻抬、按下轻缩；页签同样；可展开的行有按下反馈 */
+#app .context button,#app .context .btn,#app .context summary{transition:transform .12s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease}
+#app .context button:not(:disabled):hover,#app .context .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(80,100,170,.16)}
+#app .context button:not(:disabled):active,#app .context .btn:active,#app .context summary:active{transform:scale(.96);box-shadow:none;transition-duration:.06s}
+#app .context .tabs .tab:not(.active):hover{background:rgba(255,255,255,.55);transform:none;box-shadow:none}
+#app .context .tabs .tab:active{transform:scale(.95)}
+#app .context .mood-date:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.7)}
+#app .context .mini-btn.confirm:hover,#app .context .mood-save:hover{box-shadow:0 6px 16px rgba(27,36,51,.28)}
+/* Web 改版 11 (2026-10-31，产品要求)：右侧面板的点击动效——页签滑块、面板内容切入、按钮涟漪、卡片悬停、展开淡入（panel-motion.js） */
+#app .context .tabs.has-indicator{position:relative;isolation:isolate}
+#app .context .tabs .tab-indicator{position:absolute;left:0;top:0;z-index:0;border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(80,100,170,.14);opacity:0;pointer-events:none;
+  transition:transform .32s cubic-bezier(.3,.9,.3,1),width .32s cubic-bezier(.3,.9,.3,1),opacity .2s ease}
+#app .context .tabs.has-indicator .tab{position:relative;z-index:1}
+#app .context .tabs.has-indicator .tab.active{background:transparent;box-shadow:none}
+#app .context .tabs .tab{transition:color .18s ease,background-color .18s ease,transform .12s ease}
+#app .context .tab-panel.is-entering{animation:panel-in .3s cubic-bezier(.2,.8,.2,1) both}
+#app .context .tab-panel.is-entering>*{animation:panel-item-in .36s cubic-bezier(.2,.8,.2,1) both}
+#app .context .tab-panel.is-entering>*:nth-child(2){animation-delay:.04s}
+#app .context .tab-panel.is-entering>*:nth-child(3){animation-delay:.08s}
+#app .context .tab-panel.is-entering>*:nth-child(4){animation-delay:.12s}
+#app .context .tab-panel.is-entering>*:nth-child(5){animation-delay:.16s}
+#app .context .tab-panel.is-entering>*:nth-child(n+6){animation-delay:.2s}
+@keyframes panel-in{from{opacity:0}to{opacity:1}}
+@keyframes panel-item-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#app .context .has-ripple{position:relative;overflow:hidden}
+#app .context .click-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.14;transform:scale(0);animation:click-ripple .5s ease-out forwards;pointer-events:none}
+@keyframes click-ripple{to{transform:scale(1);opacity:0}}
+#app .context .today-card,#app .context .followup-card,#app .context .mood-card,#app .context .app-card,#app .context .mem-item{transition:transform .18s ease,box-shadow .2s ease}
+#app .context .today-card:hover,#app .context .followup-card:hover,#app .context .app-card:hover,#app .context .mem-item:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(80,100,170,.12)}
+#app .context details>*:not(summary){animation:panel-item-in .26s cubic-bezier(.2,.8,.2,1) both}
+#app .context summary{transition:background-color .16s ease}
+#app .context summary:hover{background:rgba(255,255,255,.5);border-radius:12px}
+#app .context input[type=checkbox],#app .context input[type=radio]{transition:transform .12s ease}
+#app .context input[type=checkbox]:active,#app .context input[type=radio]:active{transform:scale(.85)}
+html[data-reduce-motion=true] #app .context .tab-panel,html[data-reduce-motion=true] #app .context .tab-panel>*,html[data-reduce-motion=true] #app .context details>*,html[data-reduce-motion=true] #app .context .tab-indicator{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){#app .context .tab-panel,#app .context .tab-panel>*,#app .context details>*,#app .context .tab-indicator{animation:none;transition:none}}
