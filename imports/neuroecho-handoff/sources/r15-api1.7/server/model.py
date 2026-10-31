@@ -113,10 +113,13 @@ class ModelClient:
             raise ModelError("model malformed or incomplete response") from e
 
 
-def from_env() -> ModelClient | None:
+def _resolve() -> dict:
+    """env > model-settings.json > 公共演示节点（可用 XINJI_MODEL_PUBLIC=0 关闭）。"""
     base = os.getenv("XINJI_MODEL_BASE_URL", "").strip()
     key = os.getenv("XINJI_MODEL_API_KEY", "").strip()
     name = os.getenv("XINJI_MODEL_NAME", "").strip()
+    source = "env" if (base and key and name) else ""
+    timeout = None
     if not (base and key and name):
         try:
             s = model_settings.load()
@@ -125,30 +128,41 @@ def from_env() -> ModelClient | None:
         base = base or (s.get("base_url") or "").strip()
         key = key or (s.get("api_key") or "").strip()
         name = name or (s.get("model") or "").strip()
+        timeout = s.get("timeout")
+        if base and key and name:
+            source = "file"
     if not (base and key and name):
+        public = model_settings.public_endpoint()
+        if public:
+            return {"base_url": public["base_url"], "api_key": public["api_key"],
+                    "model": public["model"], "timeout": public["timeout"], "source": "public"}
+    return {"base_url": base, "api_key": key, "model": name,
+            "timeout": timeout, "source": source}
+
+
+def from_env() -> ModelClient | None:
+    cfg = _resolve()
+    if not (cfg["base_url"] and cfg["api_key"] and cfg["model"]):
         return None
+    fallback = 20.0 if cfg["source"] == "public" else DEFAULT_TIMEOUT
     try:
-        timeout = float(os.getenv("XINJI_MODEL_TIMEOUT", "") or model_settings.load().get("timeout") or DEFAULT_TIMEOUT)
-    except (ValueError, Exception):
-        timeout = DEFAULT_TIMEOUT
-    return ModelClient(base, key, name, timeout)
+        timeout = float(os.getenv("XINJI_MODEL_TIMEOUT", "") or cfg["timeout"] or fallback)
+    except (ValueError, TypeError):
+        timeout = fallback
+    client = ModelClient(cfg["base_url"], cfg["api_key"], cfg["model"], timeout)
+    client.source = cfg["source"] or "env"
+    return client
 
 
 def status() -> dict:
-    base = os.getenv("XINJI_MODEL_BASE_URL", "").strip()
-    name = os.getenv("XINJI_MODEL_NAME", "").strip()
-    try:
-        s = model_settings.load()
-    except Exception:
-        s = {}
-    base = base or (s.get("base_url") or "").strip()
-    name = name or (s.get("model") or "").strip()
-    ready = bool(from_env())
+    cfg = _resolve()
+    ready = bool(cfg["base_url"] and cfg["api_key"] and cfg["model"])
     return {
         "mode": "model" if ready else "rule",
-        "model": name or None,
-        "base_url": base or None,
+        "model": cfg["model"] or None,
+        "base_url": cfg["base_url"] or None,
         "configured": ready,
+        "source": cfg["source"] or None,
     }
 
 

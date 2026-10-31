@@ -21,5 +21,6 @@ native/android/.gradle/
 native/android/.gradle-user-home/
 native/android/**/build/
 native/android/local.properties
+nx-proxy/cloudbaserc.json
 # Local desktop artifacts; source and official Gradle wrapper remain tracked
 dist/

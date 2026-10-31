@@ -78,6 +78,43 @@
     failed: ["未完成", "先核对下方提示"],
   };
 
+  let personaOptions = [];
+  let personaRequest = 0;
+  function personaName(id) { return personaOptions.find(item => item.id === id)?.name || (id === "whale" ? "小鲸鱼" : "念响"); }
+  function updatePersonaLabels() {
+    const name = personaName(state.session?.persona_id || "nianxiang");
+    const title = $("#conversation-persona-name");
+    if (title) title.textContent = name;
+    document.title = `${name} · 具身个人伙伴`;
+  }
+  async function loadPersonaPicker() {
+    const mount = $("#persona-picker");
+    if (!mount || !state.session) return;
+    const request = ++personaRequest, sid = state.session.id;
+    try {
+      const data = await api("/api/personas");
+      if (request !== personaRequest || state.session?.id !== sid) return;
+      personaOptions = (data.personas || []).filter(item => ["nianxiang", "whale"].includes(item.id));
+      const selected = state.session.persona_id || data.default_persona || "nianxiang";
+      mount.innerHTML = `<div class="k">当前伙伴</div><p class="note">可以随时切换，聊天、记忆和语气偏好都会保留。</p><div class="persona-options" role="radiogroup" aria-label="选择聊天伙伴">${personaOptions.map(item => `<button type="button" class="persona-option ${item.id === selected ? "is-selected" : ""}" data-persona-id="${esc(item.id)}" role="radio" aria-checked="${item.id === selected}"><span><b>${esc(item.name)}</b><small>${esc(item.description || "")}</small><em>${(item.tags || []).map(tag => esc(tag)).join(" · ")}</em></span><span class="persona-check" aria-hidden="true">${item.id === selected ? "✓" : ""}</span></button>`).join("")}</div>`;
+      mount.querySelectorAll("[data-persona-id]").forEach(button => button.onclick = async () => {
+        const next = button.dataset.personaId;
+        if (!next || next === (state.session?.persona_id || "nianxiang") || button.disabled) return;
+        button.disabled = true;
+        try {
+          const result = await api(`/api/session/${encodeURIComponent(sid)}/persona`, {method: "PUT", body: JSON.stringify({persona_id: next})});
+          if (state.session?.id !== sid) return;
+          state.session = result.session || result;
+          if (typeof updatePersonaLabels === "function") updatePersonaLabels();
+          if (typeof loadPersonaPicker === "function") loadPersonaPicker();
+          renderMessages();
+          toast(`已切换为${personaName(next)}`);
+        } catch (error) { button.disabled = false; toast(error.message || "切换伙伴失败"); }
+      });
+      if (typeof updatePersonaLabels === "function") updatePersonaLabels();
+    } catch (error) { if (request === personaRequest && state.session?.id === sid) mount.innerHTML = `<p class="note">暂时无法读取伙伴设置：${esc(error.message)}</p>`; }
+  }
+
   let contentMutationEpoch = 0, contentMutationCount = 0;
   async function api(path, opts = {}) {
     const mutating = !['GET', 'HEAD'].includes(String(opts.method || 'GET').toUpperCase());
@@ -858,6 +895,7 @@
     const retainedMessages = opts.preserveDrafts && sameSession ? state.messages : null;
     sourceUiEpoch++;
     state.session = data.session;
+    if (typeof updatePersonaLabels === "function") updatePersonaLabels();
     state.followupReminder?.refresh(); state.companionBoundary?.refresh();
     $("#chat-error")?.classList.add("is-hidden");
     state.messages = retainedMessages || data.messages;
@@ -877,6 +915,7 @@
     loadEngine();
     setOrb("listening");
     renderAll();
+    if (typeof loadPersonaPicker === "function") loadPersonaPicker();
     loadAudit();
     loadNextStep();
     switchTab(sameSession && previousTab ? previousTab : "today");
@@ -1416,11 +1455,23 @@
     stopButton: $("#stop-btn"), busy: () => !!activeTurn,
     onError: error => toast(error?.message || "消息发送状态暂时无法确认，请稍后核对")});
   function renderMessages(forceBottom = false) {
+    function decorateAssistantMessage(message) {
+      if (message?.role !== "assistant" || typeof message.text !== "string") return message;
+      const parser = globalThis.XinjiResponseParser;
+      if (!parser?.parse) return message;
+      if (Array.isArray(message.bubbles) && message.bubbles.length) return message;
+      const parsed = parser.parse(message.text);
+      if (!parsed || !Array.isArray(parsed.messages) || !parsed.messages.length) return message;
+      message.bubbles = parsed.messages;
+      message._bubblesSource = message.text;
+      return message;
+    }
     memoryProposal.sync();
     const empty = state.messages.filter((m) => m.role === "user").length === 0;
     $("#chat-empty")?.classList.toggle("is-hidden", !(empty && state.session?.mode === "empty"));
     const lastAssistant = [...state.messages].reverse().find((m) => m.role === "assistant");
     const visibleMessages = empty && state.session?.mode === "empty" ? [] : state.messages;
+    visibleMessages.forEach(decorateAssistantMessage);
     const sessionChanged = renderedChatSession !== state.session?.id;
     const newMessage = !sessionChanged && visibleMessages.some(message => !String(message.id).startsWith("local-") && !renderedMessageIds.has(message.id));
     chatScroll.render(() => { els.messages.innerHTML = visibleMessages
@@ -2235,6 +2286,7 @@
     if (name === "audit") loadAudit();
     if (name === "metrics") loadMetrics();
     if (name === "data") loadData();
+    if (name === "persona" && typeof loadPersonaPicker === "function") loadPersonaPicker();
   }
 
   let todaySources = [];
@@ -2793,6 +2845,7 @@
       const data = await api("/api/conversation");
       localStorage.setItem("xinji_session", data.session.id);
       state.session = data.session;
+      if (typeof updatePersonaLabels === "function") updatePersonaLabels();
     state.followupReminder?.refresh(); state.companionBoundary?.refresh();
       state.messages = data.messages;
       state.memories = data.memories;
@@ -3004,7 +3057,7 @@
     const legacyRefresh = window.XinjiForegroundSync.create({canRefresh, version:() => `${state.session?.id}:${sourceUiEpoch}:${contentMutationEpoch}`, read: () => api('/api/conversation'), apply: data => {
       if (data.session?.id !== state.session?.id) return;
       state.messages = data.messages; state.memories = data.memories; state.bookmark = data.bookmark; state.context = data.context || null; state.session = data.session;
-      renderMessages(); renderUnderstanding(); renderMemoryList(); renderConnectedSources(); renderStarterBar();
+      if (typeof updatePersonaLabels === "function") updatePersonaLabels(); renderMessages(); renderUnderstanding(); renderMemoryList(); renderConnectedSources(); renderStarterBar(); if (typeof loadPersonaPicker === "function") loadPersonaPicker();
       if (state.tab === 'today') loadToday();
     }});
     let updates;

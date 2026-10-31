@@ -7,6 +7,37 @@ from server import chat_delivery, core, plugin_bridge
 
 
 class DeliveryTests(unittest.TestCase):
+ def test_short_prose_splits_complete_sentences_without_commas(self):
+    text = '终于能说话啦！前面只能干听你喊我，可憋坏了。现在我在啦，想聊什么？'
+    self.assertEqual(chat_delivery.split_reply(text), [
+        '终于能说话啦！',
+        '前面只能干听你喊我，可憋坏了。',
+        '现在我在啦，想聊什么？',
+    ])
+
+ def test_sentence_split_preserves_closers_and_caps_at_four(self):
+    self.assertEqual(chat_delivery.split_reply('真的嘛？！“我来了。”接着说。'),
+                     ['真的嘛？！', '“我来了。”', '接着说。'])
+    parts = chat_delivery.split_reply('一。二。三。四。五。')
+    self.assertEqual(len(parts), 4)
+    self.assertEqual(parts[-1], '四。 五。')
+
+ def test_sentence_split_keeps_urls_decimals_abbreviations_and_code_intact(self):
+    self.assertEqual(chat_delivery.split_reply('请看 https://example.com/v1.2。然后告诉我。'),
+                     ['请看 https://example.com/v1.2。', '然后告诉我。'])
+    self.assertEqual(chat_delivery.split_reply('版本是 1.2.3。下一步继续。'),
+                     ['版本是 1.2.3。', '下一步继续。'])
+    self.assertEqual(chat_delivery.split_reply('例如 e.g. 这个写法。下一句。'),
+                     ['例如 e.g. 这个写法。', '下一句。'])
+    code = '```python\nprint("a。b")\n```\n然后解释。'
+    self.assertEqual(chat_delivery.split_reply(code), [code])
+
+ def test_markdown_lists_and_long_prose_remain_single_response(self):
+    markdown = '# 标题\n\n- 第一项。\n- 第二项。'
+    self.assertEqual(chat_delivery.split_reply(markdown), [markdown])
+    long = '这是一段很长的文字。' * 40
+    self.assertEqual(chat_delivery.split_reply(long), [long])
+
  def test_five_paragraphs_have_four_ordered_persisted_sends(self):
     db = sqlite3.connect(':memory:'); db.row_factory = sqlite3.Row
     db.execute('create table messages(id text primary key, session_id text, text text)')

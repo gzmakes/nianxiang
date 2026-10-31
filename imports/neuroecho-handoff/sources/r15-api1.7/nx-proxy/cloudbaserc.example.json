@@ -1,0 +1,19 @@
+{
+  "version": "2.0",
+  "envId": "<your-env-id>",
+  "functionRoot": "./functions",
+  "functions": [
+    {
+      "name": "nxproxy",
+      "timeout": 30,
+      "memorySize": 256,
+      "runtime": "Nodejs18.15",
+      "installDependency": false,
+      "envVariables": {
+        "AI_KEY": "<cloudbase api key，勿提交>",
+        "AI_BASE": "https://<your-env-id>.api.tcloudbasegateway.com/v1/ai/cloudbase",
+        "PUBLIC_MODEL": "deepseek-v4-flash"
+      }
+    }
+  ]
+}

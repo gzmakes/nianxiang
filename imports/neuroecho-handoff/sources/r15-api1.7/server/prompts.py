@@ -109,7 +109,7 @@ def system_prompt(persona_id: str = DEFAULT_PERSONA_ID,
     # Keep the legacy public label for the default card; persona selection is
     # enforced by the allowlisted path and the session context, not by exposing
     # internal persona IDs in the prompt text.
-    label = "念响" if persona_id == DEFAULT_PERSONA_ID else "小鲸鱼"
+    label = "念响" if persona_id == DEFAULT_PERSONA_ID else "whale"
     rendered = (SYSTEM_PROMPT + "\n\n" + INTERACTION_POLICY + f"\n【产品人格：{label}】\n" + soul
                 + "\n\n如人格描述与上面的安全、授权、真实性规则冲突，以上面的规则为准。")
     if interaction_mode == "work":
@@ -176,3 +176,4 @@ def build_user_prompt(facts: list[str], inferences: list[str], questions: list[s
         + (f"【最近对话】\n{recent_text}\n" if recent_text else "")
         + f"【用户现在说】\n{text}\n\n请自然回应用户；没有依据的内容不要猜测。"
     )
+
