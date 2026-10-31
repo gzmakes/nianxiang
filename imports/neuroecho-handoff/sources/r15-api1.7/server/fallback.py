@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from server import apple_source, connectors, core, device_bridge, faults, gmail_source, lark, lark_auth, local_source, model, model_settings, notion_source, plugin_bridge, real_sources  # noqa: E402
+from server import apple_source, connectors, core, device_bridge, faults, gmail_source, lark, lark_auth, local_source, model, model_settings, notion_source, plugin_bridge, real_sources, prompts  # noqa: E402
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 
@@ -503,10 +503,17 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(data)
             return
+        if p == "/api/personas":
+            return self._send(200, {"default_persona": "nianxiang", "personas": prompts.persona_manifest()})
         if p == "/api/sessions":
             return self._send(200, {"sessions": core.list_sessions()})
         if p == "/api/session":
-            return self._send(200, core.create_session(b.get("mode", "sample"), b.get("text", "")))
+            try:
+                if str(b.get("interaction_mode", "companion")).strip().lower() not in prompts.INTERACTION_MODES:
+                    raise ValueError("invalid interaction_mode")
+                return self._send(200, core.create_session(b.get("mode", "sample"), b.get("text", ""), persona_id=b.get("persona_id", "nianxiang"), interaction_mode=b.get("interaction_mode", "companion")))
+            except ValueError as e:
+                return self._send(400, {"error": str(e)})
         if p == "/api/chat":
             sid = b.get("session_id", "")
             if not core.get_session(sid):
@@ -562,15 +569,41 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PATCH(self):  # noqa: N802
         p = urlparse(self.path).path
+        b = self._body()
+        m = re.fullmatch(r"/api/session/([\w-]+)/persona", p)
+        if m:
+            try:
+                out = core.set_session_persona(m.group(1), b.get('persona_id', ''))
+            except ValueError as e:
+                return self._send(400, {'error': str(e)})
+            return self._send(200, out) if out else self._send(404, {'error': 'session not found'})
         m = re.fullmatch(r"/api/session/([\w-]+)", p)
         if not m:
             return self._send(404, {"error": "not found"})
-        b = self._body()
         title = (b.get("title") or "").strip()
         if not title:
             return self._send(400, {"error": "title required"})
         out = core.rename_session(m.group(1), title)
         return self._send(200, out) if out else self._send(404, {"error": "session not found"})
+
+    def do_PUT(self):  # noqa: N802
+        p = urlparse(self.path).path
+        b = self._body()
+        m = re.fullmatch(r"/api/session/([\w-]+)/persona", p)
+        if not m:
+            m = re.fullmatch(r"/api/session/([\w-]+)/mode", p)
+            if not m:
+                return self._send(404, {'error': 'not found'})
+            try:
+                out = core.set_session_mode(m.group(1), b.get('interaction_mode', ''))
+            except ValueError as e:
+                return self._send(400, {'error': str(e)})
+            return self._send(200, out) if out else self._send(404, {'error': 'session not found'})
+        try:
+            out = core.set_session_persona(m.group(1), b.get('persona_id', ''))
+        except ValueError as e:
+            return self._send(400, {'error': str(e)})
+        return self._send(200, out) if out else self._send(404, {'error': 'session not found'})
 
     def do_DELETE(self):  # noqa: N802
         p = urlparse(self.path).path

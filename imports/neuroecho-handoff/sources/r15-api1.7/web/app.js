@@ -104,6 +104,10 @@
     toast._t = setTimeout(() => els.toast.classList.remove("show"), 2600);
   }
 
+  document.addEventListener("xinji-space-sync-error", (event) => {
+    toast(event.detail?.error?.message || "当前人格和陪伴方式未能同步，请检查服务连接后重试。");
+  });
+
   function setOrb(stateName) {
     els.orb.dataset.state = stateName;
     document.documentElement.dataset.presenceState = stateName;
