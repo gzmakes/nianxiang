@@ -145,21 +145,26 @@ def meme_file(pack: str, tag: str, name: str) -> Path | None:
 
 
 def meme_prompt_catalog() -> list[dict[str, str]]:
-    """Tag -> human-readable meaning, for the model's sticker marker."""
+    """Explicit sticker IDs plus tag aliases for model-generated markers."""
     catalog, seen = [], set()
     for item in _all_items():
-        tag = item["tags"][0]
-        if tag in seen:
+        item_id = str(item.get("id") or "").strip()
+        if not item_id or item_id in seen:
             continue
-        seen.add(tag)
-        catalog.append({"id": tag, "meaning": str(item.get("label") or tag)})
+        seen.add(item_id)
+        tags = item.get("tags") or []
+        catalog.append({"id": item_id, "meaning": str(item.get("label") or (tags[0] if tags else item_id)),
+                        "tag": str(tags[0]) if tags else ""})
     return catalog
 
 
 def sanitize_meme_markers(text: str) -> str:
     choices = {}
     for item in _all_items():
-        choices.setdefault(item["tags"][0], item["id"])
+        item_id = item["id"]
+        choices[item_id] = item_id
+        for tag in item.get("tags") or []:
+            choices.setdefault(tag, item_id)
 
     def resolve(match):
         selected = choices.get(match.group(1).strip())

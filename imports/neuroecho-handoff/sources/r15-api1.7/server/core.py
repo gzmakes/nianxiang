@@ -1371,9 +1371,13 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
         system = prompts.system_prompt(session.get("persona_id", "nianxiang"), session.get("interaction_mode", "companion"))
         catalog = plugin_bridge.meme_prompt_catalog()
         if catalog:
-            system += ("\n轻松聊天中如果确实合适，可以在正文末尾使用一个表情标记，例如 [表情: happy]；"
-                       "认真倾诉和严肃问题不发表情。不必每次都用。仅可使用以下当前可用类别："
-                       + json.dumps(catalog, ensure_ascii=False))
+            persona = session.get("persona_id", "nianxiang")
+            system += ("\n表情包规则：只在轻松、开心、撒娇、惊讶或日常互动中自然主动发送，"
+                       "每条回复最多一个；认真倾诉、严肃问题、错误说明、隐私和安全话题不要发送。"
+                       "不要解释标记本身，也不要把标记单独成行。必须使用下面列表中的完整 id，"
+                       "例如 [表情: dafeiyu-001/happy/ok.jpg]；没有合适的就不发。"
+                       + ("当前人格是小鲸鱼，可以更主动地使用合适的大肥鱼表情，但不要为了发图而发图。" if persona == "whale" else "")
+                       + "\n当前可用表情：" + json.dumps(catalog, ensure_ascii=False))
         user = prompts.build_user_prompt(facts, inferences, questions, recent, remote_text,
                                       items=ctx.get("items"), insights=ctx.get("insights"),
                                       candidate_facts=candidates, source_excerpts=excerpts,
