@@ -1882,6 +1882,7 @@
           : '刚才尚未发出的内容已放回输入框，由你决定是否发送。';
         $('#chat-error').classList.remove('is-hidden');
         $('#chat-recover')?.classList.toggle('is-hidden', !saved.pending.length);
+        $('#chat-release')?.classList.toggle('is-hidden', !saved.pending.length);
       }
     } catch (error) { chatStorageBlocked=true; toast(error.message); }
   }
@@ -1958,7 +1959,10 @@
       const data = await chatTransport.send(turn.transport, message => {
         if (sameSession()) { $("#chat-error").textContent = message; $("#chat-error").classList.remove("is-hidden"); }
       }, turn.parts);
-      if (sameSession()) $("#chat-recover")?.classList.add("is-hidden");
+      if (sameSession()) {
+        $("#chat-recover")?.classList.add("is-hidden");
+        $("#chat-release")?.classList.add("is-hidden");
+      }
       const userMessage = data.messages.find((m) => m.id === data.user_message_id);
       if (userMessage && turn.parts.length > 1) displayedTurns.set(userMessage.id, turn.parts);
       if (sameSession()) {
@@ -1994,6 +1998,7 @@
         $("#chat-error").textContent = "发送结果尚未确认，原请求和待发内容已保存在本机。核对后可继续。";
         $("#chat-error").classList.remove("is-hidden");
         $("#chat-recover")?.classList.remove("is-hidden");
+        $("#chat-release")?.classList.remove("is-hidden");
         $("#thinking")?.remove();
         setOrb("failed");
         toast("发送结果尚未确认，请点击「核对发送状态」。");
@@ -2029,7 +2034,7 @@
       state.messages = [...expandTurns(result.messages), ...pendingMessages(turn.sessionId)];
       state.memories = result.memories;
       uncertainTurns.delete(turn.sessionId); chatBlocked = uncertainTurns.size > 0;
-      button.classList.add("is-hidden"); $("#chat-error").classList.add("is-hidden");
+        button.classList.add("is-hidden"); $("#chat-release")?.classList.add("is-hidden"); $("#chat-error").classList.add("is-hidden");
       setOrb(result.cancelled ? "listening" : result.state === "quiet" ? "quiet" : result.state === "failed" ? "failed" : "responding");
       renderAll(); dispatchTurn();
     } catch (error) {
@@ -2044,12 +2049,43 @@
         turnQueue=turnQueue.filter(item=>item.sessionId!==turn.sessionId);
         els.input.value=restored; window.XinjiComposerDraft?.save();
         uncertainTurns.delete(turn.sessionId); chatBlocked = uncertainTurns.size > 0;
-        button.classList.add("is-hidden"); setOrb("listening"); renderAll();
+        button.classList.add("is-hidden"); $("#chat-release")?.classList.add("is-hidden"); setOrb("listening"); renderAll();
         $("#chat-error").textContent = "上次回复结果未确认，已重新读取记录。原文放回输入框，请核对是否已保存再决定发送；没有自动重发。";
         $("#chat-error").classList.remove('is-hidden');
         dispatchTurn();
       } else { toast(error.message); }
     } finally { button.disabled = false; }
+  }
+
+  // An old renderer can retain a pending ledger entry even after the server
+  // has completed (or forgotten) that request. Let the user explicitly release
+  // only this local guard, preserving the original text as a draft. This never
+  // sends, cancels, or deletes anything on the server.
+  function releaseChatRecovery() {
+    const sessionId = state.session?.id;
+    const turn = sessionId ? uncertainTurns.get(sessionId) : null;
+    if (!turn || turn.sessionId !== sessionId) return;
+    const parts = Array.isArray(turn.parts) && turn.parts.length
+      ? turn.parts.map(part => String(part.text || '').trim()).filter(Boolean)
+      : [String(turn.transport?.text || '').trim()].filter(Boolean);
+    const restored = [...parts, String(els.input.value || '').trim()].filter(Boolean).join('\n');
+    try { chatLedger.returnDraft(sessionId, restored, turn.transport?.request_id || null); }
+    catch (error) { toast(error.message || '无法清除本地待核对记录。'); return; }
+    const localIds = new Set((turn.parts || []).map(part => part.id));
+    state.messages = state.messages.filter(message => !localIds.has(message.id));
+    queuedTurns = queuedTurns.filter(item => item.sessionId !== sessionId);
+    turnQueue = turnQueue.filter(item => item.sessionId !== sessionId);
+    uncertainTurns.delete(sessionId);
+    chatBlocked = uncertainTurns.size > 0;
+    els.input.value = restored;
+    window.XinjiComposerDraft?.save();
+    $('#chat-recover')?.classList.add('is-hidden');
+    $('#chat-release')?.classList.add('is-hidden');
+    $('#chat-error').textContent = '本地待核对记录已清除，原文已放回输入框；确认内容后可以重新发送。';
+    $('#chat-error').classList.remove('is-hidden');
+    setOrb('listening');
+    renderMessages();
+    dispatchTurn();
   }
 
   function showMemoryContextNotice() {
@@ -2792,6 +2828,7 @@
     $("#modal-save").onclick = saveBookmark;
     $("#stop-btn").onclick = stopWaiting;
     $("#chat-recover")?.addEventListener("click", () => recoverChat().catch(e=>toast(e.message)));
+    $("#chat-release")?.addEventListener("click", releaseChatRecovery);
     setupVoice();
     loadPlugins();
     $("#meme-btn")?.addEventListener("click", () => $("#meme-modal").classList.remove("is-hidden"));
