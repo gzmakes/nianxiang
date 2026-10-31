@@ -50,6 +50,27 @@ node --test desktop/test/*.js
 
 原生宿主/HTTP脚本按各端README显式运行。最终日志在`docs/技术交接/验证记录/`及两端`ACCEPTANCE-ROUND15.md`。资源生成不替代手写布局与平台权限验收，不以测试数推算90%产品完成率。
 
+## NeuroEcho v1.2 只读增强
+
+R15 服务端可选读取 NeuroEcho Backend Handoff v1.2 的远程最新快照。配置只放在服务端环境：
+
+```text
+NEUROECHO_CONNECTION_FILE=<交接包 remote_connection.json 的绝对路径>
+```
+
+也可以分别设置 `NEUROECHO_BASE_URL`、`NEUROECHO_CHANNEL` 和
+`NEUROECHO_READ_TOKEN`。服务端只调用交接包定义的
+`GET /api/v1/share/{channel}`，使用 `Authorization: Bearer <read_token>`；不会把凭据放进 URL，
+不会调用 owner 的 `/api/v1/policy`、`/eeg`、`/scene` 或写入接口。
+
+通过校验的同一用户原话决策会作为内容层的模式约束，允许的 EEG、BPM 和场景摘要只作为低优先级观察，
+不作为情绪、心理或健康诊断。A 会保持安静；B/C/D/E/F 分别对应短文本、短语音文本、步骤、澄清和倾听提议。
+所有时效、来源、`decision_id`、`interaction_id` 和输出长度约束都在服务端重新检查。
+
+远程未配置、鉴权失败、`available=false`、Windows 发布端过期、数据不属于当前用户原话或响应不符合契约时，
+R15 继续使用原有 SOUL、记忆、来源、模型和规则回退流程。当前交接包的只读凭据不能把 R15 用户话语写回云端，
+也不能单独触发新的 LoRA 决策；这需要队友补充独立的受信写入接口和凭据。`/api/config` 会显示只读增强是否已配置。
+
 ## 云端小鲸鱼语音（可选）
 
 语音输入仍由浏览器的本地 `SpeechRecognition` 处理。小鲸鱼 TTS 默认保留本机
@@ -67,4 +88,4 @@ NIANXIANG_TTS_TIMEOUT=120
 Token 只由 R15 后端读取，不会进入浏览器或静态资源。网关应通过可信 HTTPS 或
 私有网络访问；GPT-SoVITS 的 `9880` 只监听云主机回环地址。没有网关配置时，
 Windows 本机模式仍使用 `XINJI_TTS_URL` 和 `voice-settings.json` 中的本地设置。
-网关的部署、Token 哈希轮换和 Nginx 模板见 `voice-gateway/README.md`。
+网关的部署、Token 哈希轮换和 Nginx 模板见 `voice-gateway/README.md`。Windows 配置脚本会把配置写入启动器实际读取的 `%LOCALAPPDATA%\Nianxiang\data\voice-settings.json`，不会写入源码目录。
