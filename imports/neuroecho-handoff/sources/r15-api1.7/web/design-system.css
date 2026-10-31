@@ -954,3 +954,5 @@ body:has(#app) .design-search-results p{font-size:13px;line-height:1.6;color:var
 html[data-reduce-transparency=true] body:has(#app) .modal-card,html[data-reduce-transparency=true] body:has(#app) .echo-user-dialog,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
 html[data-reduce-motion=true] body:has(#app) .modal,html[data-reduce-motion=true] body:has(#app) .modal-card,html[data-reduce-motion=true] body:has(#app) .design-search,html[data-reduce-motion=true] body:has(#app) .design-search-card,html[data-reduce-motion=true] body:has(#app) .echo-user-dialog,html[data-reduce-motion=true] body:has(#app) .onboarding-card{animation:none}
 @media(prefers-reduced-motion:reduce){body:has(#app) .modal,body:has(#app) .modal-card,body:has(#app) .design-search,body:has(#app) .design-search-card,body:has(#app) .echo-user-dialog,body:has(#app) .onboarding-card{animation:none}}
+/* Web 改版 24 (2026-10-31，产品要求)：「回响」页里的「留一条跟进」卡整块不再显示（followups.js 仍挂载，只是不画）。 */
+#app #today-followups,#app .context .followup-card{display:none!important}
