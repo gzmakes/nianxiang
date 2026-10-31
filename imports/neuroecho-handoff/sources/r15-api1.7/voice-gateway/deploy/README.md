@@ -17,6 +17,10 @@ curl -fsS http://127.0.0.1:9881/healthz
 curl -fsS -H "Authorization: Bearer $VOICE_TOKEN" http://127.0.0.1:9881/v1/status
 ```
 
+`gpt-sovits.service.example` is a starting point for the API process. Review
+the pinned GPT-SoVITS commit, model paths and Linux virtualenv before enabling
+it; the example deliberately does not guess private model filenames.
+
 Keep ports 9880 and 9881 loopback-only. Use `nginx.conf.example` with a real
 certificate, or a private overlay network, for remote R15 backends. The
 Tencent Cloud console must be used by an authorized operator to confirm the

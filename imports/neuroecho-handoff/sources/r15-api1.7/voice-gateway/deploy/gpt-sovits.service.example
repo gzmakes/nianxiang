@@ -1,0 +1,19 @@
+[Unit]
+Description=GPT-SoVITS API for Nianxiang
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/nianxiang/apps/GPT-SoVITS
+Environment=PATH=/opt/nianxiang/apps/GPT-SoVITS/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/nianxiang/apps/GPT-SoVITS/.venv/bin/python /opt/nianxiang/apps/GPT-SoVITS/api_v2.py -a 127.0.0.1 -p 9880
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/nianxiang/apps/GPT-SoVITS /opt/nianxiang/models
+
+[Install]
+WantedBy=multi-user.target
