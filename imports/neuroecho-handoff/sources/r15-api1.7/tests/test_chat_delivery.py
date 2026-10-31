@@ -101,11 +101,11 @@ class DeliveryTests(unittest.TestCase):
     assert plugin_bridge.sanitize_meme_markers('你好 [表情: happy] [表情: invented]') == '你好 [表情: builtin/happy.svg] '
 
  def test_model_catalog_exposes_explicit_pack_ids(self):
-    catalog = plugin_bridge.meme_prompt_catalog()
+    catalog = plugin_bridge.meme_prompt_catalog("whale")
     item = next(entry for entry in catalog if entry['id'].startswith('dafeiyu-001/'))
-    assert item['tag']
+    assert item['tags']
     marker = f"[表情: {item['id']}]"
-    assert plugin_bridge.sanitize_meme_markers(marker) == marker
+    assert plugin_bridge.sanitize_meme_markers(marker, "whale") == marker
 
 
 class StyleTests(unittest.TestCase):
