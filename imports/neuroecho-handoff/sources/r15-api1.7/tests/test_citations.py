@@ -14,7 +14,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_assistant_reply_has_citations(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     d = client.post("/api/chat", json={"session_id": sid, "text": "下一步怎么走"}).json()
     assert d["messages"][-1]["role"] == "assistant"
     citations = d["messages"][-1]["citations"]

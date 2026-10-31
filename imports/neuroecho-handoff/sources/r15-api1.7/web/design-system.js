@@ -53,7 +53,7 @@
     input.oninput=refreshSearch;
     function openSearch(){if(document.querySelector('dialog[open], [aria-modal="true"]:not(.is-hidden):not(.design-search)'))return false;refreshSearch();controller.open();input.focus();return true;}
     function mountTopics(container){topicContainer=container;const labels=['全部',...topics.list()];container.innerHTML=labels.map(label=>`<button type="button" class="topic-chip ${selected===label?'active':''}" data-topic-filter="${escape(label)}" aria-pressed="${selected===label}">${escape(label)}</button>`).join('');container.querySelectorAll('[data-topic-filter]').forEach(button=>button.onclick=()=>setTopic(button.dataset.topicFilter));}
-    function filterMessages(container){container.querySelectorAll('[data-message-id]').forEach(element=>element.classList.toggle('is-topic-hidden',!topics.matches(element.dataset.messageId,selected)));}
+    function filterMessages(container){container.querySelectorAll('[data-message-id]').forEach(element=>element.classList.toggle('is-topic-hidden',!topics.matches(element.dataset.messageId,selected,element)));}
     function setTopic(label){selected=label; if(topicContainer)mountTopics(topicContainer);document.dispatchEvent(new CustomEvent('xinji-topic-change',{detail:{topic:selected}}));}
     async function tag(id){if(String(id).startsWith('local-'))return;const label=await window.XinjiDialogs.prompt({title:'标记话题',message:'仅本设备的视图分类，不是个人记忆，也不会建立新对话。',value:topics.get(id),maxLength:20});if(label!==null && topics.assign(id,label)){if(topicContainer)mountTopics(topicContainer);setTopic(String(label || "日常").trim());}}
     document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openSearch();}});

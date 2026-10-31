@@ -60,6 +60,7 @@
       } catch (error) { button.disabled = false; toast(error.message || "切换伙伴失败"); }
     });
   }
+
   let mobileOpeningEntry = 0, mobileRokidReturn = null;
   let mobileWizard = null, mobileWizardMode = "user", mobileWizardResume = null;
   let mobileAuthSurface = null, mobileAuthClosing = false;
@@ -113,7 +114,7 @@
     getMobileAuthSurface()?.open();
   }
 
-  function finishMobileAuthSurface({resume = true, documentReady = false} = {}) {
+  function finishMobileAuthSurface({resume = true, documentReady = false, accountReady = false} = {}) {
     const origin = mobileWizardResume;
     mobileWizardResume = null;
     mobileAuthClosing = true;
@@ -121,7 +122,8 @@
     mobileAuthClosing = false;
     if (resume && origin && (state.session?.id || null) === origin.sessionId && mobileSourceFormEpoch === origin.epoch) {
       openMobileWizard();
-      if (documentReady) openMobileFeishu();
+      if (accountReady) openMobileFeishuAccount();
+      else if (documentReady) openMobileFeishu();
       return true;
     }
     return false;
@@ -156,30 +158,14 @@
     const epoch = mobileSourceFormEpoch;
     wz.directEntry = true;
     openMobileWizard();
+    if (id !== "feishu" && window.XinjiConnectionIntro.connected(state.context, id)) { showConnectedMobileSource(id, {name:({local_files:"本机资料",apple_calendar:"日历"})[id] || id}); return; }
     if (id === "local_files") { openMobileLocalFiles(); return; }
+    if (id === "waytoagi" || id === "jike") { openMobilePublicSource(id); return; }
     if (id === "apple_calendar") {
-      openMobileReal("apple_calendar", "needs_click", {name: "日历", blurb: "先看看未来 7 天的安排，只读日程", reads: ["未来 7 天日程"]});
+      openMobileReal("apple_calendar", "needs_click", {name: "日历", blurb: "看看过去 7 天的安排，只读日程", reads: ["过去 7 天日程"]});
       return;
     }
-    if (id !== "feishu") return;
-    showWz(3);
-    $("#m-wz3-title").textContent = "连接飞书";
-    $("#m-read-btn").classList.add("is-hidden");
-    $("#m-read-items").innerHTML = "";
-    $("#m-read-scope").innerHTML = "";
-    $("#m-read-head").innerHTML = `<p class="lede">先选一篇你想让我了解的文档。</p><p class="synthetic" role="status">正在确认连接状态…</p>`;
-    const current = () => request === mobileOpeningEntry && epoch === mobileSourceFormEpoch && (state.session?.id || null) === sessionId;
-    try {
-      const result = await api("/api/onboarding/sources?force=1");
-      if (!current()) return;
-      const source = result.sources?.find(item => item.id === "feishu");
-      if (source?.status === "ready") { openMobileFeishu(); return; }
-      $("#m-read-head").innerHTML = `<p class="lede">飞书连接还没有准备好。你可以先聊聊，需要资料时再来。</p><p class="note">连接用于读取你选择的单篇飞书文档；你会先在飞书官方页面核对权限，再选文档、预览并确认。搜索需要单独开启，不会遍历全库。</p><details><summary>查看连接详情</summary><p class="note">${esc(source?.hint || "当前未确认飞书授权状态，请稍后在连接设置中核对。")}</p></details><button type="button" class="btn primary wide" id="m-entry-feishu-authorize">连接飞书</button><button type="button" class="btn ghost wide" id="m-entry-back-chat">先回到聊天</button>`;
-      $("#m-entry-feishu-authorize").onclick = () => { if (current()) return startLarkAuthMobile(); };
-      $("#m-entry-back-chat").onclick = () => { closeMobileWizard(); $("#m-input")?.focus(); };
-    } catch (error) {
-      if (current()) $("#m-read-head").innerHTML = `<p class="lede">暂时没能确认飞书连接。${esc(error.message)}</p><p class="synthetic">可以返回聊天，稍后再试；还没有读取文档。</p>`;
-    }
+    if (id === "feishu") openMobileFeishuAccount();
   }
 
   let contentMutationEpoch = 0, contentMutationCount = 0;
@@ -221,6 +207,34 @@
   state.companionBoundary = window.XinjiCompanionBoundary?.create({api, getSessionId: () => state.session?.id, host:document.querySelector("[data-companion-boundary]")});
   void window.XinjiVoice.configure({api});
 
+  const connectionIntro = window.XinjiConnectionIntro.create({api, host: $("#m-connection-intro"),
+    getSessionId: () => state.session?.id,
+    canApply: () => !mActiveTurn && !state.delivery?.pending() && !mQueuedTurns.length && !mTurnQueue.length && !contentMutationCount && !state.attachingSource && !state.revokingSource && !state.confirmingSource,
+    revision: () => `${state.session?.id}:${contentMutationEpoch}:${state.sourceGeneration}:${state.messages.length}`,
+    apply: data => {
+      state.session = data.session; state.messages = data.messages; state.memories = data.memories;
+      state.context = data.context || null; state.bookmark = data.bookmark || null;
+      renderMessages(); window.XinjiConnectionIntro.syncBadges(document, state.context);
+    }});
+  function finishConnection(data) {
+    closeMobileWizard(); closeSheet(); window.XinjiConnectionIntro.syncBadges(document, state.context);
+    connectionIntro.start(data?.intro); $("#m-input")?.focus();
+  }
+  async function beginConnectionIntro(sourceId) {
+    const sid = state.session?.id;
+    if (!sid) return;
+    const data = await api('/api/connections/intro', {method:'POST', body:JSON.stringify({session_id:sid,source_id:sourceId})});
+    if (state.session?.id !== sid) return;
+    closeMobileWizard(); closeSheet(); connectionIntro.start(data.intro || data); $("#m-input")?.focus();
+  }
+  function showConnectedMobileSource(id, meta) {
+    $("#m-read-btn").classList.add('is-hidden'); $("#m-read-items").innerHTML = ''; $("#m-read-scope").innerHTML = '';
+    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '✓')}</span><h3>${esc(meta?.name || '已连接')}</h3></div><p class="connection-value">✓ 已连接，可以接着聊了。</p><p class="connection-scope">需要时会参考已接入的内容。你可以在资料管理里移除。</p><button type="button" class="btn primary" id="m-connection-return">回到聊天</button><button type="button" class="text-btn" id="m-connection-manage">管理资料</button></div>`;
+    $("#m-connection-return").onclick = () => { closeMobileWizard(); closeSheet(); };
+    $("#m-connection-manage").onclick = () => { closeMobileWizard(); openSheet('more'); };
+    showWz(3);
+  }
+
   // ---------- onboarding ----------
   function enterSessionData(d) {
     if (typeof pairedDevicesPanel !== "undefined") pairedDevicesPanel?.suspend();
@@ -252,6 +266,7 @@
     }
     localStorage.setItem("xinji_session", state.session.id);
     if (typeof closeLarkAuthMobile === "function") closeLarkAuthMobile(false);
+    if (typeof closeSheet === "function") closeSheet();
     if (typeof closeMobileWizard === "function") closeMobileWizard();
     else $("#m-onboard").classList.add("is-hidden");
     $("#m-app").classList.remove("is-hidden");
@@ -259,18 +274,19 @@
     loadEngine();
     loadNextStep();
     renderStarters();
+    window.XinjiConnectionIntro.syncBadges(document, state.context);
+    connectionIntro.start(d.intro);
+    $("#m-input")?.focus();
   }
 
-  async function startSession(mode, text = "") {
-    try {
-      const persona_id = state.session?.persona_id || "nianxiang";
-      const d = await api("/api/session", { method: "POST", body: JSON.stringify({ mode, text, persona_id }) });
-      enterSessionData(d);
-    } catch (e) { toast(e.message); }
+  async function startSession() {
+    // Resume the server's canonical conversation; this client never creates a replacement conversation.
+    return restore();
+
   }
 
   // ---------- onboarding wizard (mobile) ----------
-  const wz = { catalog: null, scenario: null, connector: null, read: null };
+  const wz = { connector: null, read: null };
   const mobilePendingPrefix = "xinji_h5_source_pending_";
 
   function mobilePendingKeys() {
@@ -318,6 +334,7 @@
   }
 
   function showWz(n) {
+    $("#m-onboard").classList.toggle("connection-compact", n === 3);
     if (n !== 3) clearMobileSourceForm();
     $("#m-onboarding-return")?.classList.toggle("is-hidden", !state.session);
     [1, 2, 3, 4].forEach((i) => $(`#m-wz-${i}`)?.classList.toggle("is-hidden", i !== n));
@@ -328,19 +345,28 @@
 
   async function loadCatalog() { return loadRealSources(); }
 
+  async function readFeishuAccountState() {
+    const sid = state.session?.id;
+    if (!sid) return;
+    try {
+      const data = await api(`/api/lark/account?session_id=${encodeURIComponent(sid)}`);
+      if (state.session?.id === sid) state.feishuAccount = data;
+    } catch (_) { if (state.session?.id === sid) state.feishuAccount = null; }
+  }
+
   async function loadRealSources() {
     const request = ++mobileOpeningEntry, epoch = mobileSourceFormEpoch, sid = state.session?.id || null;
     const box = $("#m-reco");
     const current = () => request === mobileOpeningEntry && epoch === mobileSourceFormEpoch && (state.session?.id || null) === sid && !$("#m-wz-2").classList.contains("is-hidden");
     box.innerHTML = `<p class="synthetic">正在检查可用的连接…</p>`;
     try {
-      const d = await api("/api/onboarding/sources?force=1");
+      const [d] = await Promise.all([api("/api/onboarding/sources?force=1"), readFeishuAccountState()]);
       if (!current()) return;
       const labels = { ready: "可读取", needs_click: "读取前确认权限", needs_config: "需填写配置", needs_auth: "需授权", needs_install: "需安装", unavailable: "暂不可用", empty: "暂无内容" };
       box.innerHTML = (d.sources || []).map((source) => `<div class="m-connector">
         <div class="ico">${esc(source.icon)}</div><div class="bd"><b>${esc(source.name)}</b>
-        <small>${esc(source.blurb)} · ${esc(labels[source.status] || "待检查")}</small></div>
-        <button type="button" class="go" data-real="${esc(source.id)}">${source.id === "git" ? "选目录" : ["ready", "needs_click"].includes(source.status) ? "连接" : "查看"}</button>
+        <small>${esc(source.id === "apple_calendar" ? "过去 7 天的日程" : source.id === "apple_reminders" ? "最近 7 天有更新的提醒" : source.blurb)} · <span ${source.id === "feishu" ? "data-feishu-account-status" : `data-connection-source="${esc(source.id)}" data-connection-idle="${esc(labels[source.status] || "待检查")}"`}>${esc(source.id === "feishu" ? window.XinjiFeishuAccountPicker.statusLabel(state.feishuAccount) : window.XinjiConnectionIntro.connected(state.context,source.id) ? "✓ 已连接" : labels[source.status] || "待检查")}</span></small></div>
+        <button type="button" class="go" data-real="${esc(source.id)}" ${source.id === "feishu" ? "data-feishu-account-control" : `data-connection-control="${esc(source.id)}" data-connection-idle="连接"`}>${source.id === "feishu" ? state.feishuAccount?.enabled ? "管理连接" : "连接" : window.XinjiConnectionIntro.connected(state.context,source.id) ? "管理" : source.id === "git" ? "选目录" : ["ready", "needs_click"].includes(source.status) ? "连接" : "查看"}</button>
       </div>`).join("") || `<p class="synthetic">暂时没有可用来源，可以先返回聊天。</p>`;
       box.querySelectorAll("[data-real]").forEach(button => {
         button.onclick = () => { if (current()) { const source = d.sources.find(item => item.id === button.dataset.real); if (source) openMobileReal(source.id, source.status, source); } };
@@ -354,14 +380,12 @@
 
   async function openMobileReal(id, status, meta) {
     clearMobileSourceForm();
+    if (id !== "feishu" && window.XinjiConnectionIntro.connected(state.context, id)) { showConnectedMobileSource(id, meta); return; }
     if (id === "local_files") { openMobileLocalFiles(); return; }
+    if (id === "waytoagi" || id === "jike") { openMobilePublicSource(id); return; }
     if (id === "git") { openMobileGit(); return; }
     if (id === "gmail" || id === "notion") { openMobileCredentialSource(id); return; }
-    if (id === "feishu") {
-      if (status === "ready") openMobileFeishu();
-      else openMobileEntry("feishu");
-      return;
-    }
+    if (id === "feishu") { openMobileFeishuAccount(); return; }
     if (id === "github" && status !== "ready") {
       const sid = state.session?.id || null, epoch = mobileSourceFormEpoch;
       showWz(3);
@@ -390,12 +414,16 @@
     }
     wz.realSource = null;
     wz.pendingSource = id;
-    $("#m-wz3-title").textContent = `确认读取 · ${meta?.name || "来源"}`;
-    $("#m-read-head").innerHTML = `<p class="lede">${esc(meta?.blurb || "")}</p>`;
-    $("#m-read-items").innerHTML = `<p class="note">${esc((meta?.reads || []).join('、') || meta?.blurb || '')}。确认后才开始读取。先展示条目信息；接入后，聊天时可能向当前模型服务发送必要的标题、摘要和提取内容。</p>`;
-    $("#m-read-scope").innerHTML = "";
+    $("#m-wz3-title").textContent = `连接${meta?.name || "来源"}`;
+    const scope = id === 'apple_calendar' ? '只读过去 7 天的日程，相关片段会发送给当前模型。'
+      : id === 'apple_reminders' ? '只读最近 7 天相关提醒；可用时间范围以实际读取结果为准，相关片段会发送给当前模型。'
+      : '只读当前来源支持的内容，相关片段会发送给当前模型。';
+    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '▦')}</span><h3>连接${esc(meta?.name || id)}</h3></div><p class="connection-value">陪你看看最近发生的事，找到此刻值得聊的一件。</p><p class="connection-scope">${esc(scope)}</p></div>`;
+    $("#m-read-items").innerHTML = '';
+    $("#m-read-scope").innerHTML = '';
     $("#m-read-btn").classList.remove("is-hidden");
-    $("#m-read-btn").textContent = "同意并读取";
+    $("#m-read-btn").textContent = "授权";
+    $("#m-read-btn").disabled = false;
     showWz(3);
   }
 
@@ -409,10 +437,9 @@
     $("#m-read-btn").classList.add("is-hidden");
     $("#m-read-items").innerHTML = "";
     $("#m-read-scope").innerHTML = "";
-    $("#m-read-head").innerHTML = `<p class="lede">填写运行本服务的这台电脑上的完整目录。只读取所选代码库最近最多 8 条提交，不读取代码文件，也不会修改仓库。</p>
-      <p class="synthetic">仅本机 H5 可用；手机远程连接尚未开放。本次先展示提交元信息。确认接入后，聊天时可能将必要条目发送给当前模型服务。</p>
+    $("#m-read-head").innerHTML = `<div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">git</span><h3>连接代码库</h3></div><p class="connection-value">看看最近的进展，陪你理一理下一步。</p><p class="connection-scope">只读所选代码库最近最多 8 条提交；相关片段会发送给当前模型。</p>
       <div class="mobile-source-form"><label>代码库目录<input id="m-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 C:\\Users\\你的用户名\\Projects\\my-project 或 ~/Projects/my-project"></label>
-      <button class="btn ghost wide" id="m-git-preview">同意并读取提交</button><p class="synthetic" id="m-git-hint" role="status">支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
+      <button class="btn primary wide" id="m-git-preview">授权</button><p class="synthetic" id="m-git-hint" role="status">支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
     const input = $("#m-git-path"), button = $("#m-git-preview"), hint = $("#m-git-hint");
     input.oninput = () => { clearMobileSourceForm(); $("#m-read-items").innerHTML = ""; hint.textContent = "目录已更改，请重新读取。"; button.disabled = false; };
     button.onclick = async () => {
@@ -424,11 +451,12 @@
       $("#m-read-items").innerHTML = "";
       hint.textContent = "正在读取所选代码库…";
       try {
-        const result = await api("/api/onboarding/real/read", {method: "POST", body: JSON.stringify({source_id: "git", path})});
+        const result = await api("/api/onboarding/real/read", {method: "POST", body: JSON.stringify({source_id: "git", path, start_intro:true})});
         if (epoch !== mobileSourceFormEpoch || input.value.trim() !== path || (state.session?.id || null) !== initialSession) return;
         if (!result.ok || !result.preview_id || !Array.isArray(result.items)) {
           hint.textContent = [result.error || "读取失败", result.hint].filter(Boolean).join(" · "); return;
         }
+        $("#m-read-items").classList.add("connection-auto-snapshot");
         $("#m-read-items").innerHTML = `<p class="synthetic">实际代码库：${esc(result.selected_path || path)} · ${result.items.length} 条提交</p>` + result.items.map(item =>
           `<div class="m-read-item"><b>${esc(item.title)}</b><span>${esc(item.meta)} · ${esc(item.summary)}</span></div>`).join("") +
           `<button class="btn primary wide" id="m-git-use">核对这些提交并继续</button>`;
@@ -438,8 +466,9 @@
           wz.realSource = {id: "git", read: result, sessionId: initialSession};
           wz.read = result;
           wz.connector = result.connector;
-          renderInsights();
+          return startMobileReal();
         };
+        await $("#m-git-use").onclick();
       } catch (error) { if (epoch === mobileSourceFormEpoch) hint.textContent = `读取失败：${error.message}；可修改目录后重试。`; }
       finally { if (epoch === mobileSourceFormEpoch) button.disabled = false; }
     };
@@ -454,15 +483,13 @@
     $("#m-read-btn").classList.add("is-hidden");
     $("#m-read-scope").innerHTML = "";
     $("#m-read-items").innerHTML = "";
-    $("#m-read-head").innerHTML = gmail ? `
-      <p class="lede">读取收件箱最近最多 5 封未读邮件的主题、发件人和日期，不下载正文。应用专用密码可能具有更广的账号访问权限。</p>
-      <p class="synthetic">仅本机 H5 可用，手机远程连接尚未开放。凭据仅用于本次读取，不保存；返回或离开页面时清除。</p>
-      <div class="mobile-source-form"><label>Gmail 地址<input id="m-gmail-address" type="email" autocomplete="off" placeholder="你的 Gmail 地址"></label><label>应用专用密码<input id="m-gmail-password" type="password" autocomplete="off" placeholder="不是 Google 登录密码"></label>
-      <button class="btn ghost wide" id="m-source-preview">读取并预览</button><p class="synthetic" id="m-source-hint" role="status"></p></div>` : `
-      <p class="lede">只读指定页面的前 50 个顶层文本块，或指定数据库的前 20 条记录；仅提取摘要，不递归子页面。需先在 Notion 中把目标内容连接给集成。</p>
-      <p class="synthetic">仅本机 H5 可用，手机远程连接尚未开放。集成凭据的访问范围由 Notion 设置决定；凭据仅用于本次读取，不保存，返回或离开页面时清除。</p>
-      <div class="mobile-source-form"><label>连接方式<select id="m-notion-method"><option value="token">集成 Token</option><option value="cli">本机已登录的 Notion CLI</option></select></label><p class="synthetic">CLI 方式无需填写 Token，仅支持单页。<a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">官方连接说明</a></p><label>Notion 集成 Token<input id="m-notion-token" type="password" autocomplete="off" placeholder="内部集成 token"></label><label>页面或数据库链接<input id="m-notion-url" type="url" autocomplete="off" placeholder="Notion 链接"></label>
-      <button class="btn ghost wide" id="m-source-preview">读取并预览</button><p class="synthetic" id="m-source-hint" role="status"></p></div>`;
+    $("#m-read-head").innerHTML = gmail ? `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">M</span><h3>连接 Gmail</h3></div>
+      <p class="connection-value">看看最近的未读消息，一起理清在意的事。</p><p class="connection-scope">只读最近 5 封未读邮件的主题、发件人和日期，必要内容会发送给当前模型。密码仅本次使用。</p>
+      <div class="mobile-source-form"><label>Gmail 地址<input id="m-gmail-address" type="email" autocomplete="off"></label><label>应用专用密码<input id="m-gmail-password" type="password" autocomplete="off" placeholder="不是 Google 登录密码"></label>
+      <button class="btn primary wide" id="m-source-preview">授权</button><p class="connection-status" id="m-source-hint" role="status"></p></div></div>` : `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">N</span><h3>连接 Notion</h3></div>
+      <p class="connection-value">带上一页想法，从你正在做的事聊起。</p><p class="connection-scope">只读所选页面前 50 个文本块或数据库前 20 条，相关内容会发送给当前模型。Token 仅本次使用。</p>
+      <div class="mobile-source-form"><label>连接方式<select id="m-notion-method"><option value="token">集成 Token</option><option value="cli">本机已登录的 Notion CLI</option></select></label><label>集成 Token<input id="m-notion-token" type="password" autocomplete="off"></label><label>页面或数据库链接<input id="m-notion-url" type="url" autocomplete="off" placeholder="Notion 链接"></label>
+      <button class="btn primary wide" id="m-source-preview">授权</button><p class="connection-status" id="m-source-hint" role="status"></p></div><details><summary>连接帮助</summary><a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">Notion 官方 CLI 连接说明</a></details></div>`;
     if (!gmail) $("#m-notion-method").onchange = () => { clearMobileSourceForm(); $("#m-source-preview").disabled = false; $("#m-source-hint").textContent = $("#m-notion-method").value === "cli" ? "使用本机 ntn 已有登录；填写单页链接，只读前 50 个顶层文本块。" : "填写集成 Token 和页面或数据库链接。"; $("#m-notion-token").value = ""; $("#m-notion-token").disabled = $("#m-notion-method").value === "cli"; $("#m-read-items").innerHTML = ""; };
     $("#m-source-preview").onclick = async () => {
       const button = $("#m-source-preview"), hint = $("#m-source-hint"), items = $("#m-read-items");
@@ -503,7 +530,7 @@
           state.attachingSource = true;
           hint.textContent = initialSession ? "正在接入当前对话…" : "正在开始新对话…";
           try {
-            const result = await api(`/api/${id}/start`, {method:"POST", body:JSON.stringify({preview_id:d.preview_id,...(initialSession ? {session_id:initialSession} : {})})});
+            const result = await api(`/api/${id}/start`, {method:"POST", body:JSON.stringify({preview_id:d.preview_id,start_intro:true,...(initialSession ? {session_id:initialSession} : {})})});
             if (!result?.session) throw Error("结果无效");
             if (epoch !== mobileSourceFormEpoch || (state.session?.id || null) !== initialSession) {
               toast("来源接入结果未确认，请在已接入资料列表中核对。"); return;
@@ -521,25 +548,48 @@
             hint.textContent = e.status === 400 ? "预览已失效，请重新读取并确认。" : [404,409].includes(e.status) ? e.message : "未能确认接入结果，请在已接入资料列表中核对；如需重试，请重新读取预览。";
           } finally { state.attachingSource = false; }
         };
+        await $("#m-source-start").onclick();
       } catch (e) { if (epoch === mobileSourceFormEpoch) hint.textContent = `读取失败：${e.message}`; }
       finally { if (epoch === mobileSourceFormEpoch) button.disabled = false; }
     };
   }
 
+  function openMobilePublicSource(id) {
+    const sid = state.session?.id || null, epoch = mobileSourceFormEpoch;
+    $("#m-wz3-title").textContent = id === 'jike' ? '即刻公开帖子' : 'WaytoAGI 公开资料';
+    $("#m-read-btn").classList.add('is-hidden');
+    $("#m-read-items").innerHTML = ''; $("#m-read-scope").innerHTML = '';
+    window.XinjiPublicLinkPicker.mount($("#m-read-head"), {
+      sourceId:id, api, autoAttach:true, isCurrent:() => epoch === mobileSourceFormEpoch && (state.session?.id || null) === sid,
+      onConfirm: async (read) => {
+        if (epoch !== mobileSourceFormEpoch || (state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || mActiveTurn || mQueuedTurns.length || mTurnQueue.length) throw Error('对话正在更新，请稍后重新读取。');
+        state.attachingSource = true;
+        try {
+          const data = await api('/api/onboarding/real/start', {method:'POST',body:JSON.stringify({source_id:id,preview_id:read.preview_id,session_id:sid,start_intro:true})});
+          if (!data?.session || (sid && data.session.id !== sid)) throw Error('接入结果未确认');
+          if (epoch === mobileSourceFormEpoch && (state.session?.id || null) === sid) { enterSessionData(data); toast('公开正文已接入当前对话'); }
+        } finally { state.attachingSource = false; }
+      }
+    });
+    showWz(3);
+  }
+
   function openMobileLocalFiles() {
+    clearMobileSourceForm(); const epoch = mobileSourceFormEpoch;
     $("#m-wz3-title").textContent = "选择文本文件";
     $("#m-read-btn").classList.add("is-hidden");
     $("#m-read-items").innerHTML = "";
     $("#m-read-scope").innerHTML = "";
     const initialSession = state.session?.id || null;
-    window.XinjiFilePicker.mount($("#m-read-head"), {sessionId: initialSession, onConfirm: async (files, sid) => {
-      if ((state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || mActiveTurn || mQueuedTurns.length || mTurnQueue.length) {
+    window.XinjiFilePicker.mount($("#m-read-head"), {sessionId: initialSession, autoAttach:true, isCurrent: () => epoch === mobileSourceFormEpoch, onConfirm: async (files, sid) => {
+      if (epoch !== mobileSourceFormEpoch || (state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || mActiveTurn || mQueuedTurns.length || mTurnQueue.length) {
         const e = new Error("对话已切换或消息仍在发送，请回到对话后重新选择。"); e.status = 409; throw e;
       }
       state.attachingSource = true;
       try {
-        const d = await api("/api/local-files/confirm", {method: "POST", body: JSON.stringify({session_id: sid, files})});
+        const d = await api("/api/local-files/confirm", {method: "POST", body: JSON.stringify({session_id: sid, files, start_intro:true})});
         if (!d?.session || (sid && d.session.id !== sid)) throw Error("接入结果未确认");
+        if (epoch !== mobileSourceFormEpoch || (state.session?.id || null) !== sid) { connectionIntro.start(d.intro); return; }
         enterSessionData(d); toast(sid ? "已接入当前对话" : "已开始新对话");
       } finally { state.attachingSource = false; }
     }});
@@ -548,23 +598,34 @@
 
   async function readMobileConfirmedSource() {
     const id = wz.pendingSource;
-    if (!id) return renderInsights();
+    const button = $("#m-read-btn");
+    if (!id || button.disabled) return;
     const sessionId = state.session?.id || null;
     const epoch = mobileSourceFormEpoch;
-    const button = $("#m-read-btn");
-    button.disabled = true;
-    button.textContent = "读取中…";
+    let uncertain = false, pendingKey = null;
+    button.disabled = true; button.textContent = "连接中…";
+    $("#m-read-scope").textContent = "正在读取，若出现系统权限窗口，请完成后稍等。";
     try {
-      const r = await api("/api/onboarding/real/read", { method: "POST", body: JSON.stringify({ source_id: id }) });
+      const read = await api('/api/onboarding/real/read', {method:'POST',  body:JSON.stringify({source_id:id,read_window:'recent7',start_intro:true})});
       if (epoch !== mobileSourceFormEpoch) return;
-      if (!r.ok) throw new Error([r.error || "读取失败", r.hint].filter(Boolean).join(" · "));
-      if ((state.session?.id || null) !== sessionId) throw Error("对话已切换，请重新选择来源。");
-      wz.realSource = { id, read: r, sessionId };
-      wz.read = r;
+      if (!read.ok || !read.preview_id) throw Error([read.error || '读取失败', read.hint].filter(Boolean).join(' · '));
+      if ((state.session?.id || null) !== sessionId || state.attachingSource || state.revokingSource || state.confirmingSource || mActiveTurn || mQueuedTurns.length || mTurnQueue.length) throw Error('对话正在更新，请稍后重新授权。');
+      state.attachingSource = true;
+      pendingKey = markMobileSourceStart();
+      uncertain = true;
+      const data = await api('/api/onboarding/real/start', {method:'POST',body:JSON.stringify({source_id:id,preview_id:read.preview_id,session_id:sessionId,start_intro:true})});
+      if (!data?.session || (sessionId && data.session.id !== sessionId)) throw Error('接入结果尚未确认');
+      uncertain = false; finishMobileSourceStart(pendingKey);
+      if (epoch !== mobileSourceFormEpoch || (state.session?.id || null) !== sessionId) return;
       wz.pendingSource = null;
-      renderInsights();
-    } catch (e) { if (epoch === mobileSourceFormEpoch) toast(e.message); }
-    finally { if (epoch === mobileSourceFormEpoch) { button.disabled = false; button.textContent = "同意并读取"; } }
+      enterSessionData(data);
+    } catch (error) {
+      if (error.status >= 400 && error.status < 500) { uncertain = false; if (pendingKey) finishMobileSourceStart(pendingKey); }
+      if (epoch === mobileSourceFormEpoch) $("#m-read-scope").textContent = uncertain ? '连接结果尚未确认，请返回聊天后核对连接状态。' : error.message;
+    } finally {
+      state.attachingSource = false;
+      if (epoch === mobileSourceFormEpoch) { button.disabled = uncertain; button.textContent = uncertain ? '请先核对连接状态' : '授权'; }
+    }
   }
 
   async function confirmMobileFeishu(url, previewId, hint, button, guard = null) {
@@ -584,7 +645,7 @@
     const sid = state.session?.id;
     try {
       const endpoint = sid ? "/api/lark/attach" : "/api/lark/start";
-      const body = sid ? {session_id: sid, url, preview_id: previewId} : {url, preview_id: previewId};
+      const body = sid ? {session_id: sid, url, preview_id: previewId, start_intro:true} : {url, preview_id: previewId, start_intro:true};
       const data = await api(endpoint, {method: "POST", body: JSON.stringify(body)});
       if (!data?.session || (sid && data.session.id !== sid)) throw new Error("响应无效");
       if ((sid && state.session?.id !== sid) || (guard && !guard.current())) return;
@@ -607,6 +668,36 @@
     }
   }
 
+  function openMobileFeishuAccount() {
+    clearMobileSourceForm();
+    const epoch = mobileSourceFormEpoch;
+    let sessionId = state.session?.id || null;
+    const current = () => epoch === mobileSourceFormEpoch && !$("#m-onboard").classList.contains("is-hidden") &&
+      (!sessionId || state.session?.id === sessionId);
+    showWz(3); $("#m-wz3-title").textContent = "连接飞书";
+    $("#m-read-btn").classList.add("is-hidden"); $("#m-read-items").innerHTML = ""; $("#m-read-scope").innerHTML = "";
+    window.XinjiFeishuAccountPicker.mount($("#m-read-head"), {api, getSessionId: () => state.session?.id, isCurrent: current,
+      ensureSession: async () => {
+        const data = await api("/api/conversation");
+        if (!current()) return null;
+        if (!data?.session?.id) throw Error("暂时无法读取当前对话");
+        if (state.session && state.session.id !== data.session.id) throw Error("对话状态已变化，请重新打开连接");
+        if (!state.session) {
+          state.session = data.session; state.messages = data.messages || []; state.memories = data.memories || [];
+          state.context = data.context || null; state.bookmark = data.bookmark || null;
+          localStorage.setItem("xinji_session", data.session.id);
+        }
+        sessionId = state.session.id; return sessionId;
+      },
+      onAuthorize: () => startLarkAuthMobile("account"),
+      onConnected: data => finishConnection(data),
+      onReturn: () => { closeSheet(); closeMobileWizard(); $("#m-input")?.focus(); },
+      onSingleDocument: openMobileFeishu,
+      onManageSources: () => { closeMobileWizard(); openSheet("more"); },
+      onStateChange: data => { state.feishuAccount = data; window.XinjiFeishuAccountPicker.syncBadges(document, data); },
+    });
+  }
+
   function openMobileFeishu() {
     clearMobileSourceForm();
     const initialSession = state.session?.id || null, epoch = mobileSourceFormEpoch;
@@ -618,11 +709,13 @@
     $("#m-read-scope").innerHTML = "";
     $("#m-read-items").innerHTML = "";
     $("#m-read-head").innerHTML = `
-      <p class="lede">飞书已授权。搜索并选择一篇文档，只读单篇。</p>
+      <p class="lede">只接入你指定的单篇文档快照。读取时会核对飞书权限；如需授权，可点击重新连接。</p>
+      <button type="button" class="btn ghost small" id="m-feishu-reconnect">重新连接飞书</button>
       <div class="feishu-search-row"><input id="m-feishu-q" placeholder="项目 / 周会 / PRD" /><button class="btn ghost small" id="m-feishu-search">搜索</button></div>
       <details><summary>搜索不可用？指定一篇文档</summary><div class="feishu-search-row"><input id="m-feishu-url" placeholder="飞书文档链接" /><button class="btn ghost small" id="m-feishu-url-read">读取</button></div></details>
       <button class="btn ghost small is-hidden" id="m-feishu-search-auth">授权搜索云空间</button>
       <p class="synthetic" id="m-feishu-hint">不会遍历全库。</p>`;
+    $("#m-feishu-reconnect").onclick = () => startLarkAuthMobile("document", {force: true});
     const previewSelected = async (url) => {
       const request = ++requestId;
       const hint = $("#m-feishu-hint");
@@ -675,11 +768,13 @@
 
   async function startMobileReal(editFirst = false) {
     if (!wz.realSource) { toast("请先选择并核对一份真实来源。"); return; }
-    const sid = wz.realSource.sessionId;
+    const selected = wz.realSource;
+    const sid = selected.sessionId;
     if ((state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || mActiveTurn || mQueuedTurns.length || mTurnQueue.length) { toast("对话已切换或消息仍在发送，请重新选择。"); return; }
     state.attachingSource = true;
     try {
-      const d = await api("/api/onboarding/real/start", { method: "POST", body: JSON.stringify({ source_id: wz.realSource.id, preview_id: wz.realSource.read.preview_id, ...(sid ? {session_id:sid} : {}) }) });
+      const d = await api("/api/onboarding/real/start", { method: "POST", body: JSON.stringify({ source_id: wz.realSource.id, start_intro:true, preview_id: wz.realSource.read.preview_id, ...(sid ? {session_id:sid} : {}) }) });
+      if (wz.realSource !== selected || (state.session?.id || null) !== sid) { connectionIntro.start(d.intro); return; }
       enterSessionData(d);
       if (editFirst) openSheet("understand");
     } catch (e) { toast(e.message); }
@@ -785,7 +880,7 @@
   function renderInsights() {
     const r = wz.read;
     $("#m-wz-start").textContent = state.session ? "接入当前对话" : "开始对话";
-    $("#m-insights").innerHTML = r.insights.map((i) =>
+    $("#m-insights").innerHTML = (['apple_calendar', 'apple_reminders'].includes(r.connector?.id) && !r.items?.length ? `<div class="m-insight"><b>读取成功，当前没有条目</b><p>${esc(r.connector?.id === 'apple_reminders' ? '没有未完成的提醒事项。可以保存这次读取结果，之后再重新读取。' : '所选范围内没有日程。可以保存这次读取结果，之后再重新读取。')}</p></div>` : '') + r.insights.map((i) =>
       `<div class="m-insight"><div class="t">${esc(i.type.toUpperCase())}</div><b>${esc(i.title)}</b><p>${esc(i.text)}</p></div>`).join("");
     const u = r.understanding;
     const row = (k, list) => list.map((x) => `<div class="m-row"><b>${k}</b>${esc(x)}</div>`).join("");
@@ -826,7 +921,7 @@
     memoryProposal.sync();
     const box = $("#m-messages");
     const empty = state.messages.filter((m) => m.role === "user").length === 0;
-    const showEmpty = empty && state.session?.mode === "empty" && !(state.context?.sources?.length || state.context?.connector_id || state.context?.items?.length);
+    const showEmpty = empty && state.session?.mode === "empty" && !state.messages.some(message => message.connection_intro) && !(state.context?.sources?.length || state.context?.connector_id || state.context?.items?.length);
     $("#m-chat-empty")?.classList.toggle("is-hidden", !showEmpty);
     const lastAssistant = [...state.messages].reverse().find((m) => m.role === "assistant");
     const visibleMessages = showEmpty ? [] : state.messages;
@@ -838,12 +933,13 @@
       const sugg = (lastAssistant && m.id === lastAssistant.id && (m.suggestions || []).length)
         ? `<div class="m-suggests">${m.suggestions.map((s) => `<button class="m-suggest" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>`
         : "";
+      const cites = window.XinjiFeishuAccountPicker?.renderCitations(m, {includeMemories:false}) || "";
       const draft = window.XinjiActionCards.chatDraft(visibleMessages, index);
       const draftButton = draft ? `<div class="m-suggests"><button class="m-suggest" data-chat-draft="${index}">查看并保存为消息草稿</button></div>` : "";
       const parts = role === "assistant" && Array.isArray(m.bubbles) && m.bubbles.length ? m.bubbles : [m.text];
       const voiceButton = role === "assistant" && !m.delivery_pending ? `<button type="button" class="message-topic" data-voice-message="${index}" aria-label="朗读这条回复" title="${esc(window.EchoShared?.copy?.['voice.disclosure'] || '由设备语音朗读，不会自动播放或创建语音文件。')}" aria-pressed="false">${esc(window.EchoShared?.copy?.['voice.read'] || '朗读')}</button><button type="button" class="message-topic" hidden data-voice-clip="${index}">生成语音</button><span data-voice-clip-slot="${index}"></span>` : "";
       const proposalButton = m.action_proposal && !m.delivery_pending ? `<div class="m-suggests"><button class="m-suggest" data-action-proposal="${index}">查看提醒预览</button></div>` : "";
-      return `<div class="msg ${role}" data-message-id="${esc(m.id)}">${parts.map(part => `<div class="bubble">${renderMemeText(part)}</div>`).join("")}${sugg}${draftButton}${proposalButton}${voiceButton}<button type="button" class="message-topic" data-topic-message="${esc(m.id)}" ${String(m.id).startsWith("local-") ? 'disabled title="发送完成后可标记话题"' : ""}>标记话题</button></div>`;
+      return `<div class="msg ${role}" data-message-id="${esc(m.id)}" data-persona-id="${esc(m.persona_id || '')}" data-interaction-mode="${esc(m.interaction_mode || '')}">${parts.map(part => `<div class="bubble">${renderMemeText(part)}</div>`).join("")}${cites ? `<div class="cites">${cites}</div>` : ""}${sugg}${draftButton}${proposalButton}${voiceButton}<button type="button" class="message-topic" data-topic-message="${esc(m.id)}" ${String(m.id).startsWith("local-") ? 'disabled title="发送完成后可标记话题"' : ""}>标记话题</button></div>`;
     }).join(""); };
     if (showEmpty) {
       update();
@@ -903,83 +999,165 @@
   }
 
   let mAuthTimer = null;
-  let mAuthGeneration = 0;
-  let mAuthActive = false;
-  function mAuthCurrent(generation) { return mAuthActive && generation === mAuthGeneration; }
+  let mAuthGeneration = 0, mAuthActive = false;
+  let mAuthPollGeneration = null, mAuthPopup = null, mAuthPurpose = "document", mAuthForce = false;
+  let mAuthSession = null, larkConnectedThisPage = false;
+  function larkCanChooseDocuments() {
+    const context = state.context;
+    const sources = Array.isArray(context?.sources) ? context.sources : context ? [context] : [];
+    return larkConnectedThisPage || sources.some(source => source?.connector_id === "feishu" && !source.stale && !state.session?.source_revoked);
+  }
+  function reserveLarkAuthWindow() {
+    const slot = {window: null, navigated: false};
+    if (typeof window.xinjiDesktop?.openLarkAuth === "function") {
+      slot.native = window.xinjiDesktop.openLarkAuth.bind(window.xinjiDesktop);
+      slot.nativeRequested = false; slot.nativePending = false;
+      return slot;
+    }
+    try { slot.window = window.open?.("about:blank", "_blank") || null; if (slot.window) slot.window.opener = null; }
+    catch (_) { try { slot.window?.close(); } catch (_) {} slot.window = null; }
+    return slot;
+  }
+  function discardLarkAuthWindow(slot) {
+    if (!slot?.navigated) { try { slot?.window?.close(); } catch (_) {} }
+  }
+  function officialLarkAuthURL(value) {
+    if (typeof value !== "string" || value.length > 8192 || value.trim() !== value) return null;
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") &&
+        ["accounts.feishu.cn", "accounts.larksuite.com"].includes(url.hostname) ? value : null;
+    } catch (_) { return null; }
+  }
+  function mAuthCurrent(generation) { return mAuthActive && generation === mAuthGeneration && (state.session?.id || null) === mAuthSession; }
+  function clearMAuthLinks() {
+    $("#m-auth-url").classList.add("is-hidden"); $("#m-auth-url").removeAttribute("href"); $("#m-auth-url").textContent = "在飞书中打开授权";
+  }
   function closeLarkAuthMobile(resume = true) {
-    ++mAuthGeneration; mAuthActive = false;
+    ++mAuthGeneration; mAuthActive = false; mAuthPollGeneration = null;
     clearInterval(mAuthTimer); mAuthTimer = null;
+    discardLarkAuthWindow(mAuthPopup); mAuthPopup = null;
+    clearMAuthLinks();
     $("#m-auth").classList.add("is-hidden");
     if (typeof finishMobileAuthSurface === "function") finishMobileAuthSurface({resume});
   }
-
-  async function startLarkAuthMobile(purpose = "document") {
-    if (typeof beginMobileAuthSurface === "function") beginMobileAuthSurface();
-    const generation = ++mAuthGeneration;
-    const currentPurpose = purpose === "search" ? "search" : "document";
-    mAuthActive = true;
-    $("#m-auth").classList.remove("is-hidden");
-    $("#m-auth-hint").textContent = "正在唤起飞书授权…";
-    $("#m-auth-url").classList.add("is-hidden");
-    $("#m-auth-status").textContent = "等待你在飞书中确认…";
-    $("#m-auth-fix").classList.add("is-hidden");
-    clearInterval(mAuthTimer); mAuthTimer = null;
-    try {
-      const d = await api(currentPurpose === "search" ? "/api/auth/lark/search/start" : "/api/auth/lark/start", { method: "POST" });
-      if (!mAuthCurrent(generation)) return;
-      if (d.status === "success") { mAuthDone(generation, currentPurpose); return; }
-      if (d.status !== "pending" && d.status !== "starting") {
-        mAuthActive = false;
-        $("#m-auth-hint").textContent = d.error || "无法启动授权";
-        return;
-      }
-      if (d.status === "pending") showMobileLarkPending(d, currentPurpose);
-      else $("#m-auth-hint").textContent = "授权正在准备，请稍候…";
-      mAuthTimer = setInterval(() => pollMobileLarkAuth(generation, currentPurpose), 2000);
-    } catch (e) {
-      if (!mAuthCurrent(generation)) return;
-      mAuthActive = false;
-      $("#m-auth-hint").textContent = e.message;
+  function failMAuth(generation, message, response = {}) {
+    if (!mAuthCurrent(generation)) return;
+    mAuthActive = false; clearInterval(mAuthTimer); mAuthTimer = null;
+    clearMAuthLinks(); discardLarkAuthWindow(mAuthPopup); mAuthPopup = null;
+    $("#m-auth-status").textContent = message || "连接尚未完成，请重新发起授权。";
+    $("#m-auth-hint").textContent = "旧授权链接已停止显示。不会自动重试或创建新的 CLI 应用。";
+    $("#m-auth-retry").classList.remove("is-hidden"); $("#m-auth-retry").disabled = false;
+    if (response.error_code === "needs_app_setup" && response.setup_url === "https://open.feishu.cn/document/no_class/mcp-archive/feishu-cli-installation-guide.md") {
+      $("#m-auth-url").href = response.setup_url;
+      $("#m-auth-url").textContent = "首次配置飞书 CLI 应用";
+      $("#m-auth-url").classList.remove("is-hidden");
+      $("#m-auth-hint").textContent = "先按官方指南完成首次应用配置，再回来重新发起授权。这里不会自动创建应用。";
     }
   }
 
-  function showMobileLarkPending(d, purpose) {
-    $("#m-auth-hint").textContent = (purpose === "search" ? "将申请搜索云空间权限。" : "") + "点击下方按钮，在飞书里完成授权。";
-    if (d.url) { $("#m-auth-url").href = d.url; $("#m-auth-url").classList.remove("is-hidden"); }
+  async function startLarkAuthMobile(purpose = "document", {force = false} = {}) {
+    // Reserve while still inside the user's click. No credentials or authorization URL are stored.
+    const popup = reserveLarkAuthWindow();
+    if (typeof beginMobileAuthSurface === "function") beginMobileAuthSurface();
+    discardLarkAuthWindow(mAuthPopup); mAuthPopup = popup;
+    const generation = ++mAuthGeneration;
+    const currentPurpose = ["search", "account"].includes(purpose) ? purpose : "document";
+    mAuthPurpose = currentPurpose; mAuthForce = force === true; mAuthSession = state.session?.id || null;
+    if (currentPurpose === "document") larkConnectedThisPage = false;
+    mAuthActive = true; mAuthPollGeneration = null;
+    $("#m-auth").classList.remove("is-hidden");
+    clearMAuthLinks();
+    $("#m-auth-hint").textContent = "正在唤起飞书官方授权…";
+    $("#m-auth-status").textContent = "等待你在飞书中确认…";
+    $("#m-auth-retry").classList.add("is-hidden"); $("#m-auth-retry").disabled = true;
+    $("#m-auth-retry").onclick = () => startLarkAuthMobile(mAuthPurpose, {force: mAuthForce});
+    clearInterval(mAuthTimer); mAuthTimer = null;
+    try {
+      const options = {method: "POST"};
+      if (mAuthForce) options.body = JSON.stringify({force: true});
+      const value = await api(currentPurpose === "account" ? "/api/auth/lark/account/start" : currentPurpose === "search" ? "/api/auth/lark/search/start" : "/api/auth/lark/start", options);
+      if (!mAuthCurrent(generation)) { discardLarkAuthWindow(popup); return; }
+      if (value.status === "success") { mAuthDone(generation, currentPurpose); return; }
+      if (value.status !== "starting" && value.status !== "pending") { failMAuth(generation, value.error || "无法启动飞书连接，请重试。", value); return; }
+      if (value.status === "pending") { if (!showMobileLarkPending(value, currentPurpose, generation)) return; }
+      else $("#m-auth-hint").textContent = "授权正在准备，请稍候…";
+      mAuthTimer = setInterval(() => pollMobileLarkAuth(generation, currentPurpose), 2000);
+    } catch (error) { failMAuth(generation, error.message || "暂时无法连接授权服务，请重试。"); }
+  }
+
+  function showMobileLarkPending(value, purpose, generation) {
+    if (!mAuthCurrent(generation)) return false;
+    const url = officialLarkAuthURL(value.url);
+    if (!url) { failMAuth(generation, "授权地址不是有效的飞书官方 HTTPS 地址，请重新连接。"); return false; }
+    $("#m-auth-url").href = url; $("#m-auth-url").classList.remove("is-hidden");
+    const slot = mAuthPopup;
+    const updateHint = () => {
+      if (!mAuthCurrent(generation) || mAuthPopup !== slot) return;
+      $("#m-auth-hint").textContent = (purpose === "account" ? "请在飞书核对搜索和文档只读权限；授权后会自动完成连接并回到聊天。" : purpose === "search" ? "将单独申请搜索云空间权限。" : "只连接现有飞书 CLI，不会新建应用。") +
+        (slot?.nativePending ? "正在请求系统浏览器打开飞书官方页面，也可点击下方链接。" : slot?.navigated ?
+          slot.native ? "已请求系统浏览器打开飞书官方页面；若未打开，可点击下方链接。" : "请在已打开的飞书官方页面确认；也可使用下方链接。" :
+          "未能自动打开页面，请点击下方链接继续授权。");
+    };
+    if (slot?.native && !slot.nativeRequested) {
+      slot.nativeRequested = true; slot.nativePending = true;
+      const settled = opened => {
+        if (!mAuthCurrent(generation) || mAuthPopup !== slot) return;
+        slot.nativePending = false; slot.navigated = opened === true; updateHint();
+      };
+      try { Promise.resolve(slot.native(url)).then(settled, () => settled(false)); } catch (_) { settled(false); }
+    } else if (!slot?.navigated && slot?.window) {
+      try { if (!slot.window.closed) { slot.window.location.replace(url); slot.navigated = true; } } catch (_) {}
+    }
+    updateHint();
+    return true;
   }
 
   async function pollMobileLarkAuth(generation, purpose) {
-    if (!mAuthCurrent(generation)) return;
+    if (!mAuthCurrent(generation) || mAuthPollGeneration === generation) return;
+    mAuthPollGeneration = generation;
     try {
-      const s = await api(purpose === "search" ? "/api/auth/lark/search/status" : "/api/auth/lark/status");
+      const value = await api(purpose === "account" ? "/api/auth/lark/account/status" : purpose === "search" ? "/api/auth/lark/search/status" : "/api/auth/lark/status");
       if (!mAuthCurrent(generation)) return;
-      if (s.status === "success") { mAuthDone(generation, purpose); return; }
-      if (s.status === "pending" && s.url) showMobileLarkPending(s, purpose);
-      if (s.status === "error") {
-        mAuthActive = false; clearInterval(mAuthTimer); mAuthTimer = null;
-        $("#m-auth-status").textContent = s.error || "授权失败";
-        if ((s.error || "").includes("凭据存储") || (s.error || "").includes("钥匙串") || (s.error || "").includes("keychain")) $("#m-auth-fix").classList.remove("is-hidden");
-      }
-    } catch (_) {}
+      if (value.status === "success") { await mAuthDone(generation, purpose); return; }
+      if (value.status === "pending") { showMobileLarkPending(value, purpose, generation); return; }
+      if (value.status !== "starting") failMAuth(generation, value.error || "授权已失效或未完成，请重新连接。", value);
+    } catch (error) { failMAuth(generation, "暂时无法核对授权结果，请重试。不会自动重新授权。"); }
+    finally { if (mAuthPollGeneration === generation) mAuthPollGeneration = null; }
   }
 
-  function mAuthDone(generation, purpose) {
+  async function mAuthDone(generation, purpose) {
     if (!mAuthCurrent(generation)) return;
     mAuthActive = false; clearInterval(mAuthTimer); mAuthTimer = null;
-    if (purpose === "search") {
-      $("#m-auth-status").textContent = "授权流程已完成，请重试搜索；如仍失败可粘贴文档链接。";
-      setTimeout(() => { if (generation === mAuthGeneration) { $("#m-auth").classList.add("is-hidden"); if (typeof finishMobileAuthSurface === "function") finishMobileAuthSurface(); } }, 800);
-      toast("授权流程已完成，请重试搜索");
+    discardLarkAuthWindow(mAuthPopup); mAuthPopup = null; clearMAuthLinks();
+    if (purpose === "account") {
+      $("#m-auth-status").textContent = "授权已完成，正在连接…";
+      $("#m-auth-hint").textContent = "完成后会自动回到聊天。";
+      try {
+        const data = await api('/api/lark/account/connect', {method:'POST', body:JSON.stringify({session_id:mAuthSession,start_intro:true})});
+        if (generation !== mAuthGeneration || (state.session?.id || null) !== mAuthSession) return;
+        if (data?.ok !== true || data.enabled !== true || data.ready === false) throw Error([data?.error || '连接尚未完成', data?.hint].filter(Boolean).join(' · '));
+        state.feishuAccount = data; window.XinjiFeishuAccountPicker.syncBadges(document, data);
+        finishMobileAuthSurface({resume:false}); $("#m-auth").classList.add("is-hidden");
+        finishConnection(data); toast('飞书已连接');
+      } catch (error) {
+        if (generation !== mAuthGeneration || (state.session?.id || null) !== mAuthSession) return;
+        $("#m-auth-status").textContent = error.message + ' 请关闭后重新核对连接状态。';
+        $("#m-auth-hint").textContent = '还没有确认连接成功。';
+      }
       return;
     }
-    $("#m-auth-status").textContent = "飞书授权完成，请选择文档";
+    const documentReady = purpose === "document";
+    if (documentReady) larkConnectedThisPage = true;
+    $("#m-auth-status").textContent = documentReady ? "已连接当前飞书 CLI，请选择文档。" : "搜索授权流程已完成，请重试搜索；如仍失败可粘贴文档链接。";
+    $("#m-auth-hint").textContent = "还没有读取文档；选择后仍需预览和确认。";
     setTimeout(() => {
-      if (generation !== mAuthGeneration) return;
+      if (generation !== mAuthGeneration || (state.session?.id || null) !== mAuthSession) return;
       $("#m-auth").classList.add("is-hidden");
-      const resumed = typeof finishMobileAuthSurface === "function" && finishMobileAuthSurface({documentReady: true});
+      const resumed = typeof finishMobileAuthSurface === "function" && finishMobileAuthSurface({documentReady, accountReady:purpose === "account"});
       if (!resumed && !$("#m-onboard").classList.contains("is-hidden")) { showWz(2); loadRealSources(); }
     }, 800);
-    toast("飞书授权完成，请选择文档");
+    toast(documentReady ? "已连接飞书，请选择文档" : "搜索授权流程已完成，请重试搜索");
   }
 
   function renderMemeText(text) {
@@ -1120,6 +1298,7 @@
   // ---------- sheets ----------
   let pairedDevicesPanel = null;
   function openSheet(kind, presetNext = "") {
+    if (kind === "device") return;
     pairedDevicesPanel?.dispose(); pairedDevicesPanel = null;
     globalThis.XinjiVoice?.stop?.();
     followups.stop();
@@ -1131,12 +1310,11 @@
       ? '检查更新会核对记忆列表，保留聊天草稿；正在修改的记忆会先保留。'
       : '先保留当前页面；关闭后可读取新内容，正在填写的部分不会被更新替换。';
     sheet.classList.remove("is-hidden", "navigation-sheet");
-    $("#m-sheet-title").textContent = { understand: "记忆", bookmark: "任务", tasks: "任务", today: "回响", settings: "设置", persona: "角色与设备", device: "设备", more: "更多" }[kind] || kind;
+    $("#m-sheet-title").textContent = { understand: "记忆", bookmark: "任务", tasks: "任务", today: "回响", settings: "设置", persona: "角色与设备", more: "更多" }[kind] || kind;
     if (kind === "understand") renderUnderstanding();
     if (kind === "bookmark" || kind === "tasks") renderBookmark(presetNext);
     if (kind === "today") renderTodayMobile();
     if (kind === "persona") renderPersonaMobile();
-    if (kind === "device") renderDevice();
     if (kind === "more") renderMore();
     if (kind === "settings") renderDesignSettingsMobile();
   }
@@ -1164,7 +1342,7 @@
         <div class="m-today-card"><div class="k">${bookmark ? "上次停在这里" : "下一步 · 候选"}</div><b>${esc(bookmark ? bookmark.note : next.step || "先聊一件正在发生的事")}</b><p>${esc(bookmark ? bookmark.next_step || "可以接着说，也可以先放一放。" : next.rationale || "由你决定从哪里开始。")}</p><button type="button" class="btn ghost small" id="m-today-continue">把这条带回聊天</button></div>
         <div class="m-today-card"><div class="k">任务与草稿</div><b>${actions.length} 个已保存动作${pending ? ` · ${pending} 个待确认` : ""}</b><p>查看保存的内容，或自己写一条消息、提醒和日历安排。</p><button type="button" class="text-btn" id="m-today-tasks">打开任务</button></div>
         <div class="m-today-card"><div class="k">关于你的记忆</div><b>${memories.length} 条待核对或已确认的理解</b><p>不准确的地方，随时可以纠正或删除。</p><button type="button" class="text-btn" id="m-today-memories">核对记忆</button></div>
-        <div class="m-today-card"><div class="k">这次对话的资料</div><b>${sources.length} 份已接入来源</b><p>${sources.length ? sources.map(source => esc(mobileSourceTitle(source)) + (source.stale ? "（暂停使用）" : "")).join(" · ") : "还没有接入资料。可以先聊聊，需要时再连接。"}</p><button type="button" class="text-btn" id="m-today-sources">管理来源</button></div>`;
+        <div class="m-today-card"><div class="k">这次对话的资料</div><b>${sources.length} 份已接入来源</b><p>${sources.length ? sources.map(source => esc(mobileSourceTitle(source)) + (source.stale ? "（暂停使用）" : "")).join(" · ") : state.feishuAccount?.enabled === true && state.feishuAccount.ready !== false ? "✓ 飞书已连接，聊天时会按需查阅。" : "还没有接入资料。可以先聊聊，需要时再连接。"}</p><button type="button" class="text-btn" id="m-today-sources">管理来源</button></div>`;
       followups.mount($("#m-today-followups"));
       typeof mood !== "undefined" && mood?.mount($("#m-today-mood"));
       $("#m-today-continue").onclick = () => {
@@ -1221,6 +1399,7 @@
     sheet._xinjiEpoch = (sheet._xinjiEpoch || 0) + 1;
     sheet._xinjiKind = null;
     sheet.classList.add("is-hidden");
+    $$('[data-mtab]').forEach(button => button.classList.toggle('active', button.dataset.mtab === 'chat'));
   }
 
   async function showMemoryContextNotice() {
@@ -1515,88 +1694,6 @@
     } catch (error) { if (state.session?.id === sid && sheet._xinjiEpoch === epoch) toast(error.message); }
   }
 
-  function renderAck(cmd) {
-    const el = $("#m-ack");
-    if (!el || !cmd) return;
-    el.classList.remove("is-hidden");
-    el.innerHTML = `<b>模拟显示（无真实设备）</b> ${esc(cmd.text)}<br/>模拟回执 ${esc(cmd.ack?.status)} · ${cmd.ack?.latency_ms}ms`;
-  }
-
-  function renderDevice() {
-    $("#m-sheet-body").innerHTML = `
-      <div class="device-row">
-        <button class="btn ${state.deviceOn ? "primary" : "ghost"}" id="m-dev-toggle">${state.deviceOn ? "停止采集" : "开启采集"}</button>
-        <span class="device-status">${state.deviceOn ? "采集中" : "未开启"}</span>
-      </div>
-      <div class="meter"><span id="m-quality"></span></div>
-      <div class="meter-meta"><span>信号质量</span><span id="m-qtext">—</span></div>
-      <p class="synthetic" id="m-dev-note">质量不足时本轮不更新状态。</p>
-      <button class="btn ghost wide" id="m-sim-button">标记此刻</button>
-      <div id="m-ack" class="ack is-hidden"></div>`;
-    $("#m-dev-toggle").onclick = toggleDevice;
-    $("#m-sim-button").onclick = async () => {
-      try {
-        const evt = await api("/api/device/button", { method: "POST", body: JSON.stringify({ session_id: state.session.id }) });
-        toast(`模拟按钮事件 · 模拟回执 ${evt.ack?.status}`);
-        openSheet("bookmark");
-      } catch (e) { toast(e.message); }
-    };
-    if (state.lastDisplay) renderAck(state.lastDisplay);
-    pollFrame();
-  }
-
-  async function toggleDevice() {
-    try {
-      const action = state.deviceOn ? "stop" : "start";
-      const st = await api(`/api/device/${action}`, { method: "POST" });
-      state.deviceOn = st.status === "on";
-      $("#m-device-chip").textContent = state.deviceOn ? "采集中" : "设备未开";
-      $("#m-device-chip").classList.toggle("on", state.deviceOn);
-      if (state.deviceOn) {
-        clearInterval(state.timer);
-        state.timer = setInterval(pollFrame, 2200);
-      } else {
-        clearInterval(state.timer);
-        state.timer = null;
-      }
-      renderDevice();
-      toast(state.deviceOn ? "已开启合成采集" : "已停止采集");
-    } catch (e) { toast(e.message); }
-  }
-
-  async function pollFrame() {
-    if (!state.deviceOn) return;
-    try {
-      const f = await api("/api/device/frame");
-      if (f.status === "off") {
-        state.deviceOn = false;
-        clearInterval(state.timer);
-        state.timer = null;
-        $("#m-device-chip").textContent = "设备未开";
-        $("#m-device-chip").classList.remove("on");
-        if ($("#m-dev-note")) renderDevice();
-        return;
-      }
-      const pct = Math.round((f.quality || 0) * 100);
-      const bar = $("#m-quality");
-      if (!bar) return;
-      bar.style.width = `${pct}%`;
-      bar.classList.toggle("low", !!f.abstain);
-      $("#m-qtext").textContent = `${pct}% · seq ${f.seq}`;
-      $("#m-dev-note").textContent = f.abstain
-        ? `弃权：${f.reason}（质量 ${pct}%），本轮不更新状态。`
-        : `合成帧 #${f.seq} · 质量 ${pct}% · ${f.algo_version}`;
-    } catch (_) {
-      const note = $("#m-dev-note");
-      if (note) note.textContent = "无法读取合成流状态，请检查连接。";
-      const bar = $("#m-quality");
-      if (bar) bar.style.width = "0%";
-      const value = $("#m-qtext");
-      if (value) value.textContent = "—";
-      $("#m-device-chip").textContent = "状态未知";
-    }
-  }
-
   function mobileSources(context = state.context, session = state.session) {
     if (Array.isArray(context?.sources)) return context.sources.filter(source => source && typeof source === "object");
     if (context && (context.connector_id || (context.items || []).length)) {
@@ -1646,7 +1743,7 @@
       (sources.map(source => `<div class="m-today-card"><div class="k">${esc(source.label || source.connector_id || "来源")}${source.stale ? " · 待核对" : ""}</div>
         <b>${esc(mobileSourceTitle(source))}</b><p>${(source.items || []).length} 条快照${source.items?.[0]?.summary ? " · " + esc(source.items[0].summary.slice(0, 100)) : ""}</p>
         <button type="button" class="text-btn" data-msource-remove="${esc(source.id || "")}" ${state.revokingSource ? "disabled" : ""}>移除这份来源</button></div>`).join("") ||
-        `<p class="synthetic">还没有接入来源；可以先聊聊，再按需要添加。</p>`) +
+        (state.feishuAccount?.enabled === true && state.feishuAccount.ready !== false ? `<p class="synthetic">✓ 飞书已连接，聊天时会按需查阅。</p>` : `<p class="synthetic">还没有接入来源；可以先聊聊，再按需要添加。</p>`)) +
       `<button type="button" class="btn ghost wide" id="m-add-source" ${state.revokingSource ? "disabled" : ""}>继续连接资料</button>` +
       (sources.length ? `<button type="button" class="text-btn" id="m-revoke-all" ${state.revokingSource ? "disabled" : ""}>移除全部 ${sources.length} 份来源</button>` : "") +
       `<p class="synthetic">每份来源可单独移除；会停止本对话使用相应资料。历史消息、手动记忆和第三方授权仍保留。</p>`;
@@ -2075,13 +2172,6 @@
     $$("[data-close]").forEach((b) => (b.onclick = closeSheet));
     document.addEventListener("click", onMemAction);
     $("#m-auth-cancel")?.addEventListener("click", closeLarkAuthMobile);
-    $("#m-auth-fix")?.addEventListener("click", async () => {
-      if (!await window.XinjiDialogs.confirm({title: "更改凭据存储", message: "此操作会改变飞书 CLI 的凭据存储方式，将密钥链保护的主密钥改为本地文件存储。", confirmLabel: "了解并继续"})) return;
-      $("#m-auth-status").textContent = "修复中…";
-      const d = await api("/api/auth/lark/setup", { method: "POST" });
-      if (d.ok) { toast("已修复，重新授权"); startLarkAuthMobile(); }
-      else { $("#m-auth-status").textContent = d.error || "请在 Terminal 运行 lark-cli config keychain-downgrade"; }
-    });
     document.addEventListener("click", (ev) => {
       const a = ev.target.closest("[data-m-action]");
       if (a) { openMobileAction(a.dataset.mAction, Number(a.dataset.mIdx)); return; }
@@ -2122,7 +2212,7 @@
     wz.realSource = null;
     wz.pendingSource = null;
     showWz(2);
-    $("#m-wz2-sub").textContent = "只读取你选择并确认的资料。可同时接入多个来源，也可以在来源列表逐份移除；刚才聊过的话会一直保留。";
+    $("#m-wz2-sub").textContent = "飞书可连接账号，聊天时按问题自动查阅。其他资料由你选择并确认，可同时接入多个来源并逐份移除；刚才聊过的话会一直保留。";
     $("#m-skip").textContent = state.session ? "返回当前对话" : "先直接聊聊";
     await loadRealSources();
   }
@@ -2165,11 +2255,10 @@
     setupMobileDesign();
     window.XinjiComposerDraft = window.XinjiForegroundSync.draft($("#m-input"), "h5");
     const params = new URLSearchParams(location.search);
-    if (params.has("demo")) { await startSession("sample"); return; }
     const ready = await restore();
-    if (ready) restoreMobileChatLedger();
+    if (ready) { restoreMobileChatLedger(); connectionIntro.resume(); }
     $('#m-input').addEventListener('input',keepMobileChatDraft);
-    window.addEventListener('pagehide',keepMobileChatDraft);
+    window.addEventListener('pagehide',() => {keepMobileChatDraft(); connectionIntro.stop();});
     document.addEventListener('visibilitychange',()=>{ if(document.hidden) keepMobileChatDraft(); });
     if (ready && params.has("onboarding")) await showMobileOnboarding();
     let reviewedSheet = null;

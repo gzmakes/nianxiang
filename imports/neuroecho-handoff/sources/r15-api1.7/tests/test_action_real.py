@@ -14,7 +14,7 @@ def client(tmp_path, monkeypatch):
 
 
 def make_action(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     return client.post("/api/action", json={"session_id": sid, "kind": "reminder", "title": "演示前彩排"}).json()
 
 
@@ -41,7 +41,7 @@ def test_real_write_failure_never_claims_demo_success(client, monkeypatch):
 
 def test_real_calendar_write(client, monkeypatch):
     monkeypatch.setattr(apple_source, "create_event", lambda title, when: {"ok": True, "title": title, "when": when})
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     a = client.post("/api/action", json={"session_id": sid, "kind": "calendar", "title": "演示",
                                           "when": "2026-10-29T10:00"}).json()
     done = client.post(f"/api/action/{a['id']}/commit", json={"real": True}).json()

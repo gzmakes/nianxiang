@@ -1,11 +1,11 @@
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
 function node() {return {children:[],textContent:'',value:'',disabled:false,files:[],appendChild(x){this.children.push(x)},replaceChildren(){this.children=[]},setAttribute(){}};}
-function setup() {
+function setup(options={}) {
   const input=node(), previews=node(), hint=node(), button=node(), container={innerHTML:'',querySelector(s){return {'input':input,'.file-previews':previews,'.file-hint':hint,'.file-confirm':button}[s]}};
   const window={}, document={createElement:()=>node()}, calls=[];
   const ctx=vm.createContext({window,document,TextDecoder,Array,Error});
   vm.runInContext(fs.readFileSync('web/file-picker.js','utf8'),ctx);
-  window.XinjiFilePicker.mount(container,{sessionId:'existing',onConfirm:async(files,sid)=>calls.push({files,sid})});
+  window.XinjiFilePicker.mount(container,{sessionId:'existing',...options,onConfirm:async(files,sid)=>calls.push({files,sid})});
   return {input,previews,hint,button,calls,container};
 }
 const enc = new TextEncoder();
@@ -61,4 +61,15 @@ test('failed request with unknown outcome cannot be resubmitted automatically',a
  const t=setup();let calls=0;const ctx=vm.createContext({window:{},document:{createElement:()=>node()},TextDecoder,Array,Error});vm.runInContext(fs.readFileSync('web/file-picker.js','utf8'),ctx);
  ctx.window.XinjiFilePicker.mount(t.container,{sessionId:'s',onConfirm:async()=>{calls++;throw Error('connection lost')}});
  t.input.files=[file('a.txt','hello')];await t.input.onchange();await t.button.onclick();assert.equal(t.button.disabled,true);await t.button.onclick();assert.equal(calls,1);assert.match(t.hint.textContent,/结果未确认/);
+});
+
+// The system file chooser is the explicit final selection for the compact flow.
+test('compact file selection attaches once without a second confirmation and preserves the selected Unicode prefix',async()=>{
+ const t=setup({autoAttach:true});t.input.files=[file('selected.md','合成资料😀')];await t.input.onchange();
+ assert.equal(t.calls.length,1);assert.equal(t.calls[0].sid,'existing');assert.equal(t.calls[0].files[0].text,'合成资料😀');await t.button.onclick();assert.equal(t.calls.length,1);
+});
+test('a file read completing after closing the compact flow is never automatically attached',async()=>{
+ let current=true,resolve;const waiting=new Promise(r=>resolve=r),t=setup({autoAttach:true,isCurrent:()=>current});
+ t.input.files=[{name:'selected.md',size:1,arrayBuffer:()=>waiting}];const reading=t.input.onchange();current=false;resolve(new TextEncoder().encode('合成').buffer);await reading;
+ assert.equal(t.calls.length,0);assert.equal(t.button.disabled,true);
 });

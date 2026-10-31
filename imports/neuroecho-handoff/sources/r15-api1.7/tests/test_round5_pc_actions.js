@@ -40,7 +40,7 @@ test('Today bookmark uses its own card step rather than the other panel state',(
  const f=fixture();f.ctx.bookmarkTodayStep('这张卡自己的下一步','one');assert.equal(f.ctx.els.bmNext.value,'这张卡自己的下一步');
 });
 test('normal PC contains no welcome/history/reset or legacy demo read endpoints',()=>{
- const html=fs.readFileSync('web/index.html','utf8');assert.doesNotMatch(html,/id="(?:companion-welcome|reopen-welcome|history-btn|reset-btn)"/);assert.doesNotMatch(source,/\/api\/onboarding\/(?:catalog|read|start)["`]/);assert.doesNotMatch(clip('  async function commitBookmark()', '  function renderAck('),/\/api\/device\/display/);
+ const html=fs.readFileSync('web/index.html','utf8');assert.doesNotMatch(html,/id="(?:companion-welcome|reopen-welcome|history-btn|reset-btn)"/);assert.doesNotMatch(source,/\/api\/onboarding\/(?:catalog|read|start)["`]/);assert.doesNotMatch(clip('  async function commitBookmark()', '  // ---------------- misc ----------------'),/\/api\/device\/display/);
 });
 
 test('cancel while local preview creation is pending never proceeds to commit',async()=>{

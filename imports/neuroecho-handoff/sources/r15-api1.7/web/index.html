@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
 <link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
+<link rel="stylesheet" href="/static/connection-flow.css?v=3806a56fe7f8e637" />
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
@@ -28,8 +29,6 @@
     <div id="wz-1" class="wz-step">
       <h1>先理解你，<br /><em>再决定怎样陪你。</em></h1>
       <p class="lede">从一个真实来源开始，或者直接开始对话。</p>
-      <div class="section-label">你现在更想聊哪一面？</div>
-      <div id="scenario-grid" class="scenario-grid"></div>
       <div class="alt-row">
         <button class="btn ghost" id="alt-toggle">粘贴资料 / 本地文件</button>
       </div>
@@ -117,31 +116,6 @@
         <div class="orb-halo"></div>
       </div>
 
-      <div class="panel device-panel">
-        <div class="panel-head">
-          <span>设备状态</span>
-        </div>
-        <div class="device-row">
-          <button id="device-toggle" class="btn switch" aria-pressed="false">
-            <span class="switch-dot"></span>
-            <span id="device-toggle-label">开启采集</span>
-          </button>
-          <span id="device-status" class="muted">未开启</span>
-        </div>
-        <div class="meter">
-          <div class="meter-bar"><span id="quality-bar"></span></div>
-          <div class="meter-meta">
-            <span>信号质量</span>
-            <span id="quality-value">—</span>
-          </div>
-        </div>
-        <p id="device-note" class="note">合成流仅用于验证契约：来源、时间戳、序列、质量、算法版本。</p>
-        <div class="device-sim">
-          <button class="text-btn" id="sim-button" type="button">标记此刻</button>
-          <div id="display-ack" class="ack is-hidden"></div>
-        </div>
-      </div>
-
       <div class="panel source-panel">
         <div class="panel-head"><span>你提供的背景</span></div>
         <p id="source-label" class="source-label">从对话开始</p>
@@ -206,9 +180,9 @@
         <div class="connect-invite">
           <div class="connect-invite-head"><b>也可以，带一点你的生活进来</b><span>随时再连也可以</span></div>
           <div class="companion-sources">
-            <button type="button" class="companion-source" data-companion-source="feishu"><span class="source-symbol source-feishu">↗</span><span><b>飞书</b><small>选一篇资料，一起看看</small></span><span class="source-arrow">→</span></button>
+            <button type="button" class="companion-source" data-companion-source="feishu"><span class="source-symbol source-feishu">↗</span><span><b>飞书</b><small>连接后，聊天时自动查阅</small></span><span class="source-arrow">→</span></button>
             <button type="button" class="companion-source" data-companion-source="rokid"><span class="source-symbol source-rokid">⌁</span><span><b>Rokid <i>待联调</i></b><small>把陪伴延伸到眼前</small></span><span class="source-arrow">→</span></button>
-            <button type="button" class="companion-source" data-companion-source="calendar"><span class="source-symbol source-calendar">▦</span><span><b>日历</b><small>先看看范围，再读安排</small></span><span class="source-arrow">→</span></button>
+            <button type="button" class="companion-source" data-companion-source="calendar"><span class="source-symbol source-calendar">▦</span><span><b>日历</b><small>看看最近 7 天的安排</small></span><span class="source-arrow">→</span></button>
             <button type="button" class="companion-source" data-companion-source="local"><span class="source-symbol source-local">⌑</span><span><b>本机资料</b><small>只选你想聊的那一份</small></span><span class="source-arrow">→</span></button>
           </div>
           <div class="connect-more"><button id="open-connect" type="button" class="text-btn">其他来源</button><button id="skip-connect" type="button" class="text-btn">现在先聊聊</button></div>
@@ -219,6 +193,7 @@
         <button type="button" id="chat-new-messages" class="chat-new-messages is-hidden">新消息 ↓</button>
       </div>
 
+      <div id="connection-intro" class="connection-intro is-hidden" aria-live="polite"></div>
       <div id="source-uncertain-notice" class="resume-banner is-hidden" role="status">
         <span>来源接入结果尚未确认，请重新核对这段对话。</span>
         <span style="display:flex;gap:6px">
@@ -275,7 +250,7 @@
 
       <section id="tab-apps" class="tab-panel is-hidden">
         <div class="panel-title-row"><h3>连接应用</h3><button type="button" class="text-btn" id="apps-refresh">重新检查</button></div>
-        <p class="note">选一个此刻需要的来源。先核对范围，再由你确认读取。</p>
+        <p class="note">连接后，就从最近的事聊起。</p>
         <div id="apps-connected" class="connected-sources"></div>
         <div id="apps-grid" class="apps-grid"><p class="muted">正在检查本机可用来源…</p></div>
       </section>
@@ -355,16 +330,6 @@
           </div>
         </div>
         <div id="metrics-body"></div>
-        <div id="fault-panel" class="fault-panel is-hidden">
-          <div class="mem-group-label" style="margin-top:16px"><span>故障演练</span><span class="muted">?debug=1</span></div>
-          <div class="fault-actions">
-            <button class="mini-btn" data-fault="model_timeout">模型超时</button>
-            <button class="mini-btn" data-fault="device_stall">设备断流</button>
-            <button class="mini-btn" data-fault="lark_auth">飞书授权过期</button>
-            <button class="mini-btn" data-fault="clear">清除故障</button>
-          </div>
-          <p class="note" id="fault-note">注入故障后：发消息 / 开设备 / 读飞书文档，观察 failed/unknown 与降级。</p>
-        </div>
       </section>
 
       <section id="tab-data" class="tab-panel is-hidden">
@@ -440,7 +405,7 @@
     <img id="auth-qr" class="auth-qr is-hidden" alt="飞书授权二维码" />
     <a id="auth-url" class="btn ghost small is-hidden" target="_blank" rel="noopener">在飞书中打开授权</a>
     <div id="auth-status" class="note">等待你在飞书中确认…</div>
-    <button class="btn ghost small is-hidden" id="auth-fix">了解并更改凭据存储</button>
+    <button type="button" class="btn ghost small is-hidden" id="auth-retry">重新发起授权</button>
     <p class="note">关闭此窗口不会撤销已发起的授权；授权链接可能在有效期内继续生效。</p><div class="modal-actions"><button class="btn ghost" id="auth-cancel">关闭</button></div>
   </div>
 </div>
@@ -502,20 +467,25 @@
 <script src="/static/mood.js?v=127121994941f5e6"></script>
 <script src="/static/followups.js?v=5b2e33e357d5472a"></script>
 <script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
-<script src="/static/file-picker.js?v=391f3ce87a22a3e5"></script>
+<script src="/static/file-picker.js?v=95503f23c22ea9cb"></script>
+<script src="/static/connection-intro.js?v=2d71358d315b113d"></script>
+<script src="/static/feishu-account-picker.js?v=8e4f1762ccd8748d"></script>
+<script src="/static/public-link-picker.js?v=3c389fb3cccdc10c"></script>
 <script src="/static/chat-transport.js?v=1019294a1df91170"></script>
 <script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
-<script src="/static/design-system.js?v=fcda8c16048fd4e5"></script>
+<script src="/static/design-system.js?v=9ec75bbfb3f54f99"></script>
 <script src="/static/paired-devices.js?v=8641114376d41d40"></script>
 <script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
 <script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
-<script src="/static/app.js?v=7b6d573902e3fb9a"></script>
+<script src="/static/connector-auth.js?v=4154d3d6cc0cd535"></script>
+<script src="/static/response-parser.js?v=b36dffc77f374ee6"></script>
+<script src="/static/app.js?v=ed2d294e1bb62148"></script>
 <script src="/static/emoji-reactions.js?v=984098af2341e32a"></script>
 <script src="/static/message-voice.js?v=d2f5f242df660536"></script>
 <script src="/static/orb-face.js?v=40a8f976250f2036"></script>
 <script src="/static/mood-polish.js?v=1c748d608167772c"></script>
-<script src="/static/persona-switch.js?v=ad89ffc98e91932c"></script>
+<script src="/static/persona-switch.js?v=7835fc03f1158074"></script>
 <script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
 <script src="/static/ambient-music.js?v=c3b737469cea581b"></script>
 <script src="/static/conversation-tools.js?v=0fa7fdbc93c85fe4"></script>

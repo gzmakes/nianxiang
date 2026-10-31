@@ -14,9 +14,9 @@ def client(tmp_path, monkeypatch):
 
 
 def test_list_sessions(client):
-    a = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    a = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     client.post("/api/chat", json={"session_id": a, "text": "记住：第一条"})
-    b = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    b = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     d = client.get("/api/sessions").json()["sessions"]
     assert len(d) == 2
     assert d[0]["id"] == b and d[1]["id"] == a
@@ -25,7 +25,7 @@ def test_list_sessions(client):
 
 
 def test_rename_session(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     r = client.patch(f"/api/session/{sid}", json={"title": "我的演示复盘"})
     assert r.status_code == 200 and r.json()["title"] == "我的演示复盘"
     d = client.get("/api/sessions").json()["sessions"]

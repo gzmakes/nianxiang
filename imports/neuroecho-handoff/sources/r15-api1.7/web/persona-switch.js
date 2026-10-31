@@ -74,18 +74,21 @@
   root.dataset.persona = persona();
   root.dataset.spaceArming = 'true';
 
-  // 把话题筛选接管成空间筛选：未记录的历史消息算默认空间；新来的消息算当前空间并记下来。
+  // 后端记录的消息人格和模式是跨设备的真实来源；旧消息没有标记时才使用本地视图。
   let armed = false;
-  function spaceOf(id) {
+  function spaceOf(id, element) {
+    const serverPersona = element?.dataset.personaId;
+    const serverMode = element?.dataset.interactionMode;
+    if (PERSONAS[serverPersona] && MODES[serverMode]) return `${serverPersona}:${serverMode}`;
     if (!realId(id)) return current;
     if (views[id]) return views[id];
     if (!armed) return DEFAULT;
     views[id] = current; persist();
     return current;
   }
-  function matches(id, filter) {
+  function matches(id, filter, element) {
     if (filter === '全部') return true;
-    return label(spaceOf(id)) === filter;
+    return label(spaceOf(id, element)) === filter;
   }
 
   function workspace() { return window.XinjiWorkspace || window.XinjiMobileWorkspace; }

@@ -5,7 +5,7 @@ const profile=(extra={})=>({version:1,mode:'shared',origin:'http://127.0.0.1:188
 const wait=()=>new Promise(r=>setImmediate(r));
 async function fixture(t,{saved=null,probe=async origin=>profile({origin}),startError=null,startWait=null}={}){
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'echo-main-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));if(saved)connection.selectionStore(directory).save(saved);
- const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
+ const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],external:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
  Object.assign(app,{setName(){},setPath(){},getPath:()=>directory,getVersion:()=> 'test',requestSingleInstanceLock:()=>true,whenReady:()=>Promise.resolve(),quit(){quit=true;app.emit('before-quit')}});
  class Window extends EventEmitter{
   constructor(options){super();this.options=options;this.visible=false;this.destroyed=false;this.webContents=new EventEmitter();this.webContents.mainFrame={url:''};this.webContents.setWindowOpenHandler=f=>this.popup=f;this.webContents.send=(...v)=>{this.sent??=[];this.sent.push(v)};windows.push(this)}
@@ -16,7 +16,7 @@ async function fixture(t,{saved=null,probe=async origin=>profile({origin}),start
  }
  class Tray extends EventEmitter{setImage(){}setToolTip(){}getBounds(){return {x:0,y:0,width:10,height:10}}popUpContextMenu(){}destroy(){}}
  const partition=key=>{if(!partitions.has(key)){const value={handlers:{},webRequest:{onBeforeRequest(_filter,f){value.handlers.before=f},onHeadersReceived(_filter,f){value.handlers.headers=f}},setPermissionRequestHandler(f){value.handlers.permission=f},setPermissionCheckHandler(f){value.handlers.check=f},on(){}};partitions.set(key,value)}return partitions.get(key)};
- const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,f)=>handlers.set(name,f)},dialog:{showErrorBox(){},showOpenDialog:async()=>{calls.dialogs++;return{canceled:true,filePaths:[]}}},Tray,Menu:{buildFromTemplate:x=>x,setApplicationMenu(x){calls.menu=x}},nativeImage:{createFromPath:()=>({setTemplateImage(){}})},globalShortcut:{register:()=>true,unregister(){}},screen:{getDisplayMatching:()=>({workArea:{x:0,y:0,width:1000,height:900}})},shell:{openExternal(){}},Notification:{isSupported:()=>true},session:{fromPartition:partition}};
+ const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,f)=>handlers.set(name,f)},dialog:{showErrorBox(){},showOpenDialog:async()=>{calls.dialogs++;return{canceled:true,filePaths:[]}}},Tray,Menu:{buildFromTemplate:x=>x,setApplicationMenu(x){calls.menu=x}},nativeImage:{createFromPath:()=>({setTemplateImage(){}})},globalShortcut:{register:()=>true,unregister(){}},screen:{getDisplayMatching:()=>({workArea:{x:0,y:0,width:1000,height:900}})},shell:{openExternal(url){calls.external.push(url);return Promise.resolve()}},Notification:{isSupported:()=>true},session:{fromPartition:partition}};
  const realRequire=require('node:module').createRequire(path.join(__dirname,'../main.js'));
  const context={__dirname:path.resolve(__dirname,'..'),require:name=>{
   if(name==='electron')return electron;
@@ -55,3 +55,55 @@ test('quarantine cannot be bypassed by tray or Alt+Space quick panel entry',asyn
 test('quitting during owned startup stops pending candidate and late finish cannot create a window',async t=>{let finish;const pending=new Promise(r=>finish=r);const e=await fixture(t,{startWait:pending});assert.equal(e.calls.starts,1);assert.equal(e.subject.win,null);e.app.emit('before-quit');assert.equal(e.calls.stops,1);finish();for(let n=0;n<10;n++)await wait();assert.equal(e.subject.win,null);assert.equal(e.subject.selector,null);assert.equal(e.calls.starts,1);assert.equal(e.calls.notifierCreates,0);assert.equal(await e.subject.activateSpace({version:1,mode:'own'}),false);assert.equal(e.calls.starts,1)});
 
 test('cached windows keep their original navigation origin after switching spaces',async t=>{const e=await fixture(t),owner=e.subject.win,ownerOrigin=new URL(owner.url).origin;const navigation=(w,url)=>{let prevented=false;w.webContents.emit('will-navigate',{preventDefault:()=>prevented=true},url);return prevented};await e.subject.activateSpace(profile());const shared=e.subject.win;assert.equal(navigation(owner,profile().origin+'/'),true);assert.equal(navigation(owner,ownerOrigin+'/'),false);await e.subject.activateSpace({version:1,mode:'own'});assert.equal(navigation(shared,ownerOrigin+'/'),true);assert.equal(navigation(shared,profile().origin+'/'),false)});
+
+const syntheticAuthURL='https://accounts.feishu.cn/oauth/v1/device/verify/?flow_id=synthetic&user_code=NOT-A-REAL-CODE';
+test('owner auth bridge opens only validated official HTTPS hosts and keeps the exact URL',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const urls=[syntheticAuthURL,'https://accounts.larksuite.com:443/oauth/v1/device/verify/?flow_id=synthetic','https://accounts.feishu.cn/oauth/v1/device/verify/?label=%E4%B8%AD'];
+ for(const url of urls)assert.equal(await e.invoke('desktop:open-lark-auth',owner,url),true);
+ assert.deepEqual(e.calls.external,urls);
+});
+test('owner auth bridge rejects nonofficial, malformed, credential-bearing and control-character URLs',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const urls=[undefined,null,{},[],123,'',' '.repeat(2),' '+syntheticAuthURL,syntheticAuthURL+' ',
+  'https://accounts.feishu.cn/'+ 'x'.repeat(4096),'http://accounts.feishu.cn/oauth/v1/device/verify/',
+  'file:///accounts.feishu.cn','javascript:alert(1)','https://evil.invalid/','https://accounts.feishu.cn.evil.invalid/',
+  'https://sub.accounts.feishu.cn/','https://accounts.feishu.cn./','https://%61ccounts.feishu.cn/',
+  'https://name:secret@accounts.feishu.cn/','https://@accounts.feishu.cn/','https://accounts.feishu.cn:444/',
+  'https://accounts.feishu.cn:0443/','https://accounts.feishu.cn:443.evil.invalid/',
+  'https://accounts.feishu.cn\\@evil.invalid/',syntheticAuthURL+'\n',syntheticAuthURL+'\t',syntheticAuthURL+'\u0000',
+  syntheticAuthURL+'&x=%0d',syntheticAuthURL+'&x=%00',syntheticAuthURL+'&x=%7f',syntheticAuthURL+'&x=%C2%85'];
+ for(const url of urls)assert.equal(await e.invoke('desktop:open-lark-auth',owner,url),false,typeof url==='string'?JSON.stringify(url):typeof url);
+ assert.deepEqual(e.calls.external,[]);
+});
+test('owner auth bridge refuses shared, panel, selector, subframe, hidden and stale owner senders',async t=>{
+ const e=await fixture(t),owner=e.subject.win,call=w=>e.invoke('desktop:open-lark-auth',w,syntheticAuthURL);
+ e.subject.togglePanel();await wait();assert.equal(await call(e.subject.panel),false);
+ e.subject.openSelector();assert.equal(await call(e.subject.selector),false);
+ assert.equal(await e.handlers.get('desktop:open-lark-auth')({...e.event(owner),senderFrame:{url:owner.url}},syntheticAuthURL),false);
+ assert.equal(await e.handlers.get('desktop:open-lark-auth')({...e.event(owner),sender:{}},syntheticAuthURL),false);
+ owner.hide();assert.equal(await call(owner),false);owner.show();
+ await e.subject.activateSpace(profile());assert.equal(await call(owner),false);assert.equal(await call(e.subject.win),false);
+ assert.deepEqual(e.calls.external,[]);
+});
+test('queued auth request cannot open a browser after a space switch or document change',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const navigation=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);owner.webContents.mainFrame.url+='#new-document';
+ assert.equal(await navigation,false);assert.equal(e.calls.external.length,0);
+ const switched=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await e.subject.activateSpace(profile());
+ assert.equal(await switched,false);assert.equal(e.calls.external.length,0);
+});
+test('late auth opening receipt cannot confirm a different space, even after returning to the cached owner',async t=>{
+ const e=await fixture(t),owner=e.subject.win;let finish;
+ e.electron.shell.openExternal=url=>{e.calls.external.push(url);return new Promise(r=>finish=r)};
+ const pending=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await wait();assert.equal(e.calls.external.length,1);
+ await e.subject.activateSpace(profile());await e.subject.activateSpace({version:1,mode:'own'});assert.equal(e.subject.win,owner);
+ finish();assert.equal(await pending,false);
+});
+test('auth bridge returns false for synchronous shell errors, rejected requests and quit during open',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ e.electron.shell.openExternal=()=>{throw Error('synthetic OS rejection')};assert.equal(await e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL),false);
+ e.electron.shell.openExternal=async()=>{throw Error('synthetic async rejection')};assert.equal(await e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL),false);
+ let finish;e.electron.shell.openExternal=()=>new Promise(r=>finish=r);
+ const pending=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await wait();e.app.emit('before-quit');finish();assert.equal(await pending,false);
+});

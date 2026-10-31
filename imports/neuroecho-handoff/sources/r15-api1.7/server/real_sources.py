@@ -32,13 +32,21 @@ def sources(force: bool = False) -> list[dict]:
     reminders_id, calendar_id = system_source.platform_ids() or ("apple_reminders", "apple_calendar")
     reminders_status = system_source.status("tasks")
     calendar_status = system_source.status("calendar")
+    if reminders_id == "apple_reminders" and not apple_source.platform_supported():
+        reminders_status = calendar_status = {"status": "platform_unsupported", "hint": "需要在 macOS 上连接"}
     out = [
-        {"id": "feishu", "name": "飞书", "icon": "飞", "blurb": "读取你指定的一篇文档",
+        {"id": "feishu", "name": "飞书", "icon": "飞", "blurb": "连接后，聊天时自动查找相关文档",
          "kind": "可连接", "status": "ready" if lark_ok else "needs_auth",
-         "hint": lark_msg, "reads": ["单篇文档"], "mode": "real"},
+         "hint": lark_msg, "reads": ["当前账号有权访问的文档；按问题搜索并只读相关正文"], "mode": "real"},
         {"id": "local_files", "name": "本地文件", "icon": "⌂", "blurb": "由你逐个选择文本文件",
          "kind": "可连接", "status": "ready",
          "hint": "最多 3 份；先预览再确认", "reads": ["仅你选择的文本片段"], "mode": "real"},
+        {"id": "waytoagi", "name": "WaytoAGI 公开资料", "icon": "W", "blurb": "读取你指定的公开页面正文",
+         "kind": "公开链接", "status": "ready", "hint": "先预览再接入；不代表绑定个人账号",
+         "reads": ["指定公开页面正文"], "mode": "real"},
+        {"id": "jike", "name": "即刻公开帖子", "icon": "即", "blurb": "读取你分享的一条公开帖子",
+         "kind": "公开链接", "status": "ready", "hint": "粘贴 m.okjike.com/originalPosts/ 链接；不读取私信或关注列表",
+         "reads": ["指定公开帖子的文字"], "mode": "real"},
         {"id": "git", "name": "本地代码库", "icon": "git", "blurb": "最近提交",
          "kind": "可连接", "status": "ready" if repos else "needs_config",
          "hint": "由你填写代码库目录；只读该库最近最多 8 条提交",

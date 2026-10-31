@@ -1,41 +1,18 @@
-"""实体交互与 ACK（PRD F03/F06/F12/F18）。"""
-import pytest
-from fastapi.testclient import TestClient
-
-from server import core
-from server.main import app
+"""The simulator remains a unit-test helper, never a production endpoint."""
+from server import device_bridge
 
 
-@pytest.fixture()
-def client(tmp_path, monkeypatch):
-    monkeypatch.setattr(core, "DB_PATH", str(tmp_path / "test.db"))
-    core.init_db()
-    return TestClient(app)
+def test_button_fixture_returns_correlated_ack():
+    event = device_bridge.button_press("unit-only")
+    assert event["type"] == "button.press" and event["source"] == "synthetic-button"
+    assert event["ack"]["status"] == "received"
+    assert event["ack"]["for"] == event["id"]
 
 
-def test_button_press_returns_ack(client):
-    r = client.post("/api/device/button", json={"session_id": "ses_test"})
-    assert r.status_code == 200
-    d = r.json()
-    assert d["type"] == "button.press" and d["source"] == "synthetic-button"
-    assert d["ack"]["status"] == "received"
-    assert d["ack"]["for"] == d["id"]
-
-
-def test_display_command_has_ack_and_state(client):
-    r = client.post("/api/device/display", json={"session_id": "ses_test", "text": "已保存：测试", "color": "amber"})
-    assert r.status_code == 200
-    d = r.json()
-    assert d["ack"]["status"] == "displayed"
-    assert d["ack"]["latency_ms"] > 0
-    state = client.get("/api/device/presentation").json()
-    assert state["last_display"]["id"] == d["id"]
+def test_display_fixture_has_explicit_synthetic_state():
+    result = device_bridge.display("unit-only", "测试资料", "amber")
+    assert result["ack"]["status"] == "displayed"
+    assert result["ack"]["latency_ms"] > 0
+    state = device_bridge.state()
+    assert state["last_display"]["id"] == result["id"]
     assert state["synthetic"] is True
-
-
-def test_device_actions_audited(client):
-    client.post("/api/device/button", json={"session_id": "ses_audit"})
-    client.post("/api/device/display", json={"session_id": "ses_audit", "text": "hi"})
-    events = client.get("/api/audit?session_id=ses_audit").json()["events"]
-    actions = [e["action"] for e in events]
-    assert "device.button" in actions and "device.display" in actions

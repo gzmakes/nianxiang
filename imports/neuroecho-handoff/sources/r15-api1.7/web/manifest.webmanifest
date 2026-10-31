@@ -1,0 +1,19 @@
+{
+  "id": "/m",
+  "name": "念响",
+  "short_name": "念响",
+  "description": "你的个人陪伴伙伴",
+  "start_url": "/m",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#EDF1FF",
+  "theme_color": "#EDF1FF",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -62,7 +62,7 @@ def test_chat_uses_model_when_configured(client, monkeypatch):
             return "模型回复：先确认你说的这一步。"
 
     monkeypatch.setattr(core.model, "from_env", lambda: Fake())
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     r = client.post("/api/chat", json={"session_id": sid, "text": "你在吗"})
     assert r.status_code == 200
     assert r.json()["reply"].startswith("模型回复")
@@ -78,7 +78,7 @@ def test_chat_falls_back_on_model_error(client, monkeypatch):
             raise model.ModelError("timeout")
 
     monkeypatch.setattr(core.model, "from_env", lambda: Broken())
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     r = client.post("/api/chat", json={"session_id": sid, "text": "你在吗"})
     assert r.status_code == 200
     assert "我在听" in r.json()["reply"]

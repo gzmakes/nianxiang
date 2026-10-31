@@ -1,3 +1,4 @@
+const connectionContext = require("./helpers/connection-context.cjs");
 // Exercise the actual Web boot publication and existing renderers, not a copy
 // of their logic. All service records and views are disposable synthetic data.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
@@ -7,7 +8,7 @@ function node(){return {value:'',innerHTML:'',textContent:'',className:'',classL
 async function fixture(tab='today'){
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id)},calls=[],pending=[];
  let options;const state={session:{id:'one'},messages:[],memories:[],tab,companionBoundary:{canRefresh:()=>true,acceptSnapshot:()=>true},delivery:{pending:()=>false,invalidateReads(){calls.push('invalidate-delivery')}}};
- const ctx=vm.createContext({state,$,$$:()=>[],sourceUiEpoch:0,contentMutationEpoch:0,contentMutationCount:0,activeTurn:null,turnQueue:[],queuedTurns:[],chatBlocked:false,memoryDrafts:new Map(),
+ const ctx=connectionContext({state,$,$$:()=>[],sourceUiEpoch:0,contentMutationEpoch:0,contentMutationCount:0,activeTurn:null,turnQueue:[],queuedTurns:[],chatBlocked:false,memoryDrafts:new Map(),
   followups:{canRefresh:()=>true,acceptSnapshot:()=>true},mood:{canRefresh:()=>true,acceptSnapshot:()=>true},
   document:{hidden:false,documentElement:{dataset:{}},activeElement:{matches:()=>false},querySelector:()=>null,addEventListener(){}},
   window:{innerWidth:1280,addEventListener(){},XinjiForegroundSync:{draft:()=>({save(){}}),create:()=>async()=>false},XinjiContentUpdates:{mountStatus:()=>()=>{},create:opts=>{options=opts;return{start(){}}}},XinjiActionCards:{html:actions=>actions.map(a=>a.title).join('|'),bind(){}}},

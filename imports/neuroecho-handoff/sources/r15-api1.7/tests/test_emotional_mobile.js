@@ -1,18 +1,19 @@
+const connectionContext = require("./helpers/connection-context.cjs");
 // Synthetic onboarding/entry tests: no account, model, filesystem or hardware calls.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const js=fs.readFileSync('web/m.js','utf8'),html=fs.readFileSync('web/m.html','utf8'),css=fs.readFileSync('web/m.css','utf8');
 const start=js.indexOf('  let mobileOpeningEntry = '),end=js.indexOf('  const api = ',start);assert.ok(start>=0&&end>start);
-function element(){const hidden=new Set(['is-hidden']);return {value:'',innerHTML:'',textContent:'',open:false,isConnected:true,focusCount:0,classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x)},focus(){this.focusCount++},closest(){return null},showModal(){this.open=true},close(){this.open=false}};}
+function element(){const hidden=new Set(['is-hidden']);return {value:'',innerHTML:'',textContent:'',open:false,isConnected:true,focusCount:0,classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x)},querySelectorAll(){return[];},focus(){this.focusCount++},closest(){return null},showModal(){this.open=true},close(){this.open=false}};}
 function setup(reply=async()=>({sources:[]})){
  const nodes=new Map(),$=selector=>{if(!nodes.has(selector))nodes.set(selector,element());return nodes.get(selector)};
  const state={session:{id:'same-session'},messages:[]},calls=[],routes=[],shown=[],options=[];
  const welcome={maybeShow:arg=>{welcome.last=arg},open(){welcome.opened=true}},opener=element();$('#m-input').value='已有草稿';
- const ctx=vm.createContext({$,state,wz:{},document:{activeElement:opener},window:{XinjiWelcome:{create:config=>{options.push(config);return welcome},mascotMarkup:'<svg>seed</svg>'}},
+ const ctx=connectionContext({$,state,wz:{},document:{activeElement:opener},window:{XinjiWelcome:{create:config=>{options.push(config);return welcome},mascotMarkup:'<svg>seed</svg>'}},
   $$:selector=>selector==='[data-m-welcome-close]'?[element(),element()]:[],
   api:async(...args)=>{calls.push(args);return reply(...args)},toast:text=>shown.push(text),esc:s=>String(s??'').replace(/</g,'&lt;'),
-  openMobileLocalFiles:()=>routes.push('local_files'),openMobileReal:(...args)=>routes.push(args),openMobileFeishu:()=>routes.push('feishu'),startLarkAuthMobile:()=>routes.push('explicit-authorize'),showWz(){},closeSheet(){}});
- vm.runInContext('let mobileSourceFormEpoch=0;function clearMobileSourceForm(){mobileSourceFormEpoch++;}\n'+js.slice(start,end)+
-  '\nthis.entry=openMobileEntry;this.closeRokid=closeMobileRokid;this.invalidate=clearMobileSourceForm;this.closeWizard=closeMobileWizard;this.beginAuth=beginMobileAuthSurface;this.finishAuth=finishMobileAuthSurface;',ctx);
+  openMobileLocalFiles:()=>routes.push('local_files'),openMobileReal:(...args)=>routes.push(args),openMobileFeishu:()=>routes.push('feishu'),openMobileFeishuAccount:()=>routes.push('feishu-account'),startLarkAuthMobile:()=>routes.push('explicit-authorize'),showWz(){},closeSheet(){}});
+ vm.runInContext('let larkConnectedThisPage=false;'+js.slice(js.indexOf('  function larkCanChooseDocuments()'),js.indexOf('  function reserveLarkAuthWindow()'))+'let mobileSourceFormEpoch=0;function clearMobileSourceForm(){mobileSourceFormEpoch++;}\n'+js.slice(start,end)+js.slice(js.indexOf('  async function readFeishuAccountState() {'),js.indexOf('  async function openMobileReal('))+
+  '\nthis.entry=openMobileEntry;this.closeRokid=closeMobileRokid;this.invalidate=clearMobileSourceForm;this.closeWizard=closeMobileWizard;this.beginAuth=beginMobileAuthSurface;this.finishAuth=finishMobileAuthSurface;this.markConnected=()=>larkConnectedThisPage=true;this.loadSources=loadRealSources;',ctx);
  return {ctx,$,state,calls,routes,shown,options,welcome,opener};
 }
 test('four direct entries appear in the opening chat, with honest Rokid status',()=>{
@@ -33,19 +34,16 @@ test('local computer entry only opens the explicit file picker',async()=>{
  const e=setup();await e.ctx.entry('local_files',e.opener);assert.deepEqual(e.routes,['local_files']);assert.equal(e.calls.length,0);assert.equal(e.$('#m-input').value,'已有草稿');
 });
 test('calendar entry opens scope confirmation and never reads the calendar itself',async()=>{
- const e=setup();await e.ctx.entry('apple_calendar',e.opener);assert.equal(e.calls.length,0);assert.equal(e.routes[0][0],'apple_calendar');assert.match(e.routes[0][2].reads[0],/未来 7 天/);assert.equal(e.$('#m-input').value,'已有草稿');
+ const e=setup();await e.ctx.entry('apple_calendar',e.opener);assert.equal(e.calls.length,0);assert.equal(e.routes[0][0],'apple_calendar');assert.match(e.routes[0][2].reads[0],/过去 7 天/);assert.equal(e.$('#m-input').value,'已有草稿');
 });
-test('ready Feishu entry checks status then opens only the existing single-document picker',async()=>{
- const e=setup(async()=>({sources:[{id:'feishu',status:'ready'}]}));await e.ctx.entry('feishu',e.opener);assert.deepEqual(e.calls.map(call=>call[0]),['/api/onboarding/sources?force=1']);assert.deepEqual(e.routes,['feishu']);
+test('Feishu entry opens account settings without automatic OAuth or single-document selection',async()=>{
+ const e=setup(async()=>({sources:[{id:'feishu',status:'ready'}]}));await e.ctx.entry('feishu',e.opener);assert.deepEqual(e.routes,['feishu-account']);assert.equal(e.calls.length,0);assert.equal(e.$('#m-input').value,'已有草稿');
 });
-test('unready Feishu explains the connection without starting authorization or reading a document',async()=>{
- const e=setup(async()=>({sources:[{id:'feishu',status:'needs_auth',hint:'授权已过期'}]}));await e.ctx.entry('feishu',e.opener);assert.equal(e.routes.length,0);assert.equal(e.calls.length,1);assert.match(e.$('#m-read-head').innerHTML,/先聊聊/);assert.match(e.$('#m-read-head').innerHTML,/授权已过期/);
+test('an existing document snapshot still enters account settings without widening authorization',async()=>{
+ const e=setup(async()=>({sources:[{id:'feishu',status:'ready'}]}));e.ctx.markConnected();await e.ctx.entry('feishu',e.opener);assert.deepEqual(e.routes,['feishu-account']);assert.equal(e.calls.length,0);
 });
-test('Feishu authorization is available only behind an explicit scope-described click',async()=>{
- const e=setup(async()=>({sources:[{id:'feishu',status:'needs_auth'}]}));await e.ctx.entry('feishu',e.opener);assert.deepEqual(e.routes,[]);assert.match(e.$('#m-read-head').innerHTML,/单篇飞书文档.*核对权限/);e.$('#m-entry-feishu-authorize').onclick();assert.deepEqual(e.routes,['explicit-authorize']);assert.equal(e.calls.length,1);
-});
-test('a late Feishu status cannot reopen a source after leaving or switching session',async()=>{
- for(const action of ['leave','switch']){let resolve;const waiting=new Promise(r=>resolve=r);const e=setup(async()=>waiting);const run=e.ctx.entry('feishu',e.opener);if(action==='leave')e.ctx.invalidate();else e.state.session={id:'other'};resolve({sources:[{id:'feishu',status:'ready'}]});await run;assert.equal(e.routes.length,0);}
+test('an expired CLI does not automatically open a new official authorization flow',async()=>{
+ const e=setup(async()=>({sources:[{id:'feishu',status:'needs_auth',hint:'授权已过期'}]}));e.ctx.markConnected();await e.ctx.entry('feishu',e.opener);assert.deepEqual(e.routes,['feishu-account']);assert.equal(e.calls.length,0);
 });
 test('Rokid opens a static outline and restores focus without any device/API request',async()=>{
  const e=setup();await e.ctx.entry('rokid',e.opener);assert.equal(e.$('#m-rokid-outline').open,true);assert.equal(e.calls.length,0);assert.equal(e.routes.length,0);e.ctx.closeRokid();assert.equal(e.$('#m-rokid-outline').open,false);assert.equal(e.opener.focusCount,1);assert.equal(e.$('#m-input').value,'已有草稿');
@@ -72,4 +70,10 @@ test('auth suspension removes the wizard trap, then resumes only the same source
 });
 test('auth closing after leaving the originating context never revives its source layer',async()=>{
  const e=setup(),surfaces=lifecycle(e);await e.ctx.entry('local_files',e.opener);e.ctx.beginAuth();e.ctx.invalidate();assert.equal(e.ctx.finishAuth(),false);assert.equal(surfaces[0].isOpen(),false);assert.equal(surfaces[1].isOpen(),false);assert.notEqual(e.$('#m-app').inert,true);
+});
+
+test('H5 account badge requires the actual account setting, independently from CLI and saved snapshots',async()=>{
+ let enabled=false;const e=setup(async path=>path.startsWith('/api/lark/account?')?{enabled,ready:true}:{sources:[{id:'feishu',name:'飞书',status:'ready',blurb:'按问题查阅',icon:'飞'}]});e.$('#m-wz-2').classList.remove('is-hidden');await e.ctx.loadSources();assert.match(e.$('#m-reco').innerHTML,/待连接/);assert.match(e.$('#m-reco').innerHTML,/>连接<\/button>/);
+ e.ctx.markConnected();await e.ctx.loadSources();assert.match(e.$('#m-reco').innerHTML,/待连接/);
+ enabled=true;await e.ctx.loadSources();assert.match(e.$('#m-reco').innerHTML,/✓ 已连接/);assert.match(e.$('#m-reco').innerHTML,/>管理连接<\/button>/);assert.ok(e.calls.every(([,options])=>!options?.method||options.method==='GET'));
 });
