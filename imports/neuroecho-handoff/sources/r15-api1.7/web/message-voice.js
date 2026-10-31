@@ -39,7 +39,7 @@
 
   // 已有语音时，点击只播放 / 暂停，不再走重新生成。
   document.addEventListener('click', event => {
-    const button = event.target.closest?.('#app #messages [data-voice-clip]');
+    const button = event.target.closest?.('#app #messages [data-voice-clip], #m-app #m-messages [data-voice-clip]');
     if (!button) return;
     const audio = slotFor(button)?.querySelector('audio');
     if (!audio) { const id = messageId(button); if (id) wantPlay.add(id); return; }
@@ -67,7 +67,7 @@
   }
 
   function mountPreference() {
-    const panel = document.querySelector('#tab-design');
+    const panel = document.querySelector('#tab-design, #m-design-preferences');
     if (!panel || panel.querySelector('.voice-autoplay-pref')) return;
     const label = document.createElement('label');
     label.className = 'emoji-pref voice-autoplay-pref';
@@ -79,7 +79,7 @@
   }
 
   function start() {
-    const messages = document.querySelector('#app #messages');
+    const messages = document.querySelector('#app #messages, #m-app #m-messages');
     if (!messages || typeof MutationObserver === 'undefined') return;
     const scan = () => { messages.querySelectorAll('[data-voice-clip]').forEach(watch); autoplayScan(messages); };
     new MutationObserver(scan).observe(messages, {childList: true});
