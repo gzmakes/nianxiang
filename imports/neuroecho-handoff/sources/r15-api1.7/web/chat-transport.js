@@ -2,6 +2,7 @@
 (() => {
   function chatBody(turn) {
     const value={session_id:turn.session_id,text:turn.text,memory_proposals:!!turn.memory_proposals,request_id:turn.request_id};
+    if (turn.image_data_url) value.image_data_url = turn.image_data_url;
     if(Object.hasOwn(turn,'time_zone')) {
       if(typeof turn.time_zone!=='string'||!turn.time_zone)throw new Error('发送时区不完整，原请求保留，请核对。');
       value.time_zone=turn.time_zone;
@@ -31,23 +32,25 @@
       try { storage().setItem(key, JSON.stringify(value)); }
       catch (_) { throw failure(); }
     }
-    const payload = chatBody;
+    // Images are never put in localStorage. Recovery only queries the request ID.
+    function payload(turn) { const value=chatBody(turn); if (value.image_data_url) { delete value.image_data_url; value.has_image=true; } else if (turn.has_image) value.has_image=true; return value; }
+    function persistPart(part) { const {image_data_url, ...safe}=part; if (image_data_url) safe.has_image=true; return safe; }
     function restore(sessionId, fallbackDraft = '') {
       const value = read(), waiting = value.queued.filter(p => p.sessionId === sessionId);
       const draft = Object.hasOwn(value.drafts, sessionId) ? value.drafts[sessionId] : fallbackDraft;
-      const text = [...waiting.map(p => p.text), draft].filter(Boolean).join('\n');
+      const text = [...waiting.map(p => p.has_image && p.text === '[图片]' ? '' : p.text), draft].filter(Boolean).join('\n');
       value.drafts[sessionId] = text;
       value.queued = value.queued.filter(p => p.sessionId !== sessionId);
       // Persist the restored draft and consume the queue in the same write, so
       // closing between these steps cannot lose or duplicate the queued text.
       write(value);
-      return {draft:text, pending:clone(value.pending.filter(p => p.session_id === sessionId)), restored:waiting.length};
+      return {draft:text, pending:clone(value.pending.filter(p => p.session_id === sessionId)), restored:waiting.length, imageLost:waiting.some(p => p.has_image)};
     }
     return {
       snapshot: () => clone(read()), restore,
       saveDraft(sessionId, text) { const value=read(); value.drafts[sessionId]=text; write(value); },
       enqueue(part) {
-        const value=read(); value.queued.push(clone(part)); value.drafts[part.sessionId]=''; write(value);
+        const value=read(); value.queued.push(clone(persistPart(part))); value.drafts[part.sessionId]=''; write(value);
       },
       begin(turn, parts = []) {
         const value=read(), existing=value.pending.find(p => p.request_id === turn.request_id);
@@ -57,7 +60,7 @@
         }
         const ids=new Set(parts.map(p => p.id));
         value.queued=value.queued.filter(p => !ids.has(p.id));
-        if (!existing) value.pending.push({...payload(turn), parts:clone(parts), cancelWanted:!!turn.cancelWanted});
+        if (!existing) value.pending.push({...payload(turn), parts:clone(parts.map(persistPart)), cancelWanted:!!turn.cancelWanted});
         write(value);
       },
       cancelWanted(turn) {
@@ -134,7 +137,7 @@
         try {
           result = await api('/api/chat', {method:'POST', body:JSON.stringify(chatBody(turn))});
         } catch (error) {
-          if ([400,422,429].includes(error.status)) error.notSent = true;
+          if ([400,413,422,429].includes(error.status)) error.notSent = true;
           if (error.status && error.status < 500) throw error;
           result = await recover(turn, onStatus, false);
         }

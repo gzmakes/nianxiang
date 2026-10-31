@@ -1,0 +1,25 @@
+.soundscape-settings { margin: 18px 0; padding: 18px; border: 1px solid rgba(128,108,87,.18); border-radius: 18px; background: rgba(255,250,241,.72); color: #443a34; }
+.soundscape-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.soundscape-heading h3 { margin:0; font-size:16px; }
+.soundscape-heading p,.soundscape-note,.soundscape-status { margin:5px 0 0; color:#81766d; font-size:12px; line-height:1.5; }
+.soundscape-heading > span { font-size:23px; color:#bd936d; }
+.soundscape-toggle { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:11px 0; border-top:1px solid rgba(128,108,87,.12); }
+.soundscape-toggle span { display:flex; flex-direction:column; gap:3px; }
+.soundscape-toggle b,.soundscape-select span,.soundscape-volume span { font-size:13px; }
+.soundscape-toggle small { color:#81766d; font-size:12px; line-height:1.4; }
+.soundscape-settings input[type=checkbox] { width:18px; height:18px; accent-color:#b17e55; flex:none; }
+.soundscape-select { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; margin:5px 0 12px; }
+.soundscape-select > span { grid-column:1 / -1; }
+.soundscape-select select { min-width:0; width:100%; padding:8px 9px; border:1px solid #dfd1c0; border-radius:9px; background:#fffdfa; color:inherit; font:inherit; font-size:13px; }
+.soundscape-select button { padding:8px 12px; border:1px solid #d9c5b1; border-radius:9px; background:#fffaf3; color:#795b44; cursor:pointer; }
+.soundscape-volume { display:flex; align-items:center; gap:12px; margin:8px 0 14px; }
+.soundscape-volume input { flex:1; min-width:0; accent-color:#b17e55; }
+.soundscape-status { min-height:1.5em; color:#795b44; }
+.soundscape-settings :focus-visible { outline:2px solid #a8653d; outline-offset:3px; }
+.soundscape-silence,.soundscape-breath button { padding:7px 10px; border:1px solid #d9c5b1; border-radius:9px; background:#fffaf3; color:#795b44; font-size:12px; cursor:pointer; }
+.soundscape-silence { margin:7px 0 1px; }
+.soundscape-breath { margin-top:16px; padding-top:15px; border-top:1px solid rgba(128,108,87,.15); }
+.soundscape-breath b { font-size:13px; }
+.soundscape-breath small { display:block; margin-top:4px; color:#81766d; font-size:12px; line-height:1.5; }
+.soundscape-breath p { margin:10px 0; color:#795b44; font-size:13px; line-height:1.5; }
+.soundscape-breath-actions { display:flex; flex-wrap:wrap; gap:8px; }

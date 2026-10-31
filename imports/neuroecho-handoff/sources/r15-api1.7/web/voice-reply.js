@@ -7,6 +7,10 @@
   const clips = new Map(), inflight = new Set(), clipControls = new Map();
   const keyFor = (sid, id) => `${sid}\u0000${id}`;
   const visible = () => !global.document?.hidden;
+  function syncVoiceActivity() {
+    const clipPlaying = [...clips.values()].some(item => item.player && !item.player.paused && !item.player.ended);
+    global.NianxiangSound?.setVoiceActive(!!active?.speaking || clipPlaying);
+  }
   function readText(message) {
     if (!message || message.role !== 'assistant' || message.delivery_pending) return '';
     if (Array.isArray(message.bubbles) && message.bubbles.length)
@@ -28,11 +32,12 @@
   function stop() {
     const old = active; active = null; clearWatchdog(old);
     if (old && global.speechSynthesis) { try { global.speechSynthesis.cancel(); } catch (_) {} }
-    reset(old);
+    reset(old); syncVoiceActivity();
   }
   function pauseClip(item, clear = false) {
     if (!item?.player) return;
     try { item.player.pause(); if (clear) { item.player.removeAttribute('src'); item.player.load?.(); } } catch (_) {}
+    syncVoiceActivity();
   }
   function stopAll() { stop(); for (const item of clips.values()) pauseClip(item); }
   function spokenText(value) {
@@ -83,11 +88,11 @@
     }
     utterance.onstart = () => {
       if (active !== item) return;
-      item.preparing = false; bindMessage(id, text, item.button, sessionId);
+      item.preparing = false; item.speaking = true; syncVoiceActivity(); bindMessage(id, text, item.button, sessionId);
       watchdog(Math.min(600000, Math.max(20000, body.length * 500 + 10000)));
     };
-    utterance.onend = () => { if (active === item) { active = null; clearWatchdog(item); reset(item); } };
-    utterance.onerror = () => { if (active !== item) return; active = null; clearWatchdog(item); unavailable(item.button); };
+    utterance.onend = () => { if (active === item) { active = null; clearWatchdog(item); reset(item); syncVoiceActivity(); } };
+    utterance.onerror = () => { if (active !== item) return; active = null; clearWatchdog(item); unavailable(item.button); syncVoiceActivity(); };
     watchdog(10000);
     try { global.speechSynthesis.speak(utterance); return true; }
     catch (_) { utterance.onerror(); return false; }
@@ -112,7 +117,8 @@
     pauseClip(item, true);
     const player = global.document.createElement('audio');
     item.player = player;
-    player.onplay = () => { stop(); for (const other of clips.values()) if (other !== item) pauseClip(other); if (!visible()) pauseClip(item); };
+    player.onplay = () => { stop(); for (const other of clips.values()) if (other !== item) pauseClip(other); if (!visible()) pauseClip(item); syncVoiceActivity(); };
+    player.onpause = player.onended = player.onerror = syncVoiceActivity;
     player.controls = true;
     player.style.maxWidth = '100%';
     player.preload = 'metadata';

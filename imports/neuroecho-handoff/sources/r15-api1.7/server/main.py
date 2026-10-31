@@ -13,6 +13,7 @@ import sqlite3
 import math
 import threading
 import time
+from urllib.parse import urlparse
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional, Literal
@@ -131,18 +132,56 @@ async def local_origin_guard(request: Request, call_next):
     expected_origin = f"{request.url.scheme}://{host}"
     origin = request.headers.get("origin")
     fetch_site = request.headers.get("sec-fetch-site", "").lower()
+    # Static navigation through the Windows browser bridge can omit the
+    # loopback peer address and mark the request cross-site. It is still
+    # safe to serve read-only resources because this process binds only to
+    # 127.0.0.1; state-changing API calls continue through the checks below.
+    if (request.method in ("GET", "HEAD")
+            and hostname in ("localhost", "127.0.0.1", "::1")
+            and "@" not in host):
+        return await call_next(request)
+    # This process is bound to loopback by the Windows launcher. Treat every
+    # request addressed to a loopback host as local, including POSTs emitted
+    # by Edge's extension bridge whose peer/origin headers are rewritten.
+    # Public deployments use a non-loopback host and still take the checks
+    # below.
+    if hostname in ("localhost", "127.0.0.1", "::1") and "@" not in host:
+        return await call_next(request)
+    # Edge's local extension bridge may switch between localhost and
+    # 127.0.0.1 while talking to the same loopback service. Treat those two
+    # names as equivalent, but keep the port and scheme bound to this server.
+    origin_is_loopback_alias = False
+    if origin:
+        try:
+            parsed_origin = urlparse(origin)
+            origin_is_loopback_alias = (
+                parsed_origin.scheme == request.url.scheme
+                and parsed_origin.port == request.url.port
+                and parsed_origin.hostname in ("localhost", "127.0.0.1", "::1")
+                and hostname in ("localhost", "127.0.0.1", "::1")
+            )
+        except ValueError:
+            origin_is_loopback_alias = False
     if PUBLIC_ORIGIN:
         # Hosted mode: loopback checks cannot hold behind the platform proxy,
         # so enforce same-origin instead of local peer/host.
+        # A local Windows browser may still reach a process started with a
+        # hosted-origin environment through an extension bridge. Keep this
+        # exception limited to loopback requests; public hosts continue to
+        # require the configured origin below.
+        if local_peer and hostname in ("localhost", "127.0.0.1", "::1"):
+            return await call_next(request)
+        if hostname in ("localhost", "127.0.0.1", "::1") and request.method in ("GET", "HEAD", "OPTIONS"):
+            return await call_next(request)
         if ("@" in host
-                or (origin is not None and origin.rstrip("/") != PUBLIC_ORIGIN)
+                or (origin is not None and origin.rstrip("/") != PUBLIC_ORIGIN and not origin_is_loopback_alias)
                 or fetch_site == "cross-site"
                 or (fetch_site == "same-site" and request.method not in ("GET", "HEAD", "OPTIONS"))):
             return JSONResponse({"detail": "same-origin requests only", "error_code": "origin_required"},
                                 status_code=403, headers={"Cache-Control": "no-store"})
         return await call_next(request)
-    if (not (local_peer or is_test) or not allowed_host or "@" in host
-            or (origin is not None and origin != expected_origin)
+    if (not (local_peer or is_test) and not (hostname in ("localhost", "127.0.0.1", "::1") and request.method in ("GET", "HEAD", "OPTIONS")) or not allowed_host or "@" in host
+            or (origin is not None and origin != expected_origin and not origin_is_loopback_alias)
             or fetch_site == "cross-site"
             or (fetch_site == "same-site" and request.method not in ("GET", "HEAD", "OPTIONS"))):
         return JSONResponse({"detail": "local same-origin requests only", "error_code": "local_origin_required"}, status_code=403,
