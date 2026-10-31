@@ -518,3 +518,25 @@ html[data-persona=whale] .presence-light-core::before{left:27%;top:38%}
 html[data-persona=whale] .presence-light-core::after{left:51%;top:38%}
 html[data-persona=whale] #app .conversation-persona h2{color:#2B4A8A}
 html[data-persona=whale] .emoji-orb{font-size:22px}
+/* Web 改版 10 (2026-10-31，产品要求)：人格胶囊文字+箭头整体居中；小鲸鱼头顶小水柱、尾鳍有明暗；右侧面板按钮有按下/悬停反馈 */
+#app .conversation-persona h2.persona-name{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 22px 5px 24px}
+#app .conversation-persona h2.persona-name::after{position:static;transform:translateY(-2px) rotate(45deg);margin-left:0;right:auto;top:auto}
+#app .conversation-persona h2.persona-name[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+/* 小水柱：三滴，轻轻上下浮；尾鳍：高光 + 下沿阴影 + 轻微透视，下面垫一片柔影 */
+html[data-persona=whale] [data-companion-art]{position:relative}
+html[data-persona=whale] [data-companion-art]::before{content:"";position:absolute;left:50%;top:9%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#5EA6FF;
+  box-shadow:-7px -5px 0 -.5px #7DB8FF,7px -5px 0 -.5px #7DB8FF,0 -8px 0 -1px #9CCBFF;opacity:calc(.5 + .5 * var(--echo-light-intensity));animation:whale-spout 2.8s ease-in-out infinite;pointer-events:none;z-index:2}
+@keyframes whale-spout{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+html[data-persona=whale] .presence-light::before{right:-10%;top:37%;width:32%;height:30%;clip-path:polygon(0 44%,0 56%,100% 0,80% 50%,100% 100%);transform:rotate(-8deg) skewY(-6deg);
+  background:radial-gradient(circle at 28% 32%,rgba(255,255,255,.75) 0,rgba(255,255,255,0) 42%),linear-gradient(to bottom,rgba(255,255,255,0) 50%,rgba(30,60,140,.32) 100%),linear-gradient(160deg,var(--orb-b),var(--orb-c))}
+html[data-persona=whale] [data-companion-art]::after{content:"";position:absolute;right:-4%;top:58%;width:26%;height:12%;border-radius:50%;background:rgba(30,60,140,.22);filter:blur(4px);z-index:-1;pointer-events:none}
+html[data-reduce-motion=true] [data-companion-art]::before{animation:none}
+@media(max-width:899px){html[data-persona=whale] [data-companion-art]::before{width:4px;height:4px;margin-left:-2px;box-shadow:-5px -4px 0 -.5px #A6D2FF,5px -4px 0 -.5px #A6D2FF,0 -6px 0 -1px #BFE0FF}}
+/* 右侧面板：按钮悬停轻抬、按下轻缩；页签同样；可展开的行有按下反馈 */
+#app .context button,#app .context .btn,#app .context summary{transition:transform .12s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease}
+#app .context button:not(:disabled):hover,#app .context .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(80,100,170,.16)}
+#app .context button:not(:disabled):active,#app .context .btn:active,#app .context summary:active{transform:scale(.96);box-shadow:none;transition-duration:.06s}
+#app .context .tabs .tab:not(.active):hover{background:rgba(255,255,255,.55);transform:none;box-shadow:none}
+#app .context .tabs .tab:active{transform:scale(.95)}
+#app .context .mood-date:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.7)}
+#app .context .mini-btn.confirm:hover,#app .context .mood-save:hover{box-shadow:0 6px 16px rgba(27,36,51,.28)}
