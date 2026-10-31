@@ -7,7 +7,6 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $server = Join-Path $root 'server'
-$configPath = Join-Path $server 'voice-settings.json'
 
 if ([string]::IsNullOrWhiteSpace($GatewayBaseUrl)) { throw 'GatewayBaseUrl is required.' }
 if ([string]::IsNullOrWhiteSpace($GatewayToken)) { throw 'GatewayToken is required.' }
@@ -20,6 +19,8 @@ if ($uri.Host -in @('127.0.0.1', 'localhost', '::1')) { throw 'Use a reachable H
 
 $template = Join-Path $server 'voice-settings.example.json'
 if (-not (Test-Path $template)) { throw "Missing template: $template" }
+$configPath = Join-Path $DataDir 'voice-settings.json'
+New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 $config = [System.IO.File]::ReadAllText($template, [Text.UTF8Encoding]::new($false)) | ConvertFrom-Json
 $config.tts.enabled = $true
 $config.tts.provider = 'remote'
@@ -30,7 +31,6 @@ $config.tts.timeout_seconds = 120
 
 $json = $config | ConvertTo-Json -Depth 8
 [System.IO.File]::WriteAllText($configPath, $json, [Text.UTF8Encoding]::new($false))
-New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 
 Write-Host "Wrote remote voice config: $configPath"
 Write-Host "Gateway: $base"

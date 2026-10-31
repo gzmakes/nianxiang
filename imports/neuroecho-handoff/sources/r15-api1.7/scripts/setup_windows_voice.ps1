@@ -1,16 +1,18 @@
 param(
   [string]$ReferenceAudio = '',
   [string]$FfmpegPath = '',
-  [switch]$EnableTts
+  [switch]$EnableTts,
+  [string]$DataDir = "$env:LOCALAPPDATA\Nianxiang\data"
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $server = Join-Path $root 'server'
-$configPath = Join-Path $server 'voice-settings.json'
+$configPath = Join-Path $DataDir 'voice-settings.json'
 $examplePath = Join-Path $server 'voice-settings.example.json'
 
 if (-not (Test-Path $examplePath)) { throw "Missing template: $examplePath" }
+New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 
 if ([string]::IsNullOrWhiteSpace($FfmpegPath)) {
   $ffmpeg = Get-Command ffmpeg.exe -ErrorAction SilentlyContinue
