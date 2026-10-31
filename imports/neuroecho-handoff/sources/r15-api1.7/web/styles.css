@@ -1452,3 +1452,12 @@ body::before { display: none; }
 #action-name:read-only, #action-message:read-only, #action-when:read-only { color: #606953; background: #f0ede2; }
 #action-modal .modal-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
 @media (min-width: 960px) { .onboarding { background: #393e302e; } }
+
+/* Picture attachments are held in memory only until this page is closed. */
+#app .composer .image-preview:not(.is-hidden) { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 10px; padding: 8px; font-size: 12px; color: var(--ink-mute); }
+#app .image-preview img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; }
+#app .image-preview button { border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
+#app .image-message img { display: block; max-width: min(270px, 100%); max-height: 300px; border-radius: 12px; object-fit: contain; }
+#app .composer.has-image:has(textarea:placeholder-shown) [type=submit] { background: var(--ink)!important; }
+#app .composer #image-btn { min-width: 40px; min-height: 40px; padding: 5px 8px; border: 0; border-radius: 20px; font-size: 12px; cursor: pointer; }
+@media (max-width: 560px) { #app .composer #image-btn { min-width: 36px; padding: 4px; } }

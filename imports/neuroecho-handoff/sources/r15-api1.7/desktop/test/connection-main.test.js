@@ -3,9 +3,9 @@ const test=require('node:test'),assert=require('node:assert/strict'),vm=require(
 const connection=require('../service-connection');
 const profile=(extra={})=>({version:1,mode:'shared',origin:'http://127.0.0.1:18821',service_instance_id:'instance-A',conversation_id:'conversation-A',contract_version:'1.7.0',...extra});
 const wait=()=>new Promise(r=>setImmediate(r));
-async function fixture(t,{saved=null,probe=async origin=>profile({origin}),startError=null,startWait=null}={}){
+async function fixture(t,{saved=null,probe=async origin=>profile({origin}),startError=null,startWait=null,pointer=null,environment={},runtimeError=null}={}){
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'echo-main-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));if(saved)connection.selectionStore(directory).save(saved);
- const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],external:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
+ const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],external:[],runtimeInputs:[],backendInputs:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
  Object.assign(app,{setName(){},setPath(){},getPath:()=>directory,getVersion:()=> 'test',requestSingleInstanceLock:()=>true,whenReady:()=>Promise.resolve(),quit(){quit=true;app.emit('before-quit')}});
  class Window extends EventEmitter{
   constructor(options){super();this.options=options;this.visible=false;this.destroyed=false;this.webContents=new EventEmitter();this.webContents.mainFrame={url:''};this.webContents.setWindowOpenHandler=f=>this.popup=f;this.webContents.send=(...v)=>{this.sent??=[];this.sent.push(v)};windows.push(this)}
@@ -21,18 +21,33 @@ async function fixture(t,{saved=null,probe=async origin=>profile({origin}),start
  const context={__dirname:path.resolve(__dirname,'..'),require:name=>{
   if(name==='electron')return electron;
   if(name==='./service-connection')return{...connection,probeService:probe,createSelectionFlow:opts=>connection.createSelectionFlow({...opts,probe})};
-  if(name==='./backend-lifecycle')return{createBackendLifecycle:()=>({async start(){calls.starts++;if(startWait)await startWait;if(startError)throw Error(startError);return{port:18819,borrowed:false}},stop(){calls.stops++}})};
-  if(name==='./runtime-paths')return{backendPaths:()=>({python:'/synthetic/python'})};
+  if(name==='./project-root.json'){if(pointer)return pointer;throw Error('no synthetic local pointer');}
+  if(name==='./backend-lifecycle')return{createBackendLifecycle:options=>{calls.backendInputs.push(options);return{async start(){calls.starts++;if(startWait)await startWait;if(startError)throw Error(startError);return{port:18819,borrowed:false}},stop(){calls.stops++}}}};
+  if(name==='./runtime-paths')return{backendPaths:options=>{calls.runtimeInputs.push(options);if(runtimeError)throw Error(runtimeError);return{python:options.pythonOverride || '/synthetic/python',...(options.backendDataDir?{runner:path.join(options.root,'scripts/run_paired_service.py'),dataDir:options.backendDataDir}:{})}}};
   if(name==='./bridge')return{readTextFile:()=>{calls.reads++;return{ok:true}}};
   if(name==='./notification-policy')return{legacyNotificationResult:()=>({ok:false}),createFollowupNotifier:()=>{calls.notifierCreates++;return {async tick(){},invalidate(){calls.notifierInvalidations++}}}};
   return realRequire(name);
- },process:{platform:'darwin',env:{XINJI_DESKTOP_DATA_DIR:directory,XINJI_PROJECT_ROOT:'/synthetic/project',XINJI_PORT:'18819'},stdout:{write(){}},stderr:{write(){}}},console,URL,AbortSignal,setTimeout,clearTimeout,setInterval:f=>({unref(){},callback:f}),clearInterval(){},fetch:async(...args)=>{calls.requests.push(args);return {json:async()=>({session:{id:'canonical'},actions:[]})}}};
+ },process:{platform:'darwin',env:{XINJI_DESKTOP_DATA_DIR:directory,XINJI_PROJECT_ROOT:'/synthetic/project',XINJI_PORT:'18819',...environment},stdout:{write(){}},stderr:{write(){}}},console,URL,AbortSignal,setTimeout,clearTimeout,setInterval:f=>({unref(){},callback:f}),clearInterval(){},fetch:async(...args)=>{calls.requests.push(args);return {json:async()=>({session:{id:'canonical'},actions:[]})}}};
  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../main.js'),'utf8')+'\n;globalThis.subject={get mode(){return mode},get win(){return win},get selector(){return selector},get selected(){return selected},openSelector,activateSpace,verifyCurrentShared,emit,summary,quarantineShared,leaseFor,togglePanel,get panel(){return panel}};',context);
  for(let n=0;n<10;n++)await wait();
  const event=window=>({sender:window.webContents,senderFrame:window.webContents.mainFrame});const invoke=(name,window,...args)=>handlers.get(name)(event(window),...args);
  t.after(()=>app.emit('before-quit'));
  return {subject:context.subject,handlers,windows,calls,app,partitions,event,invoke,electron,directory,get quit(){return quit}};
 }
+test('local pointer passes selected venv and backend profile through shipped main into lifecycle',async t=>{
+ const e=await fixture(t,{pointer:{root:'/selected/source',port:18827,python:'/existing/.venv/bin/python',backendDataDir:'/private/original-profile'},environment:{XINJI_PROJECT_ROOT:undefined,XINJI_PORT:undefined}});
+ assert.equal(e.calls.runtimeInputs[0].root,'/selected/source');assert.equal(e.calls.runtimeInputs[0].pythonOverride,'/existing/.venv/bin/python');assert.equal(e.calls.runtimeInputs[0].backendDataDir,'/private/original-profile');
+ const backend=e.calls.backendInputs[0];assert.equal(backend.python,'/existing/.venv/bin/python');assert.equal(backend.runner,'/selected/source/scripts/run_paired_service.py');assert.equal(backend.dataDir,'/private/original-profile');assert.equal(backend.port,18827);
+});
+test('explicit development environment can override pointer Python and data profile as a pair',async t=>{
+ const e=await fixture(t,{pointer:{python:'/old/python',backendDataDir:'/old/data'},environment:{XINJI_PYTHON:'/new/.venv/bin/python',XINJI_BACKEND_DATA_DIR:'/new/private'}});
+ assert.equal(e.calls.backendInputs[0].python,'/new/.venv/bin/python');assert.equal(e.calls.backendInputs[0].dataDir,'/new/private');
+});
+test('an unavailable selected data directory opens the recoverable selector instead of crashing or starting another profile',async t=>{
+ const e=await fixture(t,{runtimeError:'所选私有数据目录暂不可用'});
+ assert.equal(e.calls.starts,0);assert.equal(e.calls.backendInputs.length,0);assert.equal(e.subject.win,null);assert.ok(e.subject.selector);
+ assert.match((await e.invoke('connection:status',e.subject.selector)).message,/所选私有数据目录暂不可用/);
+});
 test('saved shared identity restores only restricted partition without starting owned backend',async t=>{const e=await fixture(t,{saved:profile()});assert.equal(e.subject.mode,'shared');assert.equal(e.calls.starts,0);assert.equal(e.calls.notifierCreates,0);const w=e.subject.win;assert.equal(path.basename(w.options.webPreferences.preload),'shared-preload.js');assert.equal(w.options.webPreferences.partition,connection.partitionFor(profile()));assert.equal(w.options.webPreferences.sandbox,true);assert.equal(w.options.webPreferences.nodeIntegration,false);assert.equal(await e.invoke('desktop:set-state',w,{state:'thinking'}),false);assert.equal((await e.invoke('desktop:pick-text',w)).reason,'unavailable');assert.throws(()=>e.invoke('desktop:info',w),/sender/);assert.equal((await e.invoke('desktop:shared-info',w)).native,false);assert.equal(e.calls.dialogs,0);assert.equal(e.calls.reads,0);e.app.emit('before-quit');assert.equal(e.calls.stops,0)});
 test('saved offline or changed shared identity opens selector and never silently opens empty own space',async t=>{const e=await fixture(t,{saved:profile(),probe:async()=>{throw Error('offline')}});assert.equal(e.subject.win,null);assert.ok(e.subject.selector);assert.equal(e.calls.starts,0);assert.equal(e.calls.notifierCreates,0);assert.equal(e.windows.length,1);assert.equal(path.basename(e.windows[0].options.webPreferences.preload),'selector-preload.js')});
 test('main only accepts selector IPC from trusted file; shared settings entry opens selector but cannot connect',async t=>{const e=await fixture(t,{saved:profile()}),w=e.subject.win;await assert.rejects(async()=>e.invoke('connection:verify',w,'http://127.0.0.1:1'),/sender/);assert.equal(await e.invoke('desktop:open-connections',w,{origin:'http://127.0.0.1:1'}),true);const s=e.subject.selector;assert.ok(s);const status=await e.invoke('connection:status',s);assert.equal(status.selection.origin,profile().origin);s.webContents.mainFrame.url+='?untrusted=1';await assert.rejects(async()=>e.invoke('connection:own',s,{confirmed:true}),/sender/);assert.equal(e.calls.starts,0)});

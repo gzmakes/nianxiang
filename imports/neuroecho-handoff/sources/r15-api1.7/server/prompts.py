@@ -126,6 +126,7 @@ def build_user_prompt(facts: list[str], inferences: list[str], questions: list[s
                       recent: list[dict], text: str,
                       items: list[dict] | None = None, insights: list[dict] | None = None,
                       candidate_facts: list[str] | None = None,
+                      auto_facts: list[str] | None = None,
                       source_excerpts: list[str] | None = None,
                       response_mode: str = "auto", mode_from_preference: bool = False,
                       conversation_style: str = "warm") -> str:
@@ -141,7 +142,7 @@ def build_user_prompt(facts: list[str], inferences: list[str], questions: list[s
     }
     mode_block = "【本次会话回应方式】\n" + mode_copy.get(response_mode, mode_copy["auto"]) + "\n"
     if mode_from_preference:
-        mode_block += "这是用户确认过的回应偏好，并非对当前心情的推断；当前明确要求优先，可随时更改。\n"
+        mode_block += "这是来自用户明确表达的回应偏好，并非对当前心情的推断；当前明确要求优先，可随时更改。\n"
     styles = {"warm": "温柔自然，日常可有一点俏皮。",
               "serious": "用户选择认真、稳重的语气；减少玩笑和撒娇。",
               "playful": "用户选择活泼、轻快的语气；认真倾诉时仍须认真。"}
@@ -170,10 +171,10 @@ def build_user_prompt(facts: list[str], inferences: list[str], questions: list[s
     return (
         mode_block + source_block
         + block("用户已确认的记忆", facts)
+        + block("用户主动记下或自动记录的原话，可能过时，可以纠正", auto_facts or [])
         + block("待用户确认的内容，不当作事实", candidate_facts or [])
         + block("我的推测（未确认）", inferences)
         + block("待确认的问题", questions)
         + (f"【最近对话】\n{recent_text}\n" if recent_text else "")
         + f"【用户现在说】\n{text}\n\n请自然回应用户；没有依据的内容不要猜测。"
     )
-

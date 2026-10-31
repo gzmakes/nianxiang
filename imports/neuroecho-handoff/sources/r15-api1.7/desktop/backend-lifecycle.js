@@ -20,8 +20,11 @@ function portAvailable(port) {
     server.listen({host:'127.0.0.1',port,exclusive:true}, () => server.close(() => resolve(true)));
   });
 }
-async function inspectMacListener(port, root, expectedPid = null, execute = run, realpath = fs.realpathSync) {
+async function inspectMacListener(port, root, expectedPid = null, execute = run, realpath = fs.realpathSync, dataDir = null) {
   const actualRoot = realpath(root);
+  const expectedLock = dataDir === null ? null : path.join(realpath(dataDir),'data.db.server.lock');
+  const profileLock = expectedLock === null ? null : realpath(expectedLock);
+  if(profileLock!==expectedLock)throw new Error('所选数据目录的专用锁文件不是原路径，无法核验服务归属。');
   const {stdout} = await execute('/usr/sbin/lsof', ['-nP','-a',`-iTCP:${port}`,'-sTCP:LISTEN','-Fpn'], {timeout:1500,maxBuffer:65536});
   const listeners = [];
   let current = null;
@@ -36,6 +39,18 @@ async function inspectMacListener(port, root, expectedPid = null, execute = run,
     const cwd = await execute('/usr/sbin/lsof', ['-a','-p',String(listener.pid),'-d','cwd','-Fn'], {timeout:1500,maxBuffer:65536});
     const names = String(cwd.stdout).split('\n').filter(line => line.startsWith('n')).map(line => line.slice(1));
     if (names.length !== 1 || realpath(names[0]) !== actualRoot) throw new Error('监听进程不属于当前原型目录。');
+    if(profileLock!==null) {
+      // DatabaseLease keeps this exact file descriptor open for the worker's
+      // lifetime. Query only its metadata, never DB/config contents or argv.
+      // macOS lsof does not report Python flock as a record-lock field.
+      const opened=await execute('/usr/sbin/lsof',['-nP','-a','-p',String(listener.pid),'-Ffn','--',profileLock],{timeout:1500,maxBuffer:65536});
+      let numericFd=false,matched=false;
+      for(const field of String(opened.stdout).split('\n')) {
+        if(field.startsWith('f'))numericFd=/^f\d+$/.test(field);
+        else if(field.startsWith('n') && numericFd && field.slice(1)===profileLock)matched=true;
+      }
+      if(!matched)throw new Error('监听进程未持有所选后端数据目录的专用锁文件；没有复用其他空间。');
+    }
   }
   return {pids:[...new Set(listeners.map(listener => listener.pid))].sort((a,b)=>a-b)};
 }
@@ -46,11 +61,11 @@ function createBackendLifecycle(options) {
   const available=options.portAvailable || portAvailable;
   const fetchImpl=options.fetch || globalThis.fetch;
   const spawnImpl=options.spawn || spawn;
-  const inspect=options.inspectListener || ((value, expectedPid) => platform==='win32' ? inspectWindowsListener(value,root,python,expectedPid) : inspectMacListener(value, root, expectedPid));
+  const inspect=options.inspectListener || ((value, expectedPid) => platform==='win32' ? inspectWindowsListener(value,root,python,expectedPid) : inspectMacListener(value, root, expectedPid,run,fs.realpathSync,options.runner ? options.dataDir : null));
   const pause=options.pause || (ms=>new Promise(resolve=>setTimeout(resolve,ms)));
   const now=options.now || Date.now, timeout=options.timeoutMs ?? 20000;
   let child=null, owned=false, borrowed=false, settled=false, childFailure=null, exitSignal;
-  const foreign = () => new Error(`本机 ${port} 端口已占用，或无法验证为当前念响副本。请核对该端口服务；桌面不会另换端口打开同一数据库。`);
+  const foreign = () => new Error(`本机 ${port} 端口已占用，或无法验证为当前念响副本${options.runner ? '的所选数据空间' : ''}。请核对服务，或在「连接与空间」明确选择已有服务；桌面不会另换端口打开同一数据库。`);
 
   async function health() {
     try {
@@ -68,6 +83,7 @@ function createBackendLifecycle(options) {
     if (settled) throw new Error('桌面后端生命周期不能重复启动。');
     settled=true;checkStopped();
     if (!['darwin','win32'].includes(platform)) throw new Error('当前桌面仅支持 macOS 和 Windows 的服务归属核验；未连接或启动后端。');
+    if(options.runner && (platform!=='darwin' || options.bootstrap || typeof options.dataDir!=='string' || !path.isAbsolute(options.dataDir)))throw new Error('本机开发服务入口需要明确的 macOS 外部数据目录。');
     const free=await available(port);checkStopped();
     if (!free) {
       // A matching bundle cwd alone does not prove the same private app-data
@@ -85,12 +101,15 @@ function createBackendLifecycle(options) {
     }
     const args=options.bootstrap
       ? ['-I','-B',options.bootstrap,'--data-dir',options.dataDir,'--port',String(port)]
+      : options.runner ? ['-I','-B',options.runner,'--data-dir',options.dataDir,'--local-port',String(port)]
       : ['-m','uvicorn','server.main:app','--host','127.0.0.1','--port',String(port)];
     if(platform==='win32')args.push('--app-dir',root);
     checkStopped();child=spawnImpl(python, args, {cwd:root,stdio:['ignore','pipe','pipe'],windowsHide:true});
     owned=true;
     exitSignal=new Promise(resolve => {
-      child.once('error', error => {childFailure=new Error(`后端未能启动：${error.code || '进程错误'}`);resolve({failed:true});});
+      child.once('error', error => {childFailure=new Error(error.code==='ENOENT'
+        ? '后端未能启动（ENOENT）：所选 Python 或服务启动目录已不可用。请核对本机开发壳配置；没有改用其他解释器或数据库。'
+        : `后端未能启动：${error.code || '进程错误'}`);resolve({failed:true});});
       child.once('exit', (code, signal) => {childFailure=new Error(`后端已退出（${signal || (code ?? '未知状态')}），请查看终端启动日志。`);resolve({failed:true});});
     });
     child.stdout?.on('data', data=>options.onStdout?.(data));

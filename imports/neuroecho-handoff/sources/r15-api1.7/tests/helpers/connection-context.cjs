@@ -7,6 +7,7 @@ module.exports=inputs=>{
  ctx.document.querySelectorAll ||= ()=>[];
  ctx.URL ||= URL;
  ctx.connectionIntro ||= {resume(){},start(){},stop(){}};
+ ctx.expandTurns ||= messages=>messages;
  ctx.mobileSourceFormEpoch ??= 0;
  if(ctx.$){const find=ctx.$;ctx.$=(...args)=>{const node=find(...args);if(node?.classList&&!node.classList.toggle)node.classList.toggle=(name,on)=>on?node.classList.add(name):node.classList.remove(name);return node;};}
  vm.runInContext(fs.readFileSync('web/connection-intro.js','utf8'),ctx);

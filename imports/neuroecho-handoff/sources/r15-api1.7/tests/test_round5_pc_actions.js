@@ -7,7 +7,7 @@ function fixture() {
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id)}, calls=[],notes=[],refresh=[];
  const state={session:{id:'one'},messages:[],nextStep:{step:'另一个面板的建议'}};
  let actions=[],lost=false,deferredCreate=null;
- const ctx=vm.createContext({$,state,els:{input:node(),bmNote:node(),bmNext:node()},Date,encodeURIComponent,toast:text=>notes.push(text),insightEntries:()=>[],connectedSources:()=>[],switchTab:name=>refresh.push(name),loadTaskActions:async()=>{calls.push(['/api/actions?session_id=one',{method:'GET'}]);refresh.push('tasks')},loadToday:()=>refresh.push('today'),loadAudit(){},touchLastSeen(){},openBookmarkModal(){ctx.els.bmNext.value=state.nextStep.step},api:async(path,options={})=>{calls.push([path,options]);if(path.startsWith('/api/actions?'))return {actions};if(path==='/api/action')return deferredCreate || {id:'created-one',status:'previewed'};if(path.endsWith('/commit')){if(lost)throw Error('response lost');return{status:'committed',real:0}};throw Error(path)}});
+ const ctx=vm.createContext({$,state,els:{input:node(),bmNote:node(),bmNext:node()},Date,encodeURIComponent,toast:text=>notes.push(text),insightEntries:()=>[],connectedSources:()=>[],switchTab:name=>refresh.push(name),openMyTasks:()=>refresh.push('bookmark'),loadTaskActions:async()=>{calls.push(['/api/actions?session_id=one',{method:'GET'}]);refresh.push('tasks')},loadToday:()=>refresh.push('today'),loadAudit(){},touchLastSeen(){},openBookmarkModal(){ctx.els.bmNext.value=state.nextStep.step},api:async(path,options={})=>{calls.push([path,options]);if(path.startsWith('/api/actions?'))return {actions};if(path==='/api/action')return deferredCreate || {id:'created-one',status:'previewed'};if(path.endsWith('/commit')){if(lost)throw Error('response lost');return{status:'committed',real:0}};throw Error(path)}});
  vm.runInContext('let pendingAction=null;'+clip('  function closeAction(', '  function actionStatusLabel(')+clip('  function putTodayDraft(', '  async function loadToday(')+'\nObject.assign(this,{closeAction,openAction,openSavedAction,confirmAction,checkActionStatus,putTodayDraft,bookmarkTodayStep,getPending:()=>pendingAction});',ctx);
  return {ctx,$,calls,notes,refresh,state,setActions:value=>actions=value,lose:()=>lost=true,deferCreate:value=>deferredCreate=value};
 }
@@ -30,7 +30,7 @@ test('lost commit response retains the created id and blocks duplicate creation'
  assert.equal(f.calls.filter(([path])=>path==='/api/action').length,1);assert.equal(f.ctx.getPending().existingId,'created-one');assert.equal(f.$('#action-confirm').disabled,true);assert.match(f.$('#action-result').textContent,/暂勿重复保存/);
 });
 test('unknown action check reads local status and never posts an external retry',async()=>{
- const f=fixture();await f.ctx.checkActionStatus({id:'unknown',session_id:'one',status:'unknown'});assert.ok(f.calls.length);assert.equal(f.calls.some(([,opt])=>opt.method==='POST'),false);assert.match(f.notes.at(-1),/没有再次写入系统/);
+ const f=fixture();await f.ctx.checkActionStatus({id:'unknown',session_id:'one',status:'unknown'});assert.ok(f.refresh.includes('bookmark'));assert.ok(f.calls.length);assert.equal(f.calls.some(([,opt])=>opt.method==='POST'),false);assert.match(f.notes.at(-1),/没有再次写入系统/);
 });
 test('Today continuation preserves the unsent draft and never sends',()=>{
  const f=fixture();f.ctx.els.input.value='还没说完';f.ctx.putTodayDraft('想接着聊的话','one');assert.equal(f.ctx.els.input.value,'还没说完\n想接着聊的话');assert.equal(f.ctx.els.input.focused,true);assert.equal(f.calls.length,0);

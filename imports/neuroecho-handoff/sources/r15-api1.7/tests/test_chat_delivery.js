@@ -47,3 +47,11 @@ test('a stable cross-device snapshot invalidates older delivery reads before rep
  release({messages:[{id:'m',role:'assistant',text:'旧来源的晚到片段',delivery_pending:true}]});await read;
  assert.equal(env.state.messages[0].text,'已撤回旧来源后的当前内容');assert.equal(env.state.messages[0].delivery_pending,false);assert.equal(env.renders,0);
 });
+
+test('delivery polling preserves in-memory picture preview while updating remote message fields',async()=>{
+ const data='data:image/png;base64,AAAA';
+ const env=environment(async()=>({messages:[{id:'m',role:'assistant',text:'完成',delivery_pending:false},{id:'u',role:'user',text:'[图片]',persona_id:'updated'}]}));
+ env.state.messages.push({id:'u',role:'user',text:'[图片]',persona_id:'old',image_data_url:data});
+ env.delivery.schedule();await [...env.timers.values()][0]();
+ assert.equal(env.state.messages[1].image_data_url,data);assert.equal(env.state.messages[1].persona_id,'updated');
+});

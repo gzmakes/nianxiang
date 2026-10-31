@@ -37,8 +37,8 @@ def test_mixed_do_not_remind_and_emotional_expression_reaches_model(client, monk
 def test_explicit_memory_with_reminder_words_is_not_misrouted(client):
     sid = client.post('/api/session', json={'mode': 'empty'}).json()['session']['id']
     result = client.post('/api/chat', json={'session_id': sid, 'text': '记住：我不喜欢提醒我上次的事情'}).json()
-    assert result['action'] == 'memory.candidate'
-    assert any('不喜欢提醒' in m['text'] and m['status'] == 'candidate' for m in result['memories'])
+    assert result['action'] == 'memory.auto'
+    assert any('不喜欢提醒' in m['text'] and m['status'] == 'auto' for m in result['memories'])
 
 
 def test_direct_reminder_refusal_persists_boundary_without_model(client, monkeypatch):
@@ -112,26 +112,26 @@ def test_explicit_commands_work_without_model(client, monkeypatch):
     monkeypatch.setattr(core.model, "from_env", model_must_not_be_called)
     sid = client.post("/api/session", json={"mode": "empty"}).json()["session"]["id"]
     remembered = client.post("/api/chat", json={"session_id": sid, "text": "记住：我喜欢散步"}).json()
-    assert any(m["text"] == "我喜欢散步" and m["status"] == "candidate" for m in remembered["memories"])
+    assert any(m["text"] == "我喜欢散步" and m["status"] == "auto" for m in remembered["memories"])
     quiet = client.post("/api/chat", json={"session_id": sid, "text": "安静"}).json()
     assert quiet["state"] == "quiet"
 
 
-@pytest.mark.parametrize(('command', 'fact'), [
+@pytest.mark.parametrize(('command', 'fact', 'status', 'source'), [
     ('请记住这句：在这次合成测试里，我喜欢你先听我说，再问我要不要建议。',
-     '在这次合成测试里，我喜欢你先听我说，再问我要不要建议'),
-    ('请记住：我喜欢散步。', '我喜欢散步'),
-    ('帮我记住我喜欢散步', '我喜欢散步'),
-    ('请帮我记住：我喜欢散步', '我喜欢散步'),
-    ('请你记住这句话：我喜欢散步', '我喜欢散步'),
-    ('记住：我喜欢散步', '我喜欢散步'),
+     '在这次合成测试里，我喜欢你先听我说，再问我要不要建议', 'candidate', '对话中用户要求'),
+    ('请记住：我喜欢散步。', '我喜欢散步', 'auto', '对话原话 · 用户选存'),
+    ('帮我记住我喜欢散步', '我喜欢散步', 'auto', '对话原话 · 用户选存'),
+    ('请帮我记住：我喜欢散步', '我喜欢散步', 'auto', '对话原话 · 用户选存'),
+    ('请你记住这句话：我喜欢散步', '我喜欢散步', 'auto', '对话原话 · 用户选存'),
+    ('记住：我喜欢散步', '我喜欢散步', 'auto', '对话原话 · 用户选存'),
     ('请记住这句：我不喜欢被叫停，也不希望你回到上次的书签。',
-     '我不喜欢被叫停，也不希望你回到上次的书签'),
+     '我不喜欢被叫停，也不希望你回到上次的书签', 'candidate', '对话中用户要求'),
 ])
-def test_direct_memory_command_creates_candidate_during_today_quiet_without_auto_proposals(
-        client, monkeypatch, command, fact):
+def test_direct_memory_command_records_during_today_quiet_without_auto_proposals(
+        client, monkeypatch, command, fact, status, source):
     def no_model():
-        pytest.fail('an explicit memory command must use the real candidate receipt, not a model claim')
+        pytest.fail('an explicit memory command must use a real receipt, not a model claim')
 
     monkeypatch.setattr(core.model, 'from_env', no_model)
     sid = client.post('/api/session', json={'mode': 'empty'}).json()['session']['id']
@@ -142,14 +142,18 @@ def test_direct_memory_command_creates_candidate_during_today_quiet_without_auto
         'session_id': sid, 'text': command, 'memory_proposals': False})
     assert response.status_code == 200
     result = response.json()
-    assert result['action'] == 'memory.candidate'
-    assert '待确认' in result['reply']
+    assert result['action'] == 'memory.' + status
+    assert ('待整理' in result['reply']) == (status == 'candidate')
+    assert '查看、修改或删除' in result['reply']
     assert '没有' not in result['reply']
     assert len(result['memories']) == 1
     memory = result['memories'][0]
     assert (memory['text'], memory['status'], memory['source']) == (
-        fact, 'candidate', '对话中用户要求')
+        fact, status, source)
     assert core.list_memories(sid)[0]['id'] == memory['id']
+    groups = core._memory_groups(sid)
+    assert fact in groups[4 if status == 'auto' else 3]
+    assert fact not in groups[0]
     boundary = client.get('/api/companion-boundary', params={'session_id': sid}).json()
     assert boundary['mode'] == 'until'
 
@@ -179,7 +183,7 @@ def test_quoted_or_question_memory_text_does_not_create_candidate(client, monkey
     assert result['memories'] == core.list_memories(sid) == []
 
 
-def test_polite_memory_command_replays_candidate_without_confirming_or_duplicating(client, monkeypatch):
+def test_polite_memory_command_replays_auto_without_confirming_or_duplicating(client, monkeypatch):
     monkeypatch.setattr(core.model, 'from_env', lambda: pytest.fail('direct command called model'))
     sid = client.post('/api/session', json={'mode': 'empty'}).json()['session']['id']
     body = {'session_id': sid, 'text': '请记住这句：我喜欢散步。',
@@ -193,9 +197,42 @@ def test_polite_memory_command_replays_candidate_without_confirming_or_duplicati
     again = client.post('/api/chat', json={**body, 'request_id': 'same-memory-new-request'}).json()
     assert len(again['memories']) == 1
     assert again['memories'][0]['id'] == first['memories'][0]['id']
-    assert again['memories'][0]['status'] == 'candidate'
+    assert again['memories'][0]['status'] == 'auto'
     assert again['memories'][0]['version'] == 1
-    assert '待确认' in again['reply']
+    assert '查看、修改或删除' in again['reply']
+
+
+def test_auto_and_candidate_memory_are_distinct_in_model_context_and_can_be_corrected_or_deleted(client, monkeypatch):
+    captured = []
+
+    class Fake:
+        model = 'fake'
+
+        def complete(self, system, user):
+            captured.append(user)
+            return '我在听。'
+
+    monkeypatch.setattr(core.model, 'from_env', lambda: Fake())
+    sid = client.post('/api/session', json={'mode': 'empty'}).json()['session']['id']
+    auto = client.post('/api/chat', json={'session_id': sid, 'text': '记住：我喜欢散步'}).json()['memories'][0]
+    records = client.post('/api/chat', json={'session_id': sid, 'text': '记住：我喜欢安静，也喜欢音乐'}).json()['memories']
+    candidate = next(item for item in records if item['status'] == 'candidate')
+    assert auto['status'] == 'auto' and auto['source'] == '对话原话 · 用户选存'
+    assert candidate['source'] == '对话中用户要求'
+
+    client.post('/api/chat', json={'session_id': sid, 'text': '你还记得我吗'})
+    assert '【用户主动记下或自动记录的原话，可能过时，可以纠正】\n- 我喜欢散步' in captured[-1]
+    assert '【待用户确认的内容，不当作事实】\n- 我喜欢安静，也喜欢音乐' in captured[-1]
+    assert '【用户已确认的记忆】' not in captured[-1]
+
+    corrected = client.patch('/api/memory/' + auto['id'], json={'text': '我喜欢跑步'}).json()
+    assert corrected['status'] == 'auto' and corrected['text'] == '我喜欢跑步'
+    assert client.delete('/api/memory/' + candidate['id']).status_code == 200
+    client.post('/api/chat', json={'session_id': sid, 'text': '你还记得我吗'})
+    assert '我喜欢跑步' in captured[-1]
+    assert '我喜欢安静，也喜欢音乐' not in captured[-1]
+    client.post('/api/chat', json={'session_id': sid, 'text': '别提记忆，聊点别的'})
+    assert '我喜欢跑步' not in captured[-1]
 
 
 def test_empty_polite_memory_command_asks_for_content_without_saving(client, monkeypatch):

@@ -137,7 +137,7 @@ test('Web and H5 canonical account adapters preserve unsent input and never ente
     const end=src.indexOf(mobile?'  function openMobileFeishu()':'  function renderFeishuPicker()',start);
     const nodes=new Map(),$=key=>{if(!nodes.has(key))nodes.set(key,{...element(),value:'unsent words'});return nodes.get(key);};
     let options, calls=0;const state={session:null},ctx={state,$,els:{onboarding:element()},api:async()=>{calls++;return{session:{id:'canonical'},messages:[],memories:[]};},
-      clearCredentialForms(){},clearMobileSourceForm(){},showWz(){},localStorage:{setItem(){}},openMobileFeishu(){},
+      clearCredentialForms(){},clearMobileSourceForm(){},showWz(){},localStorage:{setItem(){}},openMobileFeishu(){},expandTurns:messages=>messages,
       window:{XinjiFeishuAccountPicker:{mount:(container,opts)=>options=opts}},credentialGeneration:1,mobileSourceFormEpoch:1};
     vm.createContext(ctx);vm.runInContext(src.slice(start,end)+`\nthis.open=${mobile?'openMobileFeishuAccount':'renderFeishuAccount'};`,ctx);ctx.open();
     assert.equal(calls,0);const before=$('#input').value;assert.equal(await options.ensureSession(),'canonical');
