@@ -445,6 +445,13 @@ button:disabled { opacity: .5; cursor: wait; }
 #m-entry-back-chat { margin-top:10px; }
 
 #m-persona-welcome { min-height:44px; border:0; background:transparent; padding:8px 0; color:#778065; font:inherit; font-size:13px; cursor:pointer; }
+.persona-options { display:grid; gap:8px; margin-top:10px; }
+.persona-option { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; width:100%; padding:11px 12px; border:1px solid var(--line,#dce5ff); border-radius:14px; background:rgba(255,255,255,.7); color:inherit; text-align:left; cursor:pointer; font:inherit; }
+.persona-option.is-selected { border-color:var(--accent,#5670db); box-shadow:0 0 0 2px rgba(86,112,219,.12); }
+.persona-option b,.persona-option small,.persona-option em { display:block; }
+.persona-option small { margin-top:3px; color:var(--muted,#667085); font-size:12px; }
+.persona-option em { margin-top:5px; color:var(--muted,#667085); font-size:11px; font-style:normal; }
+.persona-check { min-width:20px; color:var(--accent,#5670db); font-weight:700; }
 
 /* Real task previews share the warm source surfaces. */
 .m-action-field { display:grid; gap:7px; margin:12px 0; font-size:14px; color:var(--ink); }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>念响 · 具身个人伙伴</title>
-<link rel="stylesheet" href="/static/styles.css?v=b21fcb6e9e0eadff" />
+<link rel="stylesheet" href="/static/styles.css?v=57cf541aeafce964" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
 <link rel="stylesheet" href="/static/design-system.css?v=106d574e7ff71082" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
@@ -157,7 +157,7 @@
         <div class="conversation-persona">
           <div class="persona-face" data-companion-art></div>
           <div>
-            <h2>回响</h2>
+            <h2 id="conversation-persona-name">念响</h2>
             <p class="companion-status" role="status" aria-live="polite"><span id="state-label">我在这里</span><span id="state-hint">慢慢说，我在听</span></p>
             <p class="echo-slogan">念有所感，必有回响。</p>
             <p class="session-technical" id="session-meta" hidden>—</p>
@@ -272,6 +272,7 @@
 
       <section id="tab-persona" class="tab-panel is-hidden">
         <div class="panel-title-row"><h3>角色与设备</h3><span class="muted small">虚构角色不写入你的事实</span></div>
+        <div id="persona-picker" class="data-block" aria-live="polite"></div>
         <div class="data-block" id="mindlink-panel">
           <div class="k">脑电设备 · 可选</div>
           <p class="note">仅在这台电脑上读取 MindLink 的实时专注度设备估计值；不记录、不发送给模型，也不判断情绪。需要先启动队友提供的本机服务并连接设备。</p>
@@ -502,7 +503,7 @@
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
 <script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
 <script src="/static/response-parser.js?v=b36dffc77f374ee6"></script>
-<script src="/static/app.js?v=9fb800587e6e64ba"></script>
+<script src="/static/app.js?v=563ecadf12976b03"></script>
 <script src="/static/emoji-reactions.js?v=3d8ec368c41b1941"></script>
 <script src="/static/message-voice.js?v=384d0d2fa268c5ad"></script>
 </body>

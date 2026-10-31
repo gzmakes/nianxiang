@@ -17,12 +17,30 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 from contextlib import nullcontext
+from contextvars import ContextVar
 from typing import Callable
 
 from . import agent_runtime, apple_source, chat_delivery, companion_boundary, conversation_changes, faults, followups, proactive_policy, model, moods, mood_operations, plugin_bridge, prompts, source_context
 from .conversation_intent import confirmed_preference_mode, requested_response_mode, requested_conversation_style
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
+
+# Per-request database override. Unset (the default) means the single
+# owner database above, so desktop/local use and the test suite are
+# unchanged; the anonymous-visitor middleware sets it per request.
+_DB_OVERRIDE: ContextVar[str | None] = ContextVar("nianxiang_db_path", default=None)
+
+
+def db_path() -> str:
+    return _DB_OVERRIDE.get() or DB_PATH
+
+
+def use_db(path) -> object:
+    return _DB_OVERRIDE.set(str(path))
+
+
+def reset_db(token) -> None:
+    _DB_OVERRIDE.reset(token)
 
 SAMPLE_TEXT = (
     "我在做一个面向个人用户的 AI 产品，最近在整理交互原型。"
@@ -42,7 +60,7 @@ def uid(prefix: str) -> str:
 
 
 def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -54,11 +72,15 @@ def init_db() -> None:
         """
         CREATE TABLE IF NOT EXISTS sessions(
             id TEXT PRIMARY KEY, created_at TEXT, mode TEXT,
-            source_text TEXT, source_label TEXT, state TEXT
+            source_text TEXT, source_label TEXT, state TEXT,
+            persona_id TEXT NOT NULL DEFAULT 'nianxiang',
+            interaction_mode TEXT NOT NULL DEFAULT 'companion'
         );
         CREATE TABLE IF NOT EXISTS messages(
             id TEXT PRIMARY KEY, session_id TEXT, role TEXT, text TEXT,
-            citations TEXT DEFAULT '[]', suggestions TEXT DEFAULT '[]', created_at TEXT
+            citations TEXT DEFAULT '[]', suggestions TEXT DEFAULT '[]', created_at TEXT,
+            persona_id TEXT,
+            interaction_mode TEXT
         );
         CREATE TABLE IF NOT EXISTS memories(
             id TEXT PRIMARY KEY, session_id TEXT, kind TEXT, text TEXT,
@@ -109,6 +131,20 @@ def init_db() -> None:
     if "suppressed" not in cols:
         conn.execute("ALTER TABLE messages ADD COLUMN suppressed INTEGER NOT NULL DEFAULT 0")
     sess_cols = [r[1] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()]
+    if sess_cols and "persona_id" not in sess_cols:
+        # Existing R15 sessions were all generated with the original whale card.
+        conn.execute("ALTER TABLE sessions ADD COLUMN persona_id TEXT NOT NULL DEFAULT 'whale'")
+    sess_cols = [r[1] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()]
+    if sess_cols and "interaction_mode" not in sess_cols:
+        conn.execute("ALTER TABLE sessions ADD COLUMN interaction_mode TEXT NOT NULL DEFAULT 'companion'")
+    msg_cols = [r[1] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
+    if msg_cols and "persona_id" not in msg_cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN persona_id TEXT")
+        conn.execute("UPDATE messages SET persona_id='whale' WHERE role='assistant'")
+    msg_cols = [r[1] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
+    if msg_cols and "interaction_mode" not in msg_cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN interaction_mode TEXT")
+        conn.execute("UPDATE messages SET interaction_mode='companion' WHERE role='assistant'")
     if sess_cols and "response_mode" not in sess_cols:
         conn.execute("ALTER TABLE sessions ADD COLUMN response_mode TEXT NOT NULL DEFAULT 'auto'")
     if sess_cols and "conversation_style" not in sess_cols:
@@ -228,9 +264,14 @@ def build_understanding(text: str, mode: str) -> dict:
 # ---------------- sessions / messages ----------------
 
 def create_session(mode: str = "sample", text: str = "", source_label: str | None = None,
-                   understanding: dict | None = None, greeting: str | None = None) -> dict:
+                   understanding: dict | None = None, greeting: str | None = None,
+                   persona_id: str = "nianxiang", interaction_mode: str = "companion") -> dict:
     init_db()
     sid = uid("ses")
+    persona_id = prompts.normalize_persona_id(persona_id)
+    interaction_mode = str(interaction_mode or '').strip().lower()
+    if interaction_mode not in prompts.INTERACTION_MODES:
+        raise ValueError('invalid interaction_mode')
     if mode == "empty":
         label = source_label or "新对话"
         src = ""
@@ -239,8 +280,8 @@ def create_session(mode: str = "sample", text: str = "", source_label: str | Non
         src = SAMPLE_TEXT if mode == "sample" else text.strip()
     conn = get_db()
     conn.execute(
-        "INSERT INTO sessions(id,created_at,mode,source_text,source_label,state) VALUES(?,?,?,?,?,?)",
-        (sid, now(), mode, src[:20000], label, "listening"),
+        "INSERT INTO sessions(id,created_at,mode,source_text,source_label,state,persona_id,interaction_mode) VALUES(?,?,?,?,?,?,?,?)",
+        (sid, now(), mode, src[:20000], label, "listening", persona_id, interaction_mode),
     )
     conn.commit()
     conn.close()
@@ -265,6 +306,8 @@ def create_session(mode: str = "sample", text: str = "", source_label: str | Non
             "source_label": label,
             "state": "listening",
             "created_at": now(),
+            "persona_id": persona_id,
+            "interaction_mode": interaction_mode,
         },
         "understanding": understanding,
         "memories": list_memories(sid),
@@ -290,9 +333,9 @@ def conversation_id() -> str:
         sid = chosen["id"] if chosen else uid("ses")
         if chosen is None:
             stamp = now()
-            conn.execute("INSERT INTO sessions(id,created_at,mode,source_text,source_label,state) VALUES(?,?,'empty','','我们的对话','listening')", (sid, stamp))
-            conn.execute("INSERT INTO messages(id,session_id,role,text,created_at) VALUES(?,?,'assistant',?,?)",
-                         (uid("msg"), sid, "你好，我是回响。今天想从哪件事开始？", stamp))
+            conn.execute("INSERT INTO sessions(id,created_at,mode,source_text,source_label,state,persona_id,interaction_mode) VALUES(?,?,'empty','','我们的对话','listening','nianxiang','companion')", (sid, stamp))
+            conn.execute("INSERT INTO messages(id,session_id,role,text,created_at,persona_id,interaction_mode) VALUES(?,?,'assistant',?,?,?,?)",
+                         (uid("msg"), sid, "你好，我是回响。今天想从哪件事开始？", stamp, "nianxiang", "companion"))
             conn.execute("INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,'conversation.create','','开始和回响的对话',?)", (uid("aud"), sid, stamp))
         conn.execute("INSERT INTO app_state(key,value) VALUES('canonical_conversation',?) "
                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (sid,))
@@ -485,6 +528,55 @@ def get_session(sid: str) -> dict | None:
     return dict(row) if row else None
 
 
+def set_session_persona(sid: str, persona_id: str) -> dict | None:
+    """Persist one of the fixed personas without touching conversation data."""
+    persona_id = str(persona_id or '').strip().lower()
+    if persona_id not in prompts.PERSONA_PATHS:
+        raise ValueError('invalid persona_id')
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute('SELECT * FROM sessions WHERE id=?', (sid,)).fetchone()
+        if not row:
+            conn.rollback()
+            return None
+        if row['persona_id'] != persona_id:
+            conn.execute('UPDATE sessions SET persona_id=? WHERE id=?', (persona_id, sid))
+            conn.execute('INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)',
+                         (uid('aud'), sid, 'session.persona', persona_id, '用户切换对话人格', now()))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return get_session(sid)
+
+
+def set_session_mode(sid: str, interaction_mode: str) -> dict | None:
+    interaction_mode = str(interaction_mode or '').strip().lower()
+    if interaction_mode not in prompts.INTERACTION_MODES:
+        raise ValueError('invalid interaction_mode')
+    conn = get_db()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute('SELECT * FROM sessions WHERE id=?', (sid,)).fetchone()
+        if not row:
+            conn.rollback()
+            return None
+        if row['interaction_mode'] != interaction_mode:
+            conn.execute('UPDATE sessions SET interaction_mode=? WHERE id=?', (interaction_mode, sid))
+            conn.execute('INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)',
+                         (uid('aud'), sid, 'session.mode', interaction_mode, '用户切换互动模式', now()))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return get_session(sid)
+
+
 def set_session_state(sid: str, state: str) -> None:
     conn = get_db()
     conn.execute("UPDATE sessions SET state=? WHERE id=?", (state, sid))
@@ -502,9 +594,16 @@ def add_message(sid: str, role: str, text: str, citations: list | None = None,
         if role == "user":
             conn.execute("BEGIN IMMEDIATE")
             chat_delivery.interrupt(conn, sid)
+        persona_id = None
+        interaction_mode = None
+        if role == "assistant":
+            row = conn.execute("SELECT persona_id FROM sessions WHERE id=?", (sid,)).fetchone()
+            persona_id = prompts.normalize_persona_id(row[0] if row else None)
+            mode_row = conn.execute("SELECT interaction_mode FROM sessions WHERE id=?", (sid,)).fetchone()
+            interaction_mode = prompts.normalize_interaction_mode(mode_row[0] if mode_row else None)
         conn.execute(
-            "INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at) VALUES(?,?,?,?,?,?,?)",
-            (mid, sid, role, text, json.dumps(cites, ensure_ascii=False), json.dumps(sugg, ensure_ascii=False), now()),
+            "INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at,persona_id,interaction_mode) VALUES(?,?,?,?,?,?,?,?,?)",
+            (mid, sid, role, text, json.dumps(cites, ensure_ascii=False), json.dumps(sugg, ensure_ascii=False), now(), persona_id, interaction_mode),
         )
         boundary_control = companion_boundary.apply_user_control(conn,sid,text,time_zone=time_zone) if role == "user" else None
         conn.commit()
@@ -520,7 +619,7 @@ def get_messages(sid: str) -> list[dict]:
     conn = get_db()
     conn.execute('BEGIN')
     rows = conn.execute(
-        "SELECT id,role,text,citations,suggestions,created_at FROM messages WHERE session_id=? AND suppressed=0 ORDER BY rowid",
+        "SELECT id,role,text,citations,suggestions,created_at,persona_id,interaction_mode FROM messages WHERE session_id=? AND suppressed=0 ORDER BY rowid",
         (sid,),
     ).fetchall()
     out = []
@@ -1269,7 +1368,7 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
           f"model={client.model} · facts={len(facts)} · inferences={len(inferences)} · items={len(ctx.get('items') or [])}",
           "发送必要上下文（不含正文内容）")
     try:
-        system = prompts.system_prompt()
+        system = prompts.system_prompt(session.get("persona_id", "nianxiang"), session.get("interaction_mode", "companion"))
         catalog = plugin_bridge.meme_prompt_catalog()
         if catalog:
             system += ("\n轻松聊天中如果确实合适，可以在正文末尾使用一个表情标记，例如 [表情: happy]；"
@@ -1370,10 +1469,10 @@ def generate_reply(sid: str, text: str, *,
                         conn.execute('INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)',
                                      (uid('aud'), sid, 'model.stale', '', '提交前上下文已变化，未保存旧回复', now()))
                     assistant_id = uid('msg')
-                    conn.execute('INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at) VALUES(?,?,?,?,?,?,?)',
-                                 (assistant_id, sid, 'assistant', reply, '[]', '[]', now()))
+                    conn.execute('INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at,persona_id,interaction_mode) VALUES(?,?,?,?,?,?,?,?,?)',
+                                 (assistant_id, sid, 'assistant', reply, '[]', '[]', now(), session.get('persona_id') or 'nianxiang', session.get('interaction_mode') or 'companion'))
                     if action == "model.reply":
-                        chat_delivery.register(conn, sid, assistant_id, reply)
+                        chat_delivery.register(conn, sid, assistant_id, reply, mode=session.get('interaction_mode') or 'companion')
                     conn.execute('UPDATE sessions SET state=? WHERE id=?', (state, sid))
                     if action == "model.reply" and proposal_out:
                         agent_runtime.persist_proposal(conn, sid, assistant_id, proposal_out[0], agent_runtime.context_stamp(conn, sid))
@@ -1830,6 +1929,7 @@ def list_sessions(limit: int = 20) -> list[dict]:
         out.append({
             "id": r["id"],
             "mode": r["mode"],
+            "interaction_mode": r["interaction_mode"],
             "source_label": r["source_label"],
             "created_at": r["created_at"],
             "title": ((r["title"] or "").strip()

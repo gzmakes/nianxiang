@@ -1224,6 +1224,14 @@ body::before { display: none; }
 .persona-face { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:26px; background:#e6d6ba; box-shadow:none; }
 .conversation-persona h2 { margin:0; }
 .conversation-persona p { margin:3px 0 0; }
+.persona-options { display:grid; gap:8px; margin-top:10px; }
+.persona-option { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; width:100%; padding:11px 12px; border:1px solid var(--line,#dce5ff); border-radius:14px; background:rgba(255,255,255,.58); color:inherit; text-align:left; cursor:pointer; font:inherit; }
+.persona-option:hover,.persona-option:focus-visible { border-color:var(--accent,#5670db); }
+.persona-option.is-selected { border-color:var(--accent,#5670db); box-shadow:0 0 0 2px rgba(86,112,219,.12); }
+.persona-option b,.persona-option small,.persona-option em { display:block; }
+.persona-option small { margin-top:3px; color:var(--muted,#667085); font-size:12px; }
+.persona-option em { margin-top:5px; color:var(--muted,#667085); font-size:11px; font-style:normal; }
+.persona-check { min-width:20px; color:var(--accent,#5670db); font-weight:700; }
 
 .device-panel { display:none !important; }
 

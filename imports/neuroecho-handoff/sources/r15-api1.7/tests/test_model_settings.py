@@ -64,7 +64,8 @@ def test_runtime_environment_is_reported_without_saving_or_echoing_key(client, m
     result = client.get("/api/settings/model").json()
     runtime = model.from_env()
     assert result == {"configured": True, "base_url": runtime.base_url, "model": runtime.model,
-                      "has_key": True, "timeout": runtime.timeout, "managed_by_environment": True}
+                      "has_key": True, "timeout": runtime.timeout, "managed_by_environment": True,
+                      "public_fallback": False}
     assert client.get("/api/config").json()["model"]["configured"] is True
     assert "synthetic-runtime-private-key" not in repr(result)
     assert "api_key" not in result

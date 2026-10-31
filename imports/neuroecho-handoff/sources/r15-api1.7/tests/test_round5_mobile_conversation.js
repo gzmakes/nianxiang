@@ -33,3 +33,18 @@ test('selected local material attaches to the canonical conversation and retains
  await e.picker.onConfirm([{name:'合成.txt',text:'用户明确选择的内容'}],'canonical');
  const attach=e.calls.find(call=>call.path==='/api/local-files/confirm');assert.ok(attach);assert.equal(JSON.parse(attach.opts.body).session_id,'canonical');assert.equal(e.state.session.id,'canonical');assert.equal(e.state.messages[0].id,'u');assert.equal(e.state.context.sources[0].id,'new-source');assert.ok(!e.calls.some(call=>call.path==='/api/session'));
 });
+
+test('mobile new sessions carry the currently selected persona',async()=>{
+ let request,entered;
+ const ctx=vm.createContext({
+  state:{session:{persona_id:'whale'}},
+  api:async(path,opts)=>{request={path,opts};return{session:{id:'new',persona_id:'whale'}}},
+  enterSessionData:data=>{entered=data},
+  toast:()=>{}
+ });
+ vm.runInContext(clip('  async function startSession(', '  // ---------- onboarding wizard (mobile)')+'\nthis.start=startSession;',ctx);
+ await ctx.start('empty');
+ assert.equal(request.path,'/api/session');
+ assert.deepEqual(JSON.parse(request.opts.body),{mode:'empty',text:'',persona_id:'whale'});
+ assert.equal(entered.session.persona_id,'whale');
+});

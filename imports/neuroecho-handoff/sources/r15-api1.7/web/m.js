@@ -25,6 +25,36 @@
   }
 
   const state = { session: null, messages: [], memories: [], bookmark: null, nextStep: null, context: null, deviceOn: false, timer: null, lastDisplay: null };
+  let personaOptions = [];
+  let personaRequest = 0;
+  function personaName(id) { return personaOptions.find(item => item.id === id)?.name || (id === "whale" ? "小鲸鱼" : "念响"); }
+  function updatePersonaLabels() {
+    const id = state.session?.persona_id || "nianxiang";
+    const label = $("#m-persona-name");
+    if (label) label.textContent = personaName(id);
+    document.title = `${personaName(id)} · 移动端`;
+  }
+  async function loadMobilePersonas(host, sid, epoch) {
+    const request = ++personaRequest, sheet = $("#m-sheet");
+    const data = await api("/api/personas");
+    if (request !== personaRequest || state.session?.id !== sid || sheet._xinjiEpoch !== epoch) return;
+    personaOptions = (data.personas || []).filter(item => ["nianxiang", "whale"].includes(item.id));
+    const selected = state.session.persona_id || data.default_persona || "nianxiang";
+    host.insertAdjacentHTML("afterbegin", `<div class="m-today-card"><div class="k">当前伙伴</div><p>可以随时切换，聊天、记忆和语气偏好都会保留。</p><div class="persona-options" role="radiogroup" aria-label="选择聊天伙伴">${personaOptions.map(item => `<button type="button" class="persona-option ${item.id === selected ? "is-selected" : ""}" data-m-persona-id="${esc(item.id)}" role="radio" aria-checked="${item.id === selected}"><span><b>${esc(item.name)}</b><small>${esc(item.description || "")}</small><em>${(item.tags || []).map(tag => esc(tag)).join(" · ")}</em></span><span class="persona-check" aria-hidden="true">${item.id === selected ? "✓" : ""}</span></button>`).join("")}</div></div>`);
+    host.querySelectorAll("[data-m-persona-id]").forEach(button => button.onclick = async () => {
+      const next = button.dataset.mPersonaId;
+      if (!next || next === (state.session?.persona_id || "nianxiang") || button.disabled) return;
+      button.disabled = true;
+      try {
+        const result = await api(`/api/session/${encodeURIComponent(sid)}/persona`, {method: "PUT", body: JSON.stringify({persona_id: next})});
+        if (state.session?.id !== sid) return;
+        state.session = result.session || result;
+        if (typeof updatePersonaLabels === "function") updatePersonaLabels();
+        await renderPersonaMobile();
+        toast(`已切换为${personaName(next)}`);
+      } catch (error) { button.disabled = false; toast(error.message || "切换伙伴失败"); }
+    });
+  }
   let mobileOpeningEntry = 0, mobileRokidReturn = null;
   let mobileWizard = null, mobileWizardMode = "user", mobileWizardResume = null;
   let mobileAuthSurface = null, mobileAuthClosing = false;
@@ -200,6 +230,7 @@
     clearMobileSourceForm();
     state.sourceGeneration = (state.sourceGeneration || 0) + 1;
     state.session = d.session;
+    if (typeof updatePersonaLabels === "function") updatePersonaLabels();
     state.followupReminder?.refresh(); state.companionBoundary?.refresh();
     $("#m-chat-error")?.classList.add("is-hidden");
     state.messages = d.messages;
@@ -227,7 +258,8 @@
 
   async function startSession(mode, text = "") {
     try {
-      const d = await api("/api/session", { method: "POST", body: JSON.stringify({ mode, text }) });
+      const persona_id = state.session?.persona_id || "nianxiang";
+      const d = await api("/api/session", { method: "POST", body: JSON.stringify({ mode, text, persona_id }) });
       enterSessionData(d);
     } catch (e) { toast(e.message); }
   }
@@ -779,7 +811,7 @@
       if (message?.role !== "assistant" || typeof message.text !== "string") return message;
       const parser = globalThis.XinjiResponseParser;
       if (!parser?.parse) return message;
-      if (message._bubblesSource === message.text && Array.isArray(message.bubbles) && message.bubbles.length) return message;
+      if (Array.isArray(message.bubbles) && message.bubbles.length) return message;
       const parsed = parser.parse(message.text);
       if (!parsed || !Array.isArray(parsed.messages) || !parsed.messages.length) return message;
       message.bubbles = parsed.messages;
@@ -1167,6 +1199,7 @@
         <button class="btn ghost wide" id="m-connect-apps">连接应用</button>
         <div style="height:8px"></div>
         <button class="btn ghost wide" data-sheet="more">资料与数据</button>`;
+      await loadMobilePersonas(body, sid, epoch);
       $("#m-connect-apps")?.addEventListener("click", () => {
         closeSheet();
         showMobileOnboarding();
@@ -1663,6 +1696,7 @@
       if (state.session?.id !== sid || state.sourceGeneration !== generation) return;
       if (data?.session?.id !== sid) throw new Error("撤回后的对话状态不匹配");
       state.session = data.session;
+      if (typeof updatePersonaLabels === "function") updatePersonaLabels();
       state.memories = data.memories || [];
       state.bookmark = data.bookmark || null;
       state.context = data.context || null;

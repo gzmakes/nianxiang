@@ -17,6 +17,8 @@ def isolate_local_model(tmp_path, monkeypatch):
     monkeypatch.setattr(model_settings, "PATH", str(tmp_path / "model-settings.json"))
     for key in ("XINJI_MODEL_BASE_URL", "XINJI_MODEL_API_KEY", "XINJI_MODEL_NAME"):
         monkeypatch.delenv(key, raising=False)
+    # 关掉公共演示节点，测试不依赖外网；需要它的用例自行设回。
+    monkeypatch.setenv("XINJI_MODEL_PUBLIC", "0")
 
 
 @pytest.fixture
