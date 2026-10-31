@@ -1,3 +1,4 @@
+const connectionContext = require("./helpers/connection-context.cjs");
 // Run the shipped H5 lifecycle with the shipped dialog helper, using synthetic DOM.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const helper=fs.readFileSync('web/companion-welcome.js','utf8'),mobile=fs.readFileSync('web/m.js','utf8');
@@ -27,7 +28,7 @@ function setup(){
  const auth=$('#m-auth'),authClose=$('#m-auth-cancel');authClose.control=true;auth.append(authClose);auth.classList.add('is-hidden');auth.setAttribute('aria-hidden','true');
  const sheet=$('#m-sheet');sheet.classList.add('is-hidden');sheet.setAttribute('aria-hidden','true');
  const state={session:{id:'same-session'},messages:[]},window={};
- const context=vm.createContext({document,window,$,$$:()=>[],state,wz:{},localStorage:{getItem(){return null;},setItem(){throw Error('generic dialog must not write welcome storage');}},
+ const context=connectionContext({document,window,$,$$:()=>[],state,wz:{},localStorage:{getItem(){return null;},setItem(){throw Error('generic dialog must not write welcome storage');}},
   clearMobileSourceForm:undefined,openMobileLocalFiles(){},openMobileReal(){},openMobileFeishu(){},showWz(){},closeSheet(){},toast(){},esc:String,
   api:(...args)=>{requests.push(args);throw Error('lifecycle must not access a source');},
   closeLarkAuthMobile(){context.finishAuth();}});
@@ -60,4 +61,16 @@ test('H5 auth cannot restore an abandoned source context and leaves no keyboard 
   assert.equal(e.context.finishAuth(),false);assert.equal(e.auth.getAttribute('aria-hidden'),'true');assert.equal(e.wizard.getAttribute('aria-hidden'),'true');assert.equal(e.app.inert,false);
   assert.equal(e.document.dispatch('keydown',{key:'Tab'}).defaultPrevented,false);e.input.focus();assert.equal(e.document.activeElement,e.input);assert.equal(e.input.value,'尚未发送的话');assert.equal(e.requests.length,0);
  }
+});
+
+test('a successful source connection closes its originating settings sheet and dialog, releases focus traps and returns to the preserved chat draft',async()=>{
+ const e=setup(),settings=e.$('#m-settings-connect');settings.control=true;e.sheet.append(settings);e.sheet.classList.remove('is-hidden');e.sheet._xinjiKind='settings';settings.focus();
+ await e.context.entry('apple_calendar',settings);assert.equal(e.wizard.getAttribute('aria-hidden'),'false');assert.equal(e.app.inert,true);assert.equal(e.sheet.inert,true);
+ Object.assign(e.context,{pairedDevicesPanel:null,followups:{stop(){}},renderAll(){},loadEngine(){},loadNextStep(){},renderStarters(){},closeLarkAuthMobile(){},localStorage:{setItem(){}}});
+ const begin=mobile.indexOf('  function enterSessionData('),end=mobile.indexOf('  async function startSession(',begin);
+ const closeStart=mobile.indexOf('  function closeSheet()'),closeEnd=mobile.indexOf('  async function showMemoryContextNotice()',closeStart);
+ vm.runInContext(mobile.slice(begin,end)+mobile.slice(closeStart,closeEnd)+'\nthis.acceptConnection=enterSessionData;',e.context);
+ e.context.acceptConnection({session:{id:'same-session'},messages:[{id:'real-intro',role:'assistant',text:'已读取的合成边界回复'}],memories:[],context:{sources:[{id:'source',connector_id:'apple_reminders'}]}});
+ assert.equal(e.wizard.classList.contains('is-hidden'),true);assert.equal(e.sheet.classList.contains('is-hidden'),true);assert.equal(e.sheet._xinjiKind,null);assert.equal(e.app.inert,false);assert.equal(e.sheet.inert,false);assert.equal(e.app.getAttribute('aria-hidden'),null);assert.equal(e.document.activeElement,e.input);assert.equal(e.input.value,'尚未发送的话');assert.equal(e.state.session.id,'same-session');assert.equal(e.requests.length,0);
+ assert.equal(e.document.dispatch('keydown',{key:'Tab'}).defaultPrevented,false);
 });

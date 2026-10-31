@@ -12,16 +12,17 @@ function setup(source,api,localStorage=storage()){
  ctx.open(source);
  return {$,state,calls,entered,shown,ctx,localStorage};
 }
+const flush = async () => { for (let i=0;i<15;i++) await Promise.resolve(); };
 const sample={ok:true,preview_id:'fixture',title:'样本',items:Array.from({length:9},(_,i)=>({title:`主题${i}<`,meta:`发件人${i}`,summary:`日期${i}`})),understanding:{facts:['事实一','事实二']}};
 for(const source of ['gmail','notion']) {
  const secret=source==='gmail'?'#m-gmail-password':'#m-notion-token', other=source==='gmail'?'#m-gmail-address':'#m-notion-url';
- test(`${source}: preview shows every item and the actual model facts; start attaches the preview to the current conversation without resending credentials`,async()=>{
+ test(`${source}: one authorization reads and attaches the same preview to the current conversation without resending credentials`,async()=>{
   const env=setup(source,async(path)=>path.endsWith('/preview')?sample:{session:{id:'old'},messages:[],memories:[]});
   env.$(secret).value='dummy-secret';env.$(other).value='dummy-identifier';
   await env.$('#m-source-preview').onclick();
   assert.equal(env.$(secret).value,'');assert.match(env.$('#m-read-items').innerHTML,/主题8&lt;/);assert.match(env.$('#m-read-items').innerHTML,/发件人7/);assert.match(env.$('#m-read-items').innerHTML,/事实二/);
   assert.equal((env.$('#m-read-items').innerHTML.match(/生成理解时可能发送给模型/g)||[]).length,8);
-  await env.$('#m-source-start').onclick();assert.deepEqual(JSON.parse(env.calls[1][1].body),{preview_id:'fixture',session_id:'old'});assert.equal(env.entered[0].session.id,'old');
+  assert.deepEqual(JSON.parse(env.calls[1][1].body),{preview_id:'fixture',start_intro:true,session_id:'old'});assert.equal(env.entered[0].session.id,'old');
   assert.equal(env.localStorage.length,0);
  });
  test(`${source}: failed preview clears credential and does not offer confirmation`,async()=>{
@@ -39,16 +40,16 @@ for(const source of ['gmail','notion']) {
  });
  test(`${source}: cancellation during an uncertain commit still points to the connected-source list for verification`,async()=>{
   let reject;const waiting=new Promise((_,r)=>reject=r);const env=setup(source,async(path)=>path.endsWith('/preview')?sample:waiting);
-  env.$(secret).value='dummy';env.$(other).value='dummy';await env.$('#m-source-preview').onclick();
-  const running=env.$('#m-source-start').onclick();env.ctx.clear();reject(Error('offline'));await running;
+  env.$(secret).value='dummy';env.$(other).value='dummy';
+  const running=env.$('#m-source-preview').onclick();await flush();env.ctx.clear();reject(Error('offline'));await running;
   assert.match(env.shown[0],/结果未确认.*已接入资料列表.*核对/);assert.equal(env.entered.length,0);
   assert.equal(env.localStorage.length,1);
  });
  test(`${source}: uncertain creation survives reload and requires explicit dismissal`,async()=>{
   const shared=storage();let reject;const waiting=new Promise((_,r)=>reject=r);
   const env=setup(source,async(path)=>path.endsWith('/preview')?sample:waiting,shared);
-  env.$(secret).value='dummy-secret';env.$(other).value='dummy-identifier';await env.$('#m-source-preview').onclick();
-  const running=env.$('#m-source-start').onclick();assert.equal(shared.length,1);
+  env.$(secret).value='dummy-secret';env.$(other).value='dummy-identifier';
+  const running=env.$('#m-source-preview').onclick();await flush();assert.equal(shared.length,1);
   const key=shared.key(0);assert.match(key,/^xinji_h5_source_pending_/);assert.equal(shared.getItem(key),'1');
   assert.doesNotMatch(key+shared.getItem(key),/dummy|fixture/);
   env.ctx.clear();const reopened=setup(source,async()=>({}),shared);reopened.ctx.renderPending();
@@ -65,8 +66,8 @@ for(const source of ['gmail','notion']) {
  test(`${source}: late success after leaving still requires connected-source verification`,async()=>{
   let resolve;const waiting=new Promise(r=>resolve=r);
   const env=setup(source,async(path)=>path.endsWith('/preview')?sample:waiting);
-  env.$(secret).value='dummy';env.$(other).value='dummy';await env.$('#m-source-preview').onclick();
-  const running=env.$('#m-source-start').onclick();env.ctx.clear();resolve({session:{id:'new'}});await running;
+  env.$(secret).value='dummy';env.$(other).value='dummy';
+  const running=env.$('#m-source-preview').onclick();await flush();env.ctx.clear();resolve({session:{id:'new'}});await running;
   assert.equal(env.localStorage.length,1);assert.equal(env.entered.length,0);assert.match(env.shown[0],/结果未确认.*已接入资料列表.*核对/);
  });
 }

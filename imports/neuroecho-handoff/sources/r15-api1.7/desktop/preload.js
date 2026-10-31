@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('xinjiDesktop',{
   openConnectionSettings:()=>ipcRenderer.invoke('desktop:open-connections'),
+  openLarkAuth:url=>ipcRenderer.invoke('desktop:open-lark-auth',url),
   info:()=>ipcRenderer.invoke('desktop:info'),
   pickText:()=>ipcRenderer.invoke('desktop:pick-text'),
   updateState:value=>ipcRenderer.invoke('desktop:set-state',{state:value?.state}),

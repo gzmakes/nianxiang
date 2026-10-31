@@ -16,9 +16,9 @@ def test_cross_origin_cannot_invoke_sensitive_bodyless_post(monkeypatch):
         ):
             assert client.post("/api/auth/lark/setup", headers=headers).status_code == 403
         assert calls == []
-        assert client.post("/api/auth/lark/setup", headers={"Origin": "http://127.0.0.1:8787", "Sec-Fetch-Site": "same-origin"}).status_code == 200
-        assert client.post("/api/auth/lark/setup").status_code == 200
-        assert calls == [True, True]
+        assert client.post("/api/auth/lark/setup", headers={"Origin": "http://127.0.0.1:8787", "Sec-Fetch-Site": "same-origin"}).status_code == 410
+        assert client.post("/api/auth/lark/setup").status_code == 410
+        assert calls == []
 
 
 def test_host_peer_and_cross_site_get_are_rejected():

@@ -112,7 +112,8 @@ def test_attach_adds_to_legacy_source_without_replacing_it(client, monkeypatch, 
     monkeypatch.setattr(lark, 'read_doc', lambda url: dict(FAKE_DOC))
     monkeypatch.setattr(main, '_enrich', lambda data: data)
     url = 'https://example.feishu.cn/docx/abc'
-    sid = client.post('/api/session', json={'mode': mode, 'text': text}).json()['session']['id']
+    # Old sample data is a migration fixture only; production cannot create it.
+    sid = core.create_session(mode=mode, text=text)['session']['id']
     prior = core.get_messages(sid)
     preview = client.post('/api/lark/preview', json={'url': url}).json()['preview_id']
     result = client.post('/api/lark/attach', json={'session_id': sid, 'url': url, 'preview_id': preview})

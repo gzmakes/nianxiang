@@ -19,11 +19,10 @@ def test_catalog_and_legacy_entry_do_not_scan_local_files(client, monkeypatch):
     monkeypatch.setattr(github_source, 'status', lambda: {'ok': False})
     real_sources._CACHE = None
     assert next(s for s in client.get('/api/onboarding/sources').json()['sources'] if s['id'] == 'local_files')['status'] == 'ready'
-    r = client.post('/api/onboarding/read', json={'connector_id': 'local_files'}).json()
-    assert r['ok'] is False and '选择' in r['error']
+    assert client.post('/api/onboarding/read', json={'connector_id': 'local_files'}).status_code == 410
     r = client.post('/api/onboarding/real/read', json={'source_id': 'local_files'}).json()
     assert r['ok'] is False
-    assert client.post('/api/onboarding/start', json={'connector_id': 'local_files'}).status_code == 400
+    assert client.post('/api/onboarding/start', json={'connector_id': 'local_files'}).status_code == 410
 
 
 def test_confirm_attaches_reviewed_text_without_losing_chat_and_revoke_keeps_existing_memory(client):

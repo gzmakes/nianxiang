@@ -14,14 +14,14 @@ def client(tmp_path, monkeypatch):
 
 
 def test_metrics_counts_actions(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     mems = client.get(f"/api/memory?session_id={sid}").json()["memories"]
     client.patch(f"/api/memory/{mems[0]['id']}", json={"text": "纠正后的理解", "status": "confirmed"})
     b = client.post("/api/bookmark", json={"session_id": sid, "note": "n", "choice": "c", "next_step": "s"}).json()
     client.post(f"/api/bookmark/{b['id']}/commit")
-    client.post("/api/device/start")
-    client.get("/api/device/frame")
-    client.post("/api/device/stop")
+    assert client.post("/api/device/start").status_code == 410
+    assert client.get("/api/device/frame").status_code == 410
+    assert client.post("/api/device/stop").status_code == 410
 
     m = client.get(f"/api/metrics?session_id={sid}").json()
     assert m["sessions"] == 1
@@ -29,7 +29,7 @@ def test_metrics_counts_actions(client):
     assert m["memories"]["confirmed"] == 1
     assert m["corrections"] == 1
     assert m["bookmarks"]["committed"] == 1
-    assert m["device"]["starts"] == 1 and m["device"]["stops"] == 1
+    assert m["device"]["starts"] == 0 and m["device"]["stops"] == 0
     assert m["rates"]["confirm"] > 0
     assert m["rates"]["bookmark"] == 1.0
 

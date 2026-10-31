@@ -4,7 +4,7 @@ const src=fs.readFileSync('web/m.js','utf8');
 function clip(first,last){const a=src.indexOf(first),b=src.indexOf(last,a);assert.ok(a>=0&&b>a);return src.slice(a,b)}
 function element(){
  const hidden=new Set();let html='',cache=new Map();
- const el={value:'',textContent:'',disabled:false,dataset:{},style:{},classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x),toggle:(x,on)=>on?hidden.add(x):hidden.delete(x)},addEventListener(name,fn){this['on'+name]=fn},querySelectorAll(selector){
+ const el={value:'',textContent:'',disabled:false,focus(){},dataset:{},style:{},classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x),toggle:(x,on)=>on?hidden.add(x):hidden.delete(x)},addEventListener(name,fn){this['on'+name]=fn},querySelectorAll(selector){
   if(cache.has(selector))return cache.get(selector);
   const attr=selector.slice(1,-1),key=attr.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
   const rows=[...html.matchAll(new RegExp(attr+'="([^"]*)"','g'))].map(match=>{const row=element();row.dataset[key]=match[1];row.textContent=match[1];return row});cache.set(selector,rows);return rows;
@@ -25,7 +25,8 @@ function setup(handler){
   clearMobileSourceForm(){counts.clears++},renderAll(){counts.rendered++},renderStarters(){},loadNextStep(){},loadEngine(){},loadCarryover(){},
   closeSheet(){const sheet=$('#m-sheet');sheet._xinjiEpoch++;sheet._xinjiKind=null;sheet.classList.add('is-hidden')},
   openSheet(kind){$('#m-sheet')._xinjiEpoch++;$('#m-sheet')._xinjiKind=kind},showMobileOnboarding(){},renderBookmark(){},renderUnderstanding(){counts.understanding=(counts.understanding||0)+1}});
- ctx.window = {XinjiDialogs: {confirm: async options => ctx.confirm(options.message)}};
+ ctx.document = {}; ctx.connectionIntro = {start(){}};
+ ctx.window = {XinjiConnectionIntro:{syncBadges(){}},XinjiDialogs: {confirm: async options => ctx.confirm(options.message)}};
  vm.runInContext(clip('  function enterSessionData(', '  async function startSession(')+
   clip('  function mobileSources(', '  // ---------- chat ----------')+
   '\nthis.list=renderMobileSourceList;this.remove=revokeMobileSelectedSource;this.removeAll=revokeMobileSource;this.more=renderMore;this.openHistory=openMobileHistory;this.deleteHistory=deleteMobileHistory;this.enter=enterSessionData;this.insightBookmark=openMobileInsightBookmark;',ctx);

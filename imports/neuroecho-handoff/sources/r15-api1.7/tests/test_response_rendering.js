@@ -14,3 +14,12 @@ for (const file of ['web/app.js', 'web/m.js']) {
     assert.ok(serverBubbles >= 0 && serverBubbles < parse, 'server bubbles must win over client parsing');
   });
 }
+
+for (const [htmlFile, scriptFile] of [['web/index.html', 'app.js'], ['web/m.html', 'm.js']]) {
+  test(`${htmlFile} loads the response parser before ${scriptFile}`, () => {
+    const html = fs.readFileSync(htmlFile, 'utf8');
+    const parser = html.indexOf('/static/response-parser.js');
+    const app = html.indexOf(`/static/${scriptFile}`);
+    assert.ok(parser >= 0 && app > parser);
+  });
+}

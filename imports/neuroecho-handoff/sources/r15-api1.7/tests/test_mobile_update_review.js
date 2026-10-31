@@ -1,3 +1,4 @@
+const connectionContext = require("./helpers/connection-context.cjs");
 // Exercise the real H5 boot + shared coordinator with disposable records.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('web/m.js','utf8');
@@ -11,7 +12,7 @@ async function fixture({changesSupported=true}={}){
  const sheet=$('#m-sheet');sheet.classList.add('is-hidden');sheet._xinjiEpoch=1;sheet._xinjiKind=null;
  let cursor='c0',deferSnapshot=null,sync,modal=false,offline=false;const calls=[],renders=[];
  const state={session:{id:'one'},messages:[],memories:[],sourceGeneration:0,companionBoundary:{canRefresh:()=>true,acceptSnapshot:()=>true},delivery:{pending:()=>false,invalidateReads(){}}};
- const ctx=vm.createContext({state,$,AbortController,URLSearchParams,location:{search:''},setTimeout:()=>1,clearTimeout(){},
+ const ctx=connectionContext({state,$,AbortController,URLSearchParams,location:{search:''},setTimeout:()=>1,clearTimeout(){},
   document:{hidden:false,querySelector:()=>modal?{}:null,querySelectorAll:()=>hosts.map(h=>h.host),addEventListener(){}},
   window:{addEventListener(){},XinjiMood:{entryValid:()=>true},XinjiContactContract:{validBoundary:()=>true}},
   contentMutationEpoch:0,contentMutationCount:0,mActiveTurn:null,mTurnQueue:[],mQueuedTurns:[],mChatBlocked:false,mobileManualMemoryOperation:null,onMemAction:{drafts:new Map()},
