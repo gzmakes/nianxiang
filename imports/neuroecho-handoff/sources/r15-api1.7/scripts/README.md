@@ -1,5 +1,15 @@
 # 多端共享资源与检查
 
+## 配置云端小鲸鱼语音
+
+在每台 Windows 设备上执行一次（Token 不要提交 GitHub）：
+
+```powershell
+scripts\setup_remote_voice.cmd -GatewayBaseUrl https://你的网关域名/v1 -GatewayToken 个人Token
+```
+
+脚本会写入被 Git 忽略的 `server/voice-settings.json`，并强制使用 HTTPS、`remote` 提供方和 `whale` 人格。随后运行 `start_windows_web.cmd` 即可。云端 Gateway 仍需由管理员通过 HTTPS 或私有网络提供，不能把 9880/9881 直接写进客户端。
+
 修改颜色、首批导航文案或显示偏好默认值后，在工程根目录执行：
 
 ```sh
