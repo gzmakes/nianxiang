@@ -956,3 +956,19 @@ html[data-reduce-motion=true] body:has(#app) .modal,html[data-reduce-motion=true
 @media(prefers-reduced-motion:reduce){body:has(#app) .modal,body:has(#app) .modal-card,body:has(#app) .design-search,body:has(#app) .design-search-card,body:has(#app) .echo-user-dialog,body:has(#app) .onboarding-card{animation:none}}
 /* Web 改版 24 (2026-10-31，产品要求)：「回响」页里的「留一条跟进」卡整块不再显示（followups.js 仍挂载，只是不画）。 */
 #app #today-followups,#app .context .followup-card{display:none!important}
+/* Web 改版 25 (2026-10-31，产品要求)：设置页保留「数据与模型设置」入口——「数据与记录」卡只留这一行，样式同「伙伴角色」「设备」，
+   点了进入原有的「数据与隐私」页（含模型配置）；理解卡 / 审计记录 / 指标 / 插件状态仍不显示。 */
+@media(min-width:900px){
+  #app #tab-design div.settings-section:has(> .panel-title-row){display:block;padding:0!important;border-radius:20px}
+  #app #tab-design div.settings-section:has(> .panel-title-row)>.panel-title-row,
+  #app #tab-design div.settings-section:has(> .panel-title-row) #persona-mount,
+  #app #tab-design div.settings-section:has(> .panel-title-row) #plugin-status,
+  #app #tab-design div.settings-section:has(> .panel-title-row) [data-more-tab]:not([data-more-tab=data]){display:none}
+  #app #tab-design div.settings-section:has(> .panel-title-row) .action-row{margin:0}
+  /* 面板通用按钮规则特异性更高，这里用 !important 让这一行和「伙伴角色」卡的标题行一致 */
+  #app #tab-design [data-more-tab=data]{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:68px;margin:0;padding:18px 20px!important;
+    border:0!important;border-radius:20px!important;background:transparent!important;box-shadow:none!important;color:var(--ink)!important;font-size:13px!important;font-weight:650!important;line-height:1.5;text-align:left;cursor:pointer}
+  #app #tab-design [data-more-tab=data]::after{content:"›";font-size:18px;line-height:1;color:var(--ink-mute)}
+  #app #tab-design [data-more-tab=data]:hover{background:rgba(255,255,255,.35)!important}
+  #app #tab-design [data-more-tab=data]:focus-visible{outline:2px solid #667caa;outline-offset:-2px}
+}
