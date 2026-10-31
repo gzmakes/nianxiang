@@ -31,6 +31,19 @@
   }
 
   host.querySelector('[data-tool=search]').onclick = () => $('#design-search-btn')?.click();
+  // 背景音乐：ambient-music.js 用 WebAudio 现场合成，没有音频文件；按钮只负责开关和显示状态。
+  const musicButton = host.querySelector('[data-tool=music]');
+  function syncMusic() {
+    const playing = !!window.XinjiAmbientMusic?.playing?.();
+    musicButton.setAttribute('aria-pressed', String(playing));
+    const label = musicButton.querySelector('[data-tool-music-label]');
+    if (label) label.textContent = playing ? '暂停音乐' : '播放音乐';
+  }
+  if (musicButton) {
+    musicButton.onclick = async () => { await window.XinjiAmbientMusic?.toggle?.(); syncMusic(); };
+    document.addEventListener('xinji-ambient-music', syncMusic);
+    syncMusic();
+  }
   panelButton.onclick = () => $('#design-panel-toggle')?.click();
   host.querySelector('[data-tool=mood]').onclick = async () => {
     if (!panelOpen()) $('#design-panel-toggle')?.click();

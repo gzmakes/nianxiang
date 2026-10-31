@@ -689,3 +689,10 @@ html[data-reduce-transparency=true] #app .conversation-tools{background:rgba(255
 }
 html[data-reduce-motion=true] #app .msg .meta{transition:none}
 @media(prefers-reduced-motion:reduce){#app .msg .meta{transition:none}}
+/* Web 改版 17 (2026-10-31，产品要求)：对话栏右侧胶囊在「记录心情」和「收起面板」之间加「播放音乐」（ambient-music.js，WebAudio 现场合成的轻环境音，
+   不带音频文件）；播放中按钮为墨色并带一个轻微起伏的音符。人格 / 陪伴-工作 切换在服务端同步失败时也照常切换（persona-switch.js）。 */
+#app .conversation-tools [data-tool=music][aria-pressed=true]{color:var(--ink);background:rgba(255,255,255,.88);box-shadow:0 1px 4px rgba(80,100,170,.14)}
+#app .conversation-tools [data-tool=music][aria-pressed=true] .ui-icon{animation:music-bob 1.6s ease-in-out infinite}
+@keyframes music-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+html[data-reduce-motion=true] #app .conversation-tools [data-tool=music] .ui-icon{animation:none}
+@media(prefers-reduced-motion:reduce){#app .conversation-tools [data-tool=music] .ui-icon{animation:none}}

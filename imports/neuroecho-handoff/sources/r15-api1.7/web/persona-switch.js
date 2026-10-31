@@ -18,13 +18,15 @@
     });
     try {
       const personaResult = await put(`/api/session/${encodeURIComponent(sid)}/persona`, { persona_id: nextPersona });
-      if (!personaResult.ok) throw new Error('当前人格还没有同步到服务端');
+      // 旧版服务没有这两个接口（404）：页面照常切换，只是提醒一句服务还没更新。
+      if (personaResult.status === 404 || personaResult.status === 405) throw new Error('服务还没更新到支持人格同步，这次先只在本机切换');
+      if (!personaResult.ok) throw new Error('当前人格还没有同步到服务端，这次先只在本机切换');
       const modeResult = await put(`/api/session/${encodeURIComponent(sid)}/mode`, { interaction_mode: nextMode });
       if (!modeResult.ok) {
         // Keep the session coherent when the second write is rejected. This is
         // best effort; the original error remains the user-visible failure.
         await put(`/api/session/${encodeURIComponent(sid)}/persona`, { persona_id: previousPersona }).catch(() => {});
-        throw new Error('当前陪伴方式还没有同步到服务端');
+        throw new Error('当前陪伴方式还没有同步到服务端，这次先只在本机切换');
       }
       return token === syncToken;
     } catch (error) {
@@ -108,7 +110,11 @@
   }
   async function switchTo(space) {
     if (space === current) return;
-    if (!(await syncSession(space))) return;
+    // 同步失败（服务旧、断线、被拒）也照常切换：空间筛选本来就只在本机；失败原因由 app.js 的 toast 提示。
+    // 等待期间可能又点了别的：以最后一次为准。
+    const token = syncToken + 1;
+    await syncSession(space);
+    if (token !== syncToken) return;
     current = space; persist();
     root.dataset.persona = persona();
     closeMenu();
