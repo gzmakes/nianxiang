@@ -296,7 +296,7 @@ def create_session(mode: str = "sample", text: str = "", source_label: str | Non
     conn.commit()
     conn.close()
     audit(sid, "session.create", mode, "用户选择开始方式")
-    greeting = greeting or ("你好，我是回响。今天想从哪件事开始？"
+    greeting = greeting or ("你好，我是念响。今天想从哪件事开始？"
                             if mode == "empty" else "我在。先不急着安排事情，你想从哪儿说起？")
     add_message(sid, "assistant", greeting)
     return {
@@ -335,8 +335,8 @@ def conversation_id() -> str:
             stamp = now()
             conn.execute("INSERT INTO sessions(id,created_at,mode,source_text,source_label,state,persona_id,interaction_mode) VALUES(?,?,'empty','','我们的对话','listening','nianxiang','companion')", (sid, stamp))
             conn.execute("INSERT INTO messages(id,session_id,role,text,created_at,persona_id,interaction_mode) VALUES(?,?,'assistant',?,?,?,?)",
-                         (uid("msg"), sid, "你好，我是回响。今天想从哪件事开始？", stamp, "nianxiang", "companion"))
-            conn.execute("INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,'conversation.create','','开始和回响的对话',?)", (uid("aud"), sid, stamp))
+                         (uid("msg"), sid, "你好，我是念响。今天想从哪件事开始？", stamp, "nianxiang", "companion"))
+            conn.execute("INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,'conversation.create','','开始和念响的对话',?)", (uid("aud"), sid, stamp))
         conn.execute("INSERT INTO app_state(key,value) VALUES('canonical_conversation',?) "
                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (sid,))
         conn.commit()
