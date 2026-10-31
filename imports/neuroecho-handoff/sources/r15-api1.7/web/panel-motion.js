@@ -8,7 +8,7 @@
   let indicator = null, tabs = null;
   function placeIndicator() {
     if (!tabs || !indicator) return;
-    const active = tabs.querySelector('.tab.active');
+    const active = tabs.querySelector('.tab.active, .m-tab.active');
     if (!active) { indicator.style.opacity = '0'; return; }
     const box = tabs.getBoundingClientRect(), target = active.getBoundingClientRect();
     indicator.style.opacity = '1';
@@ -18,7 +18,7 @@
     indicator.style.top = `${Math.round(target.top - box.top)}px`;
   }
   function mountIndicator() {
-    tabs = document.querySelector('#app .context .tabs');
+    tabs = document.querySelector('#app .context .tabs, #m-app .m-tabbar');
     if (!tabs || indicator) return;
     indicator = document.createElement('span');
     indicator.className = 'tab-indicator'; indicator.setAttribute('aria-hidden', 'true');
@@ -34,8 +34,8 @@
   // 涟漪：从按下的位置向外扩一圈，0.5 秒后自己消失。
   document.addEventListener('pointerdown', event => {
     if (reducedMotion() || event.button !== 0) return;
-    const button = event.target.closest('#app .context button, #app .context .btn, #app .context summary');
-    if (!button || button.disabled || button.classList.contains('tab')) return;
+    const button = event.target.closest('#app .context button, #app .context .btn, #app .context summary, #m-app .sheet-card button, #m-app .sheet-card .btn, #m-app .sheet-card summary');
+    if (!button || button.disabled || button.classList.contains('tab') || button.classList.contains('m-tab')) return;
     const rect = button.getBoundingClientRect(), size = Math.max(rect.width, rect.height) * 2;
     const ripple = document.createElement('span');
     ripple.className = 'click-ripple'; ripple.setAttribute('aria-hidden', 'true');
@@ -47,7 +47,7 @@
 
   // 面板切入：只在页签刚切换时给内容一次淡入，之后刷新进来的内容不再闪。
   function watchPanels() {
-    const panels = document.querySelectorAll('#app .context .tab-panel');
+    const panels = document.querySelectorAll('#app .context .tab-panel, #m-app #m-sheet');
     const timers = new WeakMap();
     for (const panel of panels) {
       let wasHidden = panel.classList.contains('is-hidden');

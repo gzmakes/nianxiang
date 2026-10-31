@@ -24,6 +24,8 @@
   const reducedMotion = () => root.dataset.reduceMotion === 'true' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const quiet = () => { const resume = document.querySelector('[data-companion-boundary] [data-b-resume]'); return !!resume && !resume.hidden; };
   const realId = id => id && id !== 'thinking' && !String(id).startsWith('local-');
+  // Web 是 #app #messages，H5（m.html）是 #m-app #m-messages；两页共用这一个模块。
+  const messagesRoot = () => document.querySelector('#app #messages, #m-app #m-messages');
 
   function pick(text) {
     const value = String(text || '').trim();
@@ -36,6 +38,8 @@
     }
     return !serious && value.length >= 20 ? '👀' : null;
   }
+  // 光球表情（orb-face.js）共用同一套关键词，避免两份规则各改各的。
+  window.XinjiEmojiRules = { RULES, SERIOUS, pick };
 
   function persist() {
     const keys = Object.keys(reactions);
@@ -104,7 +108,7 @@
     const button = event.target.closest('[data-emoji]');
     if (!button || !barTarget) return;
     const emoji = button.dataset.emoji, id = barTarget;
-    const msg = document.querySelector(`#messages [data-message-id="${CSS.escape(id)}"]`);
+    const msg = messagesRoot()?.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
     if (reactions[id] === emoji) delete reactions[id]; else reactions[id] = emoji;
     persist();
     closeBar(true);
@@ -118,7 +122,7 @@
 
   const seen = new Set(), pendingLocal = new Map(), localQueue = [], localToReal = new Map();
   let initialized = false, sinceLastBadge = 2;
-  const byId = id => id && document.querySelector(`#messages [data-message-id="${CSS.escape(id)}"]`);
+  const byId = id => id && messagesRoot()?.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
   const messageText = msg => [...msg.querySelectorAll(':scope > .bubble')].map(bubble => {
     const copy = bubble.cloneNode(true); copy.querySelectorAll('.emoji-badge').forEach(node => node.remove()); return copy.textContent;
   }).join('\n').trim();
@@ -185,7 +189,7 @@
   }
 
   function mountPreference() {
-    const panel = document.querySelector('#tab-design');
+    const panel = document.querySelector('#tab-design, #m-design-preferences');
     if (!panel || panel.querySelector('.emoji-pref')) return;
     const label = document.createElement('label');
     label.className = 'emoji-pref';
@@ -197,10 +201,12 @@
   }
 
   function start() {
-    const messages = document.querySelector('#app #messages');
+    const messages = messagesRoot();
     if (!messages) return;
     document.body.appendChild(bar);
     mountPreference();
+    // H5 的设置是按需渲染进弹层的，所以开关要在面板出现时再挂一次。
+    new MutationObserver(mountPreference).observe(document.body, {childList: true, subtree: true});
     decorate(messages);
     if (typeof MutationObserver !== 'undefined') new MutationObserver(() => decorate(messages)).observe(messages, {childList: true});
   }
