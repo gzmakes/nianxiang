@@ -9,6 +9,7 @@ import os
 import ipaddress
 import secrets
 import json
+import hashlib
 import sqlite3
 import math
 import threading
@@ -33,7 +34,7 @@ from . import notion_cli_source, git_source, feishu_account, lark_account_auth, 
 from .runtime_lock import DatabaseLease
 from . import visitors
 from . import api_contract as contract
-from . import paired_access, conversation_changes
+from . import paired_access, conversation_changes, memory_summary, vision_images
 
 BASE = Path(__file__).resolve().parent
 WEB = BASE.parent / "web"
@@ -194,6 +195,11 @@ class PersonaIn(BaseModel):
     persona_id: Literal['nianxiang', 'whale']
 
 
+class AutoMemoryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool
+
+
 class InteractionModeIn(BaseModel):
     interaction_mode: str
 
@@ -201,6 +207,7 @@ class InteractionModeIn(BaseModel):
 class ChatIn(BaseModel):
     session_id: str
     text: str = Field(min_length=1, max_length=4000)
+    image_data_url: str | None = Field(default=None, max_length=5_592_430)
     memory_proposals: StrictBool = False
     time_zone: str | None = Field(default=None,min_length=1,max_length=128)
     request_id: str | None = Field(default=None, min_length=8, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]+$")
@@ -390,11 +397,25 @@ class MemoryProposalIn(BaseModel):
     confirm: StrictBool = False
 
 
+class MemorySummaryRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=128)
+    version: int = Field(ge=1, strict=True)
+
+
+class MemorySummaryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str = Field(min_length=1, max_length=128)
+    confirm: StrictBool = False
+    memories: list[MemorySummaryRef] = Field(min_length=1, max_length=20)
+
+
 class MemoryIn(BaseModel):
     session_id: str
     kind: str = Field(pattern="^(fact|inference|question)$")
     text: str = Field(min_length=1, max_length=2000)
     source: str = "用户手动添加"
+    user_asserted: StrictBool = False
 
 
 class MemoryPatch(BaseModel):
@@ -1546,6 +1567,22 @@ def get_session(sid: str):
     }
 
 
+@app.get('/api/session/{sid}/auto-memory')
+def get_auto_memory(sid: str):
+    session = core.get_session(sid)
+    if not session:
+        raise HTTPException(404, 'session not found')
+    return JSONResponse({'enabled': bool(session['auto_memory_enabled'])}, headers={'Cache-Control': 'no-store'})
+
+
+@app.put('/api/session/{sid}/auto-memory')
+def put_auto_memory(sid: str, body: AutoMemoryIn):
+    result = core.set_auto_memory(sid, body.enabled)
+    if result is None:
+        raise HTTPException(404, 'session not found')
+    return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+
+
 @app.put('/api/session/{sid}/persona', response_model=contract.SessionResponse)
 def set_session_persona(sid: str, body: PersonaIn):
     try:
@@ -1640,12 +1677,25 @@ def chat(body: ChatIn):
     if body.time_zone is not None:
         try: followups._zone(body.time_zone)
         except ValueError as error: raise HTTPException(400,str(error)) from error
+    image_data_url = None
+    if body.image_data_url:
+        try:
+            image_data_url = vision_images.validate_data_url(body.image_data_url)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from error
+    else:
+        marker = plugin_bridge._MARKER.search(body.text)
+        if marker:
+            try:
+                image_data_url = vision_images.sticker_data_url(marker.group(1).strip())
+            except ValueError:
+                image_data_url = None
     store, claim = None, None
     if body.request_id:
         store = _turn_store()
         try:
             claim = store.claim(body.session_id, body.request_id, body.text,
-                                options={"memory_proposals":body.memory_proposals, **({"time_zone":body.time_zone} if body.time_zone is not None else {})})
+                                options={"memory_proposals":body.memory_proposals, **({"time_zone":body.time_zone} if body.time_zone is not None else {}), **({"image_sha256": hashlib.sha256(image_data_url.encode()).hexdigest()} if image_data_url else {})})
         except chat_turns.TurnConflict:
             raise contract.ContractError(409, "request_id_conflict", "请求标识已用于不同内容，请先核对对话。")
         except chat_turns.TurnNotFound:
@@ -1658,6 +1708,7 @@ def chat(body: ChatIn):
     try:
         result = core.generate_reply(
             body.session_id, body.text,
+            **({"image_data_url": image_data_url} if image_data_url else {}),
             **({"time_zone":body.time_zone} if body.time_zone is not None else {}),
             **({"should_cancel": store.cancel_check(body.session_id, body.request_id, claim.token),
                 "reply_lock": store.reply_lock(body.session_id, body.request_id)} if store else {}))
@@ -1713,6 +1764,10 @@ def list_memory(session_id: str = Query(...)):
 
 @app.post("/api/memory", response_model=contract.MemoryResponse, response_model_exclude_unset=True)
 def add_memory(body: MemoryIn):
+    if body.user_asserted:
+        if body.kind != 'fact' or body.source != '用户手动添加':
+            raise HTTPException(400, '手动添加的事实或偏好才能作为本人记录。')
+        return core.add_memory(body.session_id, body.kind, body.text, source='用户手动添加', status='auto')
     return core.add_memory(body.session_id, body.kind, body.text, source=body.source)
 
 
@@ -1722,6 +1777,16 @@ def save_memory_proposal(body: MemoryProposalIn):
         return core.save_proposed_memory(body.session_id, body.message_id, confirm=body.confirm)
     except ValueError as e:
         raise HTTPException(409, str(e))
+
+
+@app.post("/api/memory/summary")
+def summarize_memory(body: MemorySummaryIn):
+    try:
+        result = memory_summary.generate(body.session_id, [r.model_dump() for r in body.memories], body.confirm)
+        return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+    except memory_summary.SummaryError as error:
+        return JSONResponse({'detail': error.detail, 'error_code': error.code}, status_code=error.status,
+                            headers={'Cache-Control': 'no-store'})
 
 
 @app.get("/api/memory/{mid}/history", response_model=contract.MemoryHistoryResponse, response_model_exclude_unset=True)

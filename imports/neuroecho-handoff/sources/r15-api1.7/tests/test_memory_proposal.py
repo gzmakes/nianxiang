@@ -1,4 +1,4 @@
-"""Only literal, user-selected proposals enter a temporary isolated database."""
+"""Legacy proposal endpoint in isolation; new automatic recording is tested separately."""
 import pytest
 from fastapi.testclient import TestClient
 from server import core, model
@@ -8,6 +8,9 @@ from server.main import app
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(core, 'DB_PATH', str(tmp_path / 'test.db'))
     monkeypatch.setattr(model, 'from_env', lambda: None)
+    # Simulate a legacy message with no automatic record. This keeps the old
+    # proposal API, one-click safety and provenance paths under test.
+    monkeypatch.setattr(core.auto_memory, 'save', lambda *args, **kwargs: False)
     core.init_db()
     with TestClient(app) as c:
         yield c

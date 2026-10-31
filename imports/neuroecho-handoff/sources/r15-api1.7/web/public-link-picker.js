@@ -27,7 +27,7 @@ window.XinjiPublicLinkPicker = {
       try {
         const data = await api('/api/onboarding/real/read', {method:'POST',body:JSON.stringify({source_id:sourceId,url,...(autoAttach ? {start_intro:true} : {})})});
         if (!current(version)) return;
-        if (!data.ok) throw Error([data.error || '读取失败', data.hint].filter(Boolean).join(' · '));
+        if (!data.ok) { globalThis.NianxiangSound?.play('gentleError'); throw Error([data.error || '读取失败', data.hint].filter(Boolean).join(' · ')); }
         if (!data.preview_id || typeof data.text !== 'string' || !data.text.trim() || data.connector?.id !== sourceId) throw Error('没有取得可核对的正文，没有接入任何内容。');
         const heading = document.createElement('h4'), text = document.createElement('textarea');
         heading.textContent = data.title || name; text.value = data.text; text.readOnly = true; text.rows = 9;

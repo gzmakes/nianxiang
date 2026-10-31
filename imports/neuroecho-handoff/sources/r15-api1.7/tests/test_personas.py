@@ -43,4 +43,3 @@ def test_new_session_and_persona_switch_persist(tmp_path, monkeypatch):
         assert loaded['messages'][0]['persona_id'] == 'nianxiang'
         assert client.put(f'/api/session/{sid}/persona', json={'persona_id': 'nianxiang'}).status_code == 200
         assert client.get(f'/api/session/{sid}').json()['messages']
-

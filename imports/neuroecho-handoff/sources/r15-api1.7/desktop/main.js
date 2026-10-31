@@ -12,19 +12,21 @@ const {revealWindow} = require('./window-lifecycle');
 const {normalizeState,validCommand,tomorrowAtNine,effectiveState,stateLabel} = require('./desktop-state');
 const {createFollowupNotifier,legacyNotificationResult} = require('./notification-policy');
 app.setName('回响');
-let bundledRoot, bundledPort, bundledProfile;
+let bundledRoot, bundledPort, bundledProfile, bundledPython, bundledBackendDataDir;
 try {
   const pointer=require('./project-root.json');
   bundledRoot=pointer.root || (pointer.relativeRoot && path.resolve(__dirname,pointer.relativeRoot));
   bundledPort=pointer.port;
+  if(typeof pointer.python==='string')bundledPython=pointer.python;
+  if(typeof pointer.backendDataDir==='string')bundledBackendDataDir=pointer.backendDataDir;
   if(typeof pointer.profile==='string' && /^[a-z0-9][a-z0-9.-]{0,63}$/i.test(pointer.profile))bundledProfile=pointer.profile;
 } catch (_) {}
 const ROOT=path.resolve(process.env.XINJI_PROJECT_ROOT || bundledRoot || path.join(__dirname,'..'));
 const PORT=process.env.XINJI_PORT || bundledPort || 18787;
 if(process.env.XINJI_DESKTOP_DATA_DIR)app.setPath('userData',path.resolve(process.env.XINJI_DESKTOP_DATA_DIR));
 else if(bundledProfile)app.setPath('userData',path.join(app.getPath('appData'),bundledProfile));
-const backendRuntime=backendPaths({root:ROOT,platform:process.platform,pythonOverride:process.env.XINJI_PYTHON,dataDir:app.getPath('userData')});
-const PYTHON=backendRuntime.python;
+const backendOptions={root:ROOT,platform:process.platform,pythonOverride:process.env.XINJI_PYTHON || bundledPython,
+  dataDir:app.getPath('userData'),backendDataDir:process.env.XINJI_BACKEND_DATA_DIR || bundledBackendDataDir};
 let win=null,tray=null,panel=null,backend=null,port=PORT,state='quiet',ready=false;
 let mode='own',selected={version:1,mode:'own'},selector=null,selectorMessage='',connectionStore=null,selectionFlow=null,connectionEpoch=0,quitting=false,sharedTimer=null;
 const spaceWindows=new Map(),sharedLeases=new Map();
@@ -210,7 +212,8 @@ async function ensureOwnBackend(){
   if(quitting)return;
   if(backend?.started)return;
   if(ownStart)return ownStart;
-  ownStart=(async()=>{const candidate=createBackendLifecycle({root:ROOT,...backendRuntime,python:PYTHON,port:PORT,onStdout:d=>process.stdout.write(d),onStderr:d=>process.stderr.write(d)});
+  ownStart=(async()=>{const runtime=backendPaths(backendOptions);
+    const candidate=createBackendLifecycle({root:ROOT,...runtime,port:PORT,onStdout:d=>process.stdout.write(d),onStderr:d=>process.stderr.write(d)});
     pendingOwnBackend=candidate;
     try{const result=await candidate.start();if(quitting){candidate.stop();return;}candidate.started=true;backend=candidate;port=result.port;}
     finally{if(pendingOwnBackend===candidate)pendingOwnBackend=null;}

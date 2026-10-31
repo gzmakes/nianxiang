@@ -3,7 +3,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 function cut(src,a,b){const i=src.indexOf(a),j=src.indexOf(b,i);assert.ok(i>=0&&j>i);return src.slice(i,j)}
 function storage(){const values=new Map();return{fail:false,getItem:k=>values.get(k)||null,setItem(k,v){if(this.fail)throw Error('quota');values.set(k,v)}}}
-function element(){const hidden=new Set();return{value:'',textContent:'',style:{},disabled:false,classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x),toggle(x,on){if(on)hidden.add(x);else hidden.delete(x)}},focus(){},remove(){},replaceChildren(){}}}
+function element(){const hidden=new Set();return{value:'',textContent:'',style:{},disabled:false,classList:{add:x=>hidden.add(x),remove:x=>hidden.delete(x),contains:x=>hidden.has(x),toggle(x,on){if(on)hidden.add(x);else hidden.delete(x)}},focus(){},remove(){},removeAttribute(){},replaceChildren(){}}}
 const tick=()=>new Promise(setImmediate), result=(cancelled=false)=>({messages:[{id:'user-saved',role:'user',text:'合成原话'}],memories:[],user_message_id:'user-saved',state:'responding',cancelled,action:'model.reply'});
 let serial=0;
 for(const mobile of [false,true]){
@@ -11,7 +11,7 @@ for(const mobile of [false,true]){
  function setup(api,store=storage(),proposals=true,zone){
   const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},input=$(mobile?'#m-input':'#input');
   const timers=new Map(),state={session:{id:'synthetic-session'},messages:[],memories:[]},toasts=[];
-  const ctx=vm.createContext({api,localStorage:store,$,state,els:{input,messages:{insertAdjacentHTML(){}}},document:{createTextNode:x=>x},
+  const ctx=vm.createContext({api,localStorage:store,$,state,els:{input,composer:element(),messages:{insertAdjacentHTML(){}}},document:{createTextNode:x=>x},
    memoryProposal:{shouldRequest:()=>proposals,offer(){}},toast:s=>toasts.push(s),setOrb(){},renderAll(){},renderMessages(){},chatScroll:{render:f=>f()},
    touchLastSeen(){},loadAudit(){},loadNextStep(){},setTimeout(fn){const id=++serial;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),
    crypto:{randomUUID:()=> 'request-fixture-'+(++serial)},Date,Map,Set,Promise,encodeURIComponent});
@@ -22,16 +22,57 @@ for(const mobile of [false,true]){
     const mDisplayedTurns=new Map(),mUncertainTurns=new Map(),mChatLedger=XinjiChatTransport.createLedger('h5');
     const mChatTransport=XinjiChatTransport.create(api,{ledger:mChatLedger,pause:async()=>{},attempts:1});`
    :`let queuedTurns=[],turnQueue=[],activeTurn=null,chatBlocked=false,chatStorageBlocked=false,turnTimer=null,localTurnId=0;
+    let selectedImage=null,imageReadToken=0,imageReading=false;
     const displayedTurns=new Map(),uncertainTurns=new Map(),chatLedger=XinjiChatTransport.createLedger('web');
     const chatTransport=XinjiChatTransport.create(api,{ledger:chatLedger,pause:async()=>{},attempts:1});`;
   const code=mobile?cut(src,'  async function recoverMobileChat()', '  function setupVoice()')+cut(src,'  function mPendingMessages(', '  // ---------- boot ----------')
-   :cut(src,'  function pendingMessages(', '  function showMemoryContextNotice()');
+   :cut(src,'  function safeImageDataUrl(', '  function renderMessageText(')+cut(src,'  function setSelectedImage(', '  let recognition = null;')+cut(src,'  function pendingMessages(', '  function showMemoryContextNotice()');
   const pre=mobile?'mChat':'chat';
   vm.runInContext(declarations+code+`\nthis.send=${mobile?'send':'sendMessage'};this.recover=${mobile?'recoverMobileChat':'recoverChat'};
     this.restoreLedger=${mobile?'restoreMobileChatLedger':'restoreChatLedger'};this.keepDraft=${mobile?'keepMobileChatDraft':'keepChatDraft'};
-    this.ledger=${pre}Ledger;this.transport=${pre}Transport;this.blocked=${mobile?'mUncertainTurns':'uncertainTurns'};`,ctx);
+    this.ledger=${pre}Ledger;this.transport=${pre}Transport;this.blocked=${mobile?'mUncertainTurns':'uncertainTurns'};${mobile?'':'this.setImage=setSelectedImage;this.getImage=()=>selectedImage;this.expandSnapshot=expandTurns;'} `,ctx);
   return{ctx,state,input,store,$,toasts,flush:async()=>{const jobs=[...timers.values()];timers.clear();jobs.forEach(f=>f());await tick()}};
  }
+ if (!mobile) test('Web/Desktop: a single image and following text are sent as separate turns without cancellation',async()=>{
+  const calls=[],data='data:image/png;base64,AAAA';
+  const env=setup(async(path,opt)=>{calls.push({path,body:opt?.body&&JSON.parse(opt.body)});return result()});
+  env.ctx.setImage({dataUrl:data,sessionId:env.state.session.id});env.ctx.send('',true);
+  env.ctx.send('这是补充文字');await env.flush();await tick();
+  const posts=calls.filter(c=>c.path==='/api/chat');assert.equal(posts.length,2);
+  assert.equal(posts[0].body.text,'[图片]');assert.equal(posts[0].body.image_data_url,data);
+  assert.equal(posts[1].body.text,'这是补充文字');assert.equal(posts[1].body.image_data_url,undefined);
+  assert.equal(calls.some(c=>c.path.endsWith('/cancel')),false);
+ });
+ if (!mobile) test('Web/Desktop: refreshed server snapshot keeps the in-memory image but adopts fresh metadata',async()=>{
+  const data='data:image/png;base64,AAAA';
+  const saved={id:'user-saved',role:'user',text:'[图片]',persona_id:'first'};
+  const env=setup(async()=>({...result(),messages:[saved]}));
+  env.ctx.setImage({dataUrl:data,sessionId:env.state.session.id});env.ctx.send('',true);await env.flush();
+  const refreshed=env.ctx.expandSnapshot([{...saved,persona_id:'second'}]);
+  assert.equal(refreshed[0].image_data_url,data);assert.equal(refreshed[0].persona_id,'second');
+  const reopened=setup(async()=>assert.fail('no send'),env.store);
+  assert.equal(reopened.ctx.expandSnapshot([saved])[0].image_data_url,undefined);
+  assert.match(src,/state\.messages = expandTurns\(data\.messages\); state\.memories = data\.memories/);
+  assert.match(src,/state\.messages=expandTurns\(data\.messages\); state\.memories=data\.memories/);
+ });
+ if (!mobile) test('Web/Desktop: invalid image is restored for correction without persisting its bytes',async()=>{
+  const data='data:image/png;base64,AAAA';let posts=0;
+  const env=setup(async()=>{posts++;const error=Error('invalid PNG');error.status=400;throw error});
+  env.ctx.setImage({dataUrl:data,sessionId:env.state.session.id});env.ctx.send('',true);await env.flush();
+  assert.equal(posts,1);assert.equal(env.input.value,'');assert.equal(env.ctx.getImage().dataUrl,data);
+  assert.match(env.$('#chat-error').textContent,/图片未通过服务端检查/);
+  assert.doesNotMatch(env.store.getItem('xinji_chat_ledger_v1_web'),/data:image/);
+ });
+ test(`${label}: old enabled proposal setting does not request or show individual suggestions`,async()=>{
+  const store=storage();store.setItem('xinji_memory_proposals','on');const sent=[];
+  const env=setup(async(path,opt)=>{sent.push(JSON.parse(opt.body));return {...result(false),memory_proposal:{message_id:'synthetic-message',quote:'我喜欢喝茶'}}},store,true);
+  env.ctx.memoryProposal.offer=()=>assert.fail('obsolete suggestion must not be presented');
+  env.input.value='我喜欢喝茶';env.ctx.send(env.input.value);await env.flush();
+  assert.equal(sent.length,1);assert.equal(sent[0].memory_proposals,false);
+  assert.equal(store.getItem('xinji_memory_proposals'),'on');
+  const html=fs.readFileSync(mobile?'web/m.html':'web/index.html','utf8');
+  assert.doesNotMatch(html,/memory-proposal-enabled|memory-proposal\.js/);
+ });
  test(`${label}: new queue snapshots time zone and a reload preserves its exact transport`,async()=>{
   const writes=[];const env=setup(async(path,opt)=>{if(path==='/api/chat'){writes.push(JSON.parse(opt.body));throw Error('lost')}return {status:'unknown'}},storage(),false,'Asia/Shanghai');env.input.value='今天先别问';env.ctx.send(env.input.value);assert.equal(env.ctx.ledger.snapshot().queued[0].time_zone,'Asia/Shanghai');await env.flush();assert.equal(writes[0].time_zone,'Asia/Shanghai');
   const restored=setup(async()=>({status:'unknown'}),env.store,false,'America/New_York');restored.ctx.restoreLedger();assert.equal(restored.ctx.ledger.snapshot().pending[0].time_zone,'Asia/Shanghai');
@@ -58,7 +99,7 @@ for(const mobile of [false,true]){
  for(const cancelled of [false,true]) test(`${label}: unknown reload reconciles ${cancelled?'cancelled':'completed'} with exact ID by GET only`,async()=>{
   let posts=0;const env=setup(async(path)=>{if(path==='/api/chat')posts++;throw Error('offline')});
   env.input.value='合成原话';env.ctx.send(env.input.value);await env.flush();
-  assert.equal(posts,1);const saved=env.ctx.ledger.snapshot().pending[0];assert.ok(saved.request_id);assert.equal(saved.memory_proposals,true);assert.equal(saved.text,'合成原话');assert.equal(saved.session_id,env.state.session.id);
+  assert.equal(posts,1);const saved=env.ctx.ledger.snapshot().pending[0];assert.ok(saved.request_id);assert.equal(saved.memory_proposals,false);assert.equal(saved.text,'合成原话');assert.equal(saved.session_id,env.state.session.id);
   const calls=[],again=setup(async(path,opts)=>{calls.push({path,opts});return{status:cancelled?'cancelled':'completed',result:result(cancelled)}},env.store,false);
   again.ctx.restoreLedger();assert.equal(calls.length,0);assert.equal(again.ctx.blocked.size,1);
   assert.match(again.$(mobile?'#m-chat-error':'#chat-error').textContent,/只读取结果/);

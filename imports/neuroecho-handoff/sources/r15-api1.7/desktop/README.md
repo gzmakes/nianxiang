@@ -14,9 +14,23 @@ Electron 可显式连接已有 Web 的本机服务，继续同一条持续对话
 
 从 Dock 重开会恢复最小化并聚焦；加载失败会显示原因，可按 ⌘R 重试。退出只停止本次自己启动的后端，借用的 Web 服务继续运行。
 
+以下默认命令仅适用于源码目录中已有可执行 `.venv/bin/python` 的情况；缺失时，打包器会在复制 Electron 前明确拒绝，并要求同时提供下面的 `--python` 与 `--backend-data-dir`。已有 Web 服务能被借用，不代表开发壳具备自行启动能力。
+
 ```sh
 python3 desktop/package-local.py --runtime /path/to/official/Electron.app --project-root /path/to/project --output /new/path/回响.app --adhoc-sign
 ```
+
+源码下没有 `.venv`，或 Web 使用外部数据目录时，打包必须同时明确指定现有解释器与原数据目录。下面的配置只写路径到本机开发壳的 `project-root.json`，不读取或复制模型 key、账号、数据库，也不会创建或更改数据目录权限：
+
+```sh
+python3 desktop/package-local.py --runtime /path/to/official/Electron.app --project-root /path/to/project --output /new/path/回响.app --port 18827 --python /path/to/existing/.venv/bin/python --backend-data-dir /path/to/original-private-data --adhoc-sign
+```
+
+`--python` 保留 `.venv/bin/python` 的符号链接入口，不改成其指向的全局 Python；这样才能保留已有依赖环境。`--backend-data-dir` 必须是源码与任何 `.app` 包体外、已存在的私有目录（0700），与桌面 UI 的 `--profile` 是两种不同用途。两项必须成对提供，路径失效时明确失败，不回退到源码中的空数据库。
+
+此开发配置使用 `scripts/run_paired_service.py --data-dir … --local-port …` 自启，默认只有固定回环 HTTP，不启用 TLS／局域网入口。端口已有服务时，除产品健康响应、相同源码 cwd 和两次稳定监听 PID，还核对该 PID 是否打开了所选数据目录的 `data.db.server.lock` 数字文件描述符；只查该文件的元数据，不读取文件、模型配置、进程环境或完整 argv。macOS 的此项检查不是排他锁证明；无法核验时拒绝借用，可从「连接与空间」另行明确选择已有服务。退出只停止桌面自己启动的子进程，借用服务不会被结束。
+
+此处只提供本机开发壳修复；Mac 自包含便携包的独立 profile/bootstrap 与 Windows 启动行为保持原路径。重新打包、Dock 启动、自启／借用与窗口交互仍需分别验收，单测不代表 App 已重建或实际打开。
 
 ## macOS Apple Silicon 自包含便携路径（R12）
 
@@ -38,11 +52,11 @@ Windows 使用隐藏标题栏与系统按钮预留、彩色托盘图标、Ctrl �
 
 默认 `http://127.0.0.1:18787`，不开放网络。
 
-- macOS：lsof 核对监听仅 127.0.0.1、真实进程目录属于本副本。
+- macOS：lsof 核对监听仅 127.0.0.1、真实进程目录属于本副本；显式外部数据目录的开发壳另核对该监听 PID 打开的所选 profile 专用锁文件描述符。
 - Windows：PowerShell Get-NetTCPConnection/CIM 核对本端口、PID、Python 路径和包含明确 --app-dir 的启动参数；未知归属拒绝复用。
 - 空闲端口才自行启动；不扫描其他端口，不结束未知进程。退出仅停止自己的子进程。
 
-开发测试可指定 XINJI_PORT / XINJI_PROJECT_ROOT / XINJI_PYTHON / XINJI_DESKTOP_DATA_DIR。不要把本机用户数据目录或模型配置打进包。
+开发测试可指定 XINJI_PORT / XINJI_PROJECT_ROOT / XINJI_PYTHON / XINJI_DESKTOP_DATA_DIR；macOS 开发壳可用 XINJI_BACKEND_DATA_DIR 指定外部后端数据目录。XINJI_DESKTOP_DATA_DIR 只决定桌面偏好与分区位置，不能替代后端目录。不要把本机用户数据目录或模型配置打进包。
 
 ## 桌面操作与验证
 

@@ -8,10 +8,10 @@ function setup({mode='empty',messages=[],bookmark=null}={}){
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);};
  const state={session:{id:'restored-session',mode},messages,bookmark},switched=[],scrolls=[];
  const context=vm.createContext({$,state,els:{messages:$('#messages')},localStorage:{getItem:key=>key==='xinji_last_seen_restored-session'?'2026-10-29T09:00:00+08:00':null},
-  Date,switchTab:tab=>switched.push(tab),memoryProposal:{sync(){}},chatScroll:{render:(render,options)=>{render();scrolls.push(options);}},
+  Date,switchTab:tab=>switched.push(tab),openMyTasks:()=>switched.push('bookmark'),memoryProposal:{sync(){}},chatScroll:{render:(render,options)=>{render();scrolls.push(options);}},
   window:{XinjiVoice:{pruneClips(){}},XinjiActionCards:{chatDraft:()=>null}},esc:String,renderMessageText:String,sendMessage(){throw Error('rendering must not send a message');}});
  vm.runInContext(clip('  function showResumeBanner()', '  function showIntro()')+
-  '\nlet renderedChatSession=null,renderedAssistantId=null;'+clip('  function renderMessages(', '  function memByKind(')+
+  '\nlet renderedChatSession=null,renderedMessageIds=new Set(),selectedImage=null;'+clip('  function safeImageDataUrl(', '  function renderMessageText(')+clip('  function renderMessages(', '  function memByKind(')+
   '\nthis.resume=showResumeBanner;this.render=renderMessages;',context);
  return{context,$,state,switched,scrolls};
 }
@@ -47,4 +47,16 @@ test('the first user message replaces the empty welcome and remains visible with
  const e=setup();e.context.render();assert.equal(e.$('#chat-empty').classList.contains('is-hidden'),false);
  e.state.messages=[{id:'u',role:'user',text:'今天有点累'},{id:'a',role:'assistant',text:'我在，慢慢说。'}];e.context.render();
  assert.equal(e.$('#chat-empty').classList.contains('is-hidden'),true);assert.match(e.$('#messages').innerHTML,/今天有点累/);assert.match(e.$('#messages').innerHTML,/我在，慢慢说/);assert.equal(e.scrolls[1].newMessage,true);
+});
+
+test('image with text shows a preview now and an explicit picture marker after reopening',()=>{
+ const image='data:image/png;base64,AAAA',e=setup({messages:[{id:'u',role:'user',text:'[图片] 这张图是什么？',image_data_url:image}]});
+ e.context.render();assert.match(e.$('#messages').innerHTML,/src="data:image\/png;base64,AAAA"/);
+ assert.match(e.$('#messages').innerHTML,/这张图是什么？/);assert.doesNotMatch(e.$('#messages').innerHTML,/\[图片\]/);
+ e.state.messages=[{id:'u',role:'user',text:'[图片] 这张图是什么？'}];e.context.render();
+ assert.match(e.$('#messages').innerHTML,/\[图片\] 这张图是什么？/);assert.doesNotMatch(e.$('#messages').innerHTML,/data:image/);
+});
+test('an image-only message has a visible marker after reopening',()=>{
+ const e=setup({messages:[{id:'u',role:'user',text:'[图片]'}]});e.context.render();
+ assert.match(e.$('#messages').innerHTML,/\[图片\]/);
 });

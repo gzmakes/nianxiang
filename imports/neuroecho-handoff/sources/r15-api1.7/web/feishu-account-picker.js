@@ -96,6 +96,7 @@
         const data = await api('/api/lark/account/' + (enable ? 'connect' : 'disconnect'), {method:'POST', body:JSON.stringify({session_id:id, ...(enable ? {start_intro:true} : {})})});
         if (!current(version)) return;
         if (data?.ok !== true) {
+          if (enable && data?.permission_issue !== 'user_grant') globalThis.NianxiangSound?.play('gentleError');
           verified = false;
           status.textContent = [data?.error || '连接未完成', data?.hint].filter(Boolean).join(' · ');
           connect.disabled = false;

@@ -282,7 +282,6 @@
   async function startSession() {
     // Resume the server's canonical conversation; this client never creates a replacement conversation.
     return restore();
-
   }
 
   // ---------- onboarding wizard (mobile) ----------
@@ -899,7 +898,6 @@
 
   window.XinjiCompanionChoices.bind(document, $("#m-input"));
 
-  const memoryProposal = window.createMemoryProposal({box: $("#m-memory-proposal"), toggle: $("#m-memory-proposal-enabled"), state, api, toast, refresh: renderAll});
   const chatScroll = window.createChatScroll($("#m-main"), $("#m-chat-new-messages"));
   let renderedChatSession = null;
   let renderedMessageIds = new Set();
@@ -918,7 +916,6 @@
       message._bubblesSource = message.text;
       return message;
     }
-    memoryProposal.sync();
     const box = $("#m-messages");
     const empty = state.messages.filter((m) => m.role === "user").length === 0;
     const showEmpty = empty && state.session?.mode === "empty" && !state.messages.some(message => message.connection_intro) && !(state.context?.sources?.length || state.context?.connector_id || state.context?.items?.length);
@@ -1299,6 +1296,8 @@
   let pairedDevicesPanel = null;
   function openSheet(kind, presetNext = "") {
     if (kind === "device") return;
+    const legacyPersona = kind === "persona";
+    if (legacyPersona) kind = "settings";
     pairedDevicesPanel?.dispose(); pairedDevicesPanel = null;
     globalThis.XinjiVoice?.stop?.();
     followups.stop();
@@ -1314,9 +1313,12 @@
     if (kind === "understand") renderUnderstanding();
     if (kind === "bookmark" || kind === "tasks") renderBookmark(presetNext);
     if (kind === "today") renderTodayMobile();
-    if (kind === "persona") renderPersonaMobile();
     if (kind === "more") renderMore();
     if (kind === "settings") renderDesignSettingsMobile();
+    if (legacyPersona) {
+      $("#m-settings-persona").open = true;
+      $("#m-settings-persona").scrollIntoView({block: "start"});
+    }
   }
 
   async function renderTodayMobile() {
@@ -1439,15 +1441,18 @@
 
   function memCard(m, tag) {
     const attached = m.source_attachment_id ? mobileSources().find(source => source.id === m.source_attachment_id) : null;
-    const provenance = attached ? `${m.source || attached.label || "来源"} · ${mobileSourceTitle(attached)}` : m.source || "";
+    const provenance = attached ? `${m.source || attached.label || "来源"} · ${mobileSourceTitle(attached)}` : m.source || "来源待补";
+    const uncertainSource = /撤回后来源待核对|来源待核对/.test([m.source, m.source_label].filter(Boolean).join(" "));
+    const status = m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你已添加" : "自动记录") : m.status === "confirmed" ? "已确认" : m.status === "candidate" ? "尚未核实" : "状态待核对";
+    const origin = m.kind === "inference" ? "推测" : m.source === "用户手动添加" ? "你手动添加" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录";
+    const use = uncertainSource ? "来源待核对，暂不用于回复。" : m.kind === "inference" ? "这是推测，不作为确定事实。" : m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你主动记下，可作为相关对话的背景。" : "自动记下；关闭自动记录后暂停用于回复，可确认或删除。") : m.status === "confirmed" ? "可作为相关对话的背景。" : "尚未核实，不作为确定事实。";
     return `<div class="mem-item" data-id="${m.id}">
       <div class="mem-kind">${tag} · v${m.version} · ${esc(provenance)}</div>
-      <div class="memory-origin ${m.kind === "inference" && m.status !== "confirmed" ? "is-inference" : ""}">${m.kind === "inference" && m.status !== "confirmed" ? "推测 · 待你确认" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录"}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">确认后，可作为相关对话的背景。</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>用在：相关对话的背景，${m.kind === "inference" && m.status !== "confirmed" ? "推测需要先由你确认。" : "可随时纠正或忘掉。"}</p></details>
+      <div class="memory-origin ${m.kind === "inference" ? "is-inference" : ""}">${esc(origin)}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">${esc(use)}</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>使用：${esc(use)} 可随时纠正或忘掉。</p></details>
       <div class="mem-meta">
-        <span>${m.status === "confirmed" ? "已确认" : "待确认"}</span>
+        <span>${esc(status)}</span>
         <span>
-          ${m.status === "candidate" ? `<button class="mini confirm" data-act="confirm" data-id="${m.id}">确认</button>` : ""}
-          <button class="mini" data-act="edit" data-id="${m.id}">改一改</button>
+          ${m.status === "auto" && m.source === "对话原话 · 自动记录" ? `<button class="mini" data-act="confirm" data-id="${m.id}">确认记住</button>` : ""}<button class="mini" data-act="edit" data-id="${m.id}">改一改</button>
           <button class="mini" data-act="history" data-id="${m.id}">历史</button>
           <button class="mini" data-act="delete" data-id="${m.id}">忘掉这条</button>
         </span>
@@ -1488,17 +1493,17 @@
     const operation={}; mobileManualMemoryOperation=operation;
     let created=false;
     try {
-      const text=await window.XinjiDialogs.prompt({title:'记下一件事',message:'先保存在待确认记忆里。你可以再修改、确认或忘掉。',maxLength:2000,confirmLabel:'加入待确认'});
+      const text=await window.XinjiDialogs.prompt({title:'记下一件事',message:'记下后，你可以随时修改或忘掉。',maxLength:2000,confirmLabel:'记下'});
       if (!text?.trim() || !current()) return;
       state.memorySaving=true;
-      const memory=await api('/api/memory',{method:'POST',body:JSON.stringify({session_id:sid,kind:'fact',text:text.trim(),source:'用户手动添加'})});
-      if (!memory?.id || memory.session_id!==sid || memory.status!=='candidate') throw Error('新增记忆回执未确认，请重新打开记忆核对后再决定是否重试。');
+      const memory=await api('/api/memory',{method:'POST',body:JSON.stringify({session_id:sid,kind:'fact',text:text.trim(),source:'用户手动添加',user_asserted:true})});
+      if (!memory?.id || memory.session_id!==sid || memory.status!=='auto') throw Error('新增记忆回执未确认，请重新打开记忆核对后再决定是否重试。');
       created=true;
       if (!current()) return;
       const snapshot=await api('/api/memory?session_id='+encodeURIComponent(sid));
       if (!current()) return;
-      if (!Array.isArray(snapshot.memories) || !snapshot.memories.some(item=>item.id===memory.id && item.status==='candidate')) throw Error('新增回执已收到，但暂时未能核对列表，请稍后重新打开记忆。');
-      state.memories=snapshot.memories; renderUnderstanding(); toast('已加入待确认记忆；确认后才会用于长期回应。');
+      if (!Array.isArray(snapshot.memories) || !snapshot.memories.some(item=>item.id===memory.id && item.status==='auto')) throw Error('新增回执已收到，但暂时未能核对列表，请稍后重新打开记忆。');
+      state.memories=snapshot.memories; renderUnderstanding(); toast('已记下，你可以随时修改或忘掉。');
     } catch(error) {
       if (current()) toast(created ? '新增回执已收到，列表暂时未能核对。请重新打开记忆查看。' : error.message);
     } finally {
@@ -1988,14 +1993,14 @@
       $("#m-input").value = text.trim();
     };
     recog.onstart = () => {
-      recogListening = true; btn.classList.add("listening"); btn.textContent = "在听…";
+      recogListening = true; window.NianxiangSound?.setRecording(true); btn.classList.add("listening"); btn.textContent = "在听…";
     };
     recog.onend = () => {
-      recogListening = false; btn.classList.remove("listening"); btn.textContent = "语音";
+      recogListening = false; window.NianxiangSound?.setRecording(false); btn.classList.remove("listening"); btn.textContent = "语音";
       const t = $("#m-input").value.trim();
       if (t) send(t);
     };
-    recog.onerror = () => { recogListening = false; btn.classList.remove("listening"); btn.textContent = "语音"; toast("语音识别失败，可改用文字"); };
+    recog.onerror = () => { recogListening = false; window.NianxiangSound?.setRecording(false); btn.classList.remove("listening"); btn.textContent = "语音"; toast("语音识别失败，可改用文字"); };
     btn.onclick = () => { if (recogListening) recog.stop(); else { try { recog.start(); } catch (_) {} } };
   }
 
@@ -2050,6 +2055,7 @@
     catch(error) { toast(error.message); return; }
     if (mActiveTurn?.sessionId === part.sessionId && mActiveTurn.transport) mChatTransport.cancel(mActiveTurn.transport);
     mTurnQueue.push(part);
+    window.NianxiangSound?.play("send");
     state.messages.push(part);
     renderMessages(true);
     $("#m-input").value = "";
@@ -2078,9 +2084,10 @@
     mActiveTurn = turn;
     globalThis.XinjiMobilePresence?.("thinking");
     const sameSession = () => state.session?.id === turn.sessionId;
+    const previousAssistantIds = new Set(state.messages.filter(message => message.role === "assistant").map(message => message.id));
     if (sameSession()) $("#m-stop")?.classList.remove("is-hidden");
     try {
-      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), memory_proposals:memoryProposal.shouldRequest(turn.sessionId), ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
+      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), memory_proposals:false, ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
       const d = await mChatTransport.send(turn.transport, message => {
         if (sameSession()) { $("#m-chat-error").textContent=message; $("#m-chat-error").classList.remove("is-hidden"); }
       },turn.parts);
@@ -2088,14 +2095,18 @@
       const userMessage = d.messages.find((m) => m.id === d.user_message_id);
       if (userMessage && turn.parts.length > 1) mDisplayedTurns.set(userMessage.id, turn.parts);
       if (sameSession()) {
+        // Delayed delivery is announced by chat-delivery; immediate replies are announced after rendering,
+        // so the sound controller can see whether this reply will be read aloud.
+        const completedReply = !d.cancelled && !d.error && [...d.messages].reverse().find(message => message.role === "assistant" && !message.delivery_pending && !previousAssistantIds.has(message.id));
         state.messages = [...d.messages.flatMap((m) => mDisplayedTurns.get(m.id) || [m]), ...mPendingMessages(turn.sessionId)];
         state.memories = d.memories;
         renderAll();
-        if (!d.cancelled) memoryProposal.offer(turn.sessionId, d);
+        if (completedReply) window.NianxiangSound?.play("receive", {messageId: completedReply.id});
         loadNextStep();
       }
     } catch (e) {
       if (e.notSent && sameSession()) {
+        window.NianxiangSound?.play("gentleError");
         const waiting = [...turn.parts, ...mPendingMessages(turn.sessionId)];
         const ids = new Set(waiting.map((part) => part.id));
         mQueuedTurns = mQueuedTurns.filter((item) => item.sessionId !== turn.sessionId);
@@ -2219,13 +2230,20 @@
 
   function renderDesignSettingsMobile() {
     const body = $("#m-sheet-body");
-    body.innerHTML = `<div class="design-shortcuts"><button type="button" class="btn ghost" id="m-settings-connect">连接应用</button><button type="button" class="btn ghost" id="m-settings-tasks">任务与草稿</button><button type="button" class="btn ghost" id="m-settings-persona">角色与设备</button><button type="button" class="btn ghost" id="m-settings-data">资料与记录</button></div><div id="m-design-preferences"></div><div id="m-paired-devices"></div>`;
+    body.innerHTML = `<div class="design-shortcuts"><button type="button" class="btn ghost" id="m-settings-connect">连接应用</button><button type="button" class="btn ghost" id="m-settings-tasks">任务与草稿</button><button type="button" class="btn ghost" id="m-settings-data">资料与记录</button></div><div id="m-design-preferences"></div><div id="m-auto-memory-settings"></div><div id="m-sound-settings"></div><details class="m-today-card" id="m-settings-persona"><summary>伙伴角色</summary><p>虚构角色不写入你的事实；切换伙伴不会影响已确认的记忆。</p><button type="button" class="btn ghost small" id="m-settings-choose-persona">选择聊天伙伴</button></details><details class="m-today-card" id="m-settings-devices"><summary>设备</summary><div id="m-paired-devices"></div><div class="m-today-card"><div class="k">脑电设备</div><b>请在设备所在电脑开启</b><p>当前读取只支持连接 MindLink 服务的本机；手机远程接入仍待联调。</p></div><div class="m-today-card"><div class="k">Rokid 眼镜</div><b>规划中</b><p>将用于查看用户选择的简短提示；型号、连接方式和真机显示待联调。</p></div></details>`;
     window.XinjiDesign.mountSettings($("#m-design-preferences"));
+    window.XinjiAutoMemorySettings?.mount($("#m-auto-memory-settings"), {api, getSessionId: () => state.session?.id});
+    window.NianxiangSound?.mount($("#m-sound-settings"));
     const settingsEpoch = $("#m-sheet")._xinjiEpoch;
     pairedDevicesPanel = window.XinjiPairedDevices?.mount($("#m-paired-devices"), {api, getSessionId:() => state.session?.id, visible:() => $("#m-sheet")._xinjiKind === "settings" && $("#m-sheet")._xinjiEpoch === settingsEpoch});
     $("#m-settings-connect").onclick = showMobileOnboarding;
     $("#m-settings-tasks").onclick = () => openSheet("tasks");
-    $("#m-settings-persona").onclick = () => openSheet("persona");
+    $("#m-settings-choose-persona").onclick = () => {
+      closeSheet();
+      const heading = document.querySelector(".conversation-persona h2");
+      heading?.focus();
+      heading?.click();
+    };
     $("#m-settings-data").onclick = () => openSheet("more");
   }
 

@@ -27,3 +27,29 @@ test('new request preserves frozen time_zone on explicit replay; old payload omi
  await transport.send(turn);await transport.send(turn);assert.equal(bodies[0].time_zone,'Asia/Shanghai');assert.deepEqual(bodies[0],bodies[1]);
  await transport.send({session_id:'s',text:'旧请求',request_id:'legacy-stable',memory_proposals:false});assert.equal(Object.hasOwn(bodies[2],'time_zone'),false);
 });
+
+test('image is sent once, but never written into the recovery ledger',async()=>{
+ const data='data:image/png;base64,c2Vuc2l0aXZl', store=new Map(), writes=[];
+ const storage={getItem:k=>store.get(k)||null,setItem:(k,v)=>{store.set(k,v);writes.push(v)}};
+ const context=vm.createContext({setTimeout,Map,Date,Math,Promise,crypto:{randomUUID:()=> 'image-request'}});
+ vm.runInContext(fs.readFileSync('web/chat-transport.js','utf8'),context);
+ const ledger=context.XinjiChatTransport.createLedger('web',storage);
+ const part={id:'p',sessionId:'s',text:'[图片]',image_data_url:data};
+ ledger.enqueue(part);
+ let body;
+ const transport=context.XinjiChatTransport.create(async(path,opts)=>{body=JSON.parse(opts.body);return result},{ledger});
+ await transport.send({session_id:'s',text:'[图片]',image_data_url:data},()=>{},[part]);
+ assert.equal(body.image_data_url,data);
+ assert.ok(writes.every(value=>!value.includes(data)));
+ assert.ok(writes.some(value=>value.includes('has_image')));
+});
+
+test('a queued image lost on reload does not become a fake text-only send',()=>{
+ const store=new Map(),storage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)};
+ const context=vm.createContext({setTimeout,Map,Date,Math,Promise});
+ vm.runInContext(fs.readFileSync('web/chat-transport.js','utf8'),context);
+ const ledger=context.XinjiChatTransport.createLedger('web',storage);
+ ledger.enqueue({id:'p',sessionId:'s',text:'[图片]',image_data_url:'data:image/png;base64,AAAA'});
+ const restored=ledger.restore('s');
+ assert.equal(restored.draft,'');assert.equal(restored.imageLost,true);
+});

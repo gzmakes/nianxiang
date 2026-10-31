@@ -12,7 +12,7 @@ test('listener replacement during verification is not borrowed',async()=>{let co
 test('self-start uses exactly the requested port, verifies child pid, and stops only that child once',async()=>{const env=fixture();assert.deepEqual(await env.lifecycle.start(),{port:18787,borrowed:false,pid:501});assert.equal(env.spawns.length,1);assert.equal(env.spawns[0][1].at(-1),'18787');assert.equal(env.spawns[0][2].cwd,'/fixture/project');assert.deepEqual(env.inspections,[[18787,501]]);env.lifecycle.stop();env.lifecycle.stop();assert.equal(env.c.kills,1);assert.equal(env.c.signal,'SIGTERM')});
 test('a healthy product listener that is not the child causes startup failure and only the child is stopped',async()=>{const env=fixture({inspectListener:async(_port,pid)=>{assert.equal(pid,501);throw Error('foreign pid')}});await assert.rejects(env.lifecycle.start(),/当前念响副本/);assert.equal(env.c.kills,1)});
 test('an early child exit interrupts a hanging health request immediately',async()=>{let c;const env=fixture({fetch:()=>new Promise(()=>{}),spawn:()=>{c=child();queueMicrotask(()=>{c.exitCode=2;c.emit('exit',2,null)});return c}});const started=Date.now();await assert.rejects(env.lifecycle.start(),/后端已退出.*2/);assert.ok(Date.now()-started<500);assert.equal(c.kills,0)});
-test('spawn error is reported quickly without waiting for the health deadline',async()=>{const env=fixture({fetch:()=>new Promise(()=>{}),spawn:()=>{const c=child();queueMicrotask(()=>{const e=Error('not found');e.code='ENOENT';c.emit('error',e)});return c}});await assert.rejects(env.lifecycle.start(),/未能启动.*ENOENT/)});
+test('missing Python is reported clearly without waiting or selecting another interpreter/database',async()=>{let spawns=0;const env=fixture({fetch:()=>new Promise(()=>{}),spawn:()=>{spawns++;const c=child();queueMicrotask(()=>{const e=Error('not found');e.code='ENOENT';c.emit('error',e)});return c}});await assert.rejects(env.lifecycle.start(),/未能启动.*ENOENT.*所选 Python.*没有改用其他解释器或数据库/);assert.equal(spawns,1)});
 test('a non-product health response cannot finish owned startup and timeout stops only its child',async()=>{const env=fixture({fetch:async()=>({ok:true,json:async()=>({ok:true,product:'foreign'})})});await assert.rejects(env.lifecycle.start(),/启动超时/);assert.equal(env.c.kills,1);assert.equal(env.inspections.length,0);assert.equal(env.spawns.length,1)});
 test('unknown platform fails closed before reading an existing service or starting a child',async()=>{let reads=0;const env=fixture({platform:'unknown',fetch:async()=>{reads++;return good()}});await assert.rejects(env.lifecycle.start(),/仅支持 macOS 和 Windows/);assert.equal(reads,0);assert.equal(env.spawns.length,0)});
 
@@ -32,6 +32,43 @@ test('portable Mac starts isolated no-bytecode bootstrap with an argv data path 
 test('portable Mac never borrows an occupied listener because cwd cannot prove its private data profile',async()=>{
   let reads=0;const env=fixture({bootstrap:'/fixture/bootstrap.py',dataDir:'/other-profile',portAvailable:async()=>false,fetch:async()=>{reads++;return good()}});
   await assert.rejects(env.lifecycle.start(),/端口/);assert.equal(reads,0);assert.equal(env.spawns.length,0);assert.equal(env.inspections.length,0);
+});
+
+test('developer external-data self-start keeps venv argv, original profile and fixed local port',async()=>{
+  const env=fixture({python:'/existing/.venv/bin/python',runner:'/fixture/project/scripts/run_paired_service.py',dataDir:'/private original profile',port:18827});
+  await env.lifecycle.start();
+  assert.equal(env.spawns[0][0],'/existing/.venv/bin/python');
+  assert.deepEqual(env.spawns[0][1],['-I','-B','/fixture/project/scripts/run_paired_service.py','--data-dir','/private original profile','--local-port','18827']);
+  assert.deepEqual(env.inspections,[[18827,501]]);env.lifecycle.stop();assert.equal(env.c.kills,1);
+});
+test('developer external-data mode can borrow a verified existing profile without killing it',async()=>{
+  const env=fixture({runner:'/fixture/project/scripts/run_paired_service.py',dataDir:'/private original profile',portAvailable:async()=>false});
+  assert.equal((await env.lifecycle.start()).borrowed,true);
+  assert.equal(env.spawns.length,0);assert.equal(env.inspections.length,2);env.lifecycle.stop();assert.equal(env.c.kills,0);
+});
+test('developer profile ownership failure refuses borrowing and never falls back to cwd or another port',async()=>{
+  const env=fixture({runner:'/fixture/project/scripts/run_paired_service.py',dataDir:'/selected-profile',portAvailable:async()=>false,inspectListener:async()=>{throw Error('different profile')}});
+  await assert.rejects(env.lifecycle.start(),/所选数据空间/);assert.equal(env.spawns.length,0);assert.equal(env.c.kills,0);
+});
+function profileLsof(opened='p111\nf3\nn/private/data.db.server.lock\n') {
+  const calls=[];
+  const execute=async(_bin,args)=>{calls.push(args);if(args.includes('-Fpn'))return {stdout:'p111\nn127.0.0.1:18787\n'};
+    if(args.includes('cwd'))return {stdout:'p111\nn/real/project\n'};
+    if(args.includes('-Ffn'))return {stdout:opened};throw Error('unexpected process query');};
+  return {calls,execute};
+}
+test('Mac profile verification asks only the listener for the selected lease-file descriptor',async()=>{
+  const env=profileLsof();
+  assert.deepEqual(await inspectMacListener(18787,'/real/project',null,env.execute,p=>p,'/private'),{pids:[111]});
+  assert.deepEqual(env.calls.at(-1),['-nP','-a','-p','111','-Ffn','--','/private/data.db.server.lock']);
+  assert.ok(env.calls.every(args=>!args.includes('command')&&!args.includes('environ')&&!args.includes('+e')));
+});
+test('Mac refuses wrong profile, cwd-only descriptor, missing lease and redirected lease path',async()=>{
+  for(const opened of ['p111\nf3\nn/other/data.db.server.lock\n','p111\nfcwd\nn/private/data.db.server.lock\n','']) {
+    const env=profileLsof(opened);await assert.rejects(inspectMacListener(18787,'/real/project',null,env.execute,p=>p,'/private'),/所选后端数据目录/);
+  }
+  const env=profileLsof();await assert.rejects(inspectMacListener(18787,'/real/project',null,env.execute,p=>p==='/private/data.db.server.lock'?'/other/data.db.server.lock':p,'/private'),/不是原路径/);
+  assert.equal(env.calls.length,0);
 });
 
 

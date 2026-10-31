@@ -31,17 +31,42 @@
   }
 
   host.querySelector('[data-tool=search]').onclick = () => $('#design-search-btn')?.click();
-  // 背景音乐：ambient-music.js 用 WebAudio 现场合成，没有音频文件；按钮只负责开关和显示状态。
+  // 首页和设置共用音效包的播放状态；暂时阻塞不改变用户的开关选择。
   const musicButton = host.querySelector('[data-tool=music]');
-  function syncMusic() {
-    const playing = !!window.XinjiAmbientMusic?.playing?.();
-    musicButton.setAttribute('aria-pressed', String(playing));
+  const musicNotice = document.createElement('div');
+  musicNotice.className = 'toast';
+  musicNotice.setAttribute('role', 'status');
+  musicNotice.setAttribute('aria-live', 'polite');
+  document.body.appendChild(musicNotice);
+  let noticeTimer, lastMusicError = '';
+  function showMusicNotice(message) {
+    musicNotice.textContent = message;
+    musicNotice.classList.add('show');
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => musicNotice.classList.remove('show'), 4500);
+  }
+  function syncMusic(event) {
+    const state = event?.detail || window.NianxiangSound?.getState?.();
+    const enabled = !!(state?.active ?? state?.music);
+    musicButton.setAttribute('aria-pressed', String(enabled));
     const label = musicButton.querySelector('[data-tool-music-label]');
-    if (label) label.textContent = playing ? '暂停音乐' : '播放音乐';
+    if (label) label.textContent = enabled ? '暂停音乐' : '播放音乐';
+    if (state?.error && state.error !== lastMusicError) showMusicNotice(state.error);
+    lastMusicError = state?.error || '';
   }
   if (musicButton) {
-    musicButton.onclick = async () => { await window.XinjiAmbientMusic?.toggle?.(); syncMusic(); };
-    document.addEventListener('xinji-ambient-music', syncMusic);
+    musicButton.onclick = () => {
+      if (!window.NianxiangSound?.toggleMusic) {
+        showMusicNotice('音乐暂时不可用，请刷新页面后重试。');
+        return;
+      }
+      try {
+        const state = window.NianxiangSound.toggleMusic();
+        syncMusic({detail: state});
+        if (state?.active && state.blocked) showMusicNotice('当前声音已暂时暂停，结束语音或不打扰后会继续。');
+      } catch (_) { showMusicNotice('暂时无法播放，请检查设备声音后重试。'); }
+    };
+    window.addEventListener('nianxiang-sound-change', syncMusic);
     syncMusic();
   }
   panelButton.onclick = () => $('#design-panel-toggle')?.click();

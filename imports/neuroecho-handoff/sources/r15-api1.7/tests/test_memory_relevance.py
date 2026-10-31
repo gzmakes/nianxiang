@@ -89,7 +89,7 @@ def test_filter_abstains_on_generic_or_negative_request_and_keeps_conflicting_ma
 def test_declining_memory_mentions_omits_preference_text_but_retains_response_mode(session):
     core.add_memory(session, 'fact', '我希望你先听我说', source='用户手动添加', status='confirmed')
     groups = core._memory_groups(session, '别提我的记忆，聊聊咖啡')
-    assert groups == ([], [], [], [])
+    assert groups == ([], [], [], [], [])
     assert core._effective_response_mode(session) == ('listen', True)
 
 

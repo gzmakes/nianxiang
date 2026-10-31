@@ -52,6 +52,7 @@ window.XinjiProactiveContact = {create({api,getSessionId}) {
         const hint=document.createElement('small');hint.textContent='不急。事项一直留在 Today，不用现在处理。';
         const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='先收起';dismiss.onclick=hide;
         host.append(title,content,hint,dismiss);document.body.append(host);
+        window.NianxiangSound?.play('notify');
       }
       // submitted describes this local presentation call, never delivery/read/task completion.
       void api('/api/followup-contacts/'+encodeURIComponent(claim.claim_id)+'/finish',{method:'POST',body:JSON.stringify({session_id:sid,state:'submitted'})}).catch(()=>{});

@@ -50,7 +50,7 @@ class MemoryResponse(OpenResponse):
     session_id: str | None = None
     kind: str = Field(description="Known kinds: fact, inference, question; retain future values.")
     text: str
-    status: str = Field(description="Known states: candidate, confirmed; unknown values are not confirmation.")
+    status: str = Field(description="Known states: candidate, auto, confirmed; auto is not user confirmation.")
     version: int
     source: str | None = None
     created_at: str | None = None

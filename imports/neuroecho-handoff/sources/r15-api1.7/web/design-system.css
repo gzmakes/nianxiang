@@ -303,6 +303,9 @@ html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=tru
   #app .echo-slogan{font-family:"Echo Slogan","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi",serif;font-size:24px;letter-spacing:.08em}
 }
 #app #tab-design .settings-section{margin-top:24px}
+#app #tab-design details.settings-section,#m-sheet-body details.m-today-card{padding:18px 20px;border:1px solid var(--line);border-radius:20px;background:#ffffffb8}
+#app #tab-design details.settings-section summary,#m-sheet-body details.m-today-card summary{cursor:pointer;font-weight:650;min-height:32px}
+#app #tab-design details.settings-section summary:focus-visible,#m-sheet-body details.m-today-card summary:focus-visible{outline:2px solid #667caa;outline-offset:4px}
 #app #tab-design .settings-section .action-row{gap:8px}
 /* 输入框：一行白色胶囊，左 ＋，中间输入，右侧 表情 / 语音 / 发送（圆形主按钮）；内容多时自动长高 */
 #app .conversation>.composer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:4px;min-height:56px;padding:8px;box-sizing:border-box;

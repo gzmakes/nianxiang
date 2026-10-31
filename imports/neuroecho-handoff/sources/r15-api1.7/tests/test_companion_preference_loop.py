@@ -9,6 +9,8 @@ from server.main import app
 @pytest.fixture
 def harness(tmp_path, monkeypatch):
     monkeypatch.setattr(core, 'DB_PATH', str(tmp_path / 'synthetic.db'))
+    # Exercise the legacy one-click path independently of automatic recording.
+    monkeypatch.setattr(core.auto_memory, 'save', lambda *args, **kwargs: False)
     calls = []
 
     class Model:
@@ -38,18 +40,18 @@ def test_explicit_confirm_then_later_override_correct_and_forget(harness):
     p = say(client, sid, '我不希望你马上给建议')['memory_proposal']
     saved = client.post('/api/memory/proposal', json={'session_id': sid, 'message_id': p['message_id']}).json()
     say(client, sid, '今天有点累')
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
     assert client.patch('/api/memory/' + saved['id'], json={'status': 'confirmed'}).status_code == 200
     say(client, sid, '今天有点累')
     prompt = calls[-1][1]
     assert '用户明确选择先听他说' in prompt
-    assert '这是用户确认过的回应偏好' in prompt
+    assert '这是来自用户明确表达的回应偏好' in prompt
     assert '我不希望你马上给建议' in prompt
     assert '没有任何可执行工具' in calls[-1][0]
 
     say(client, sid, '帮我梳理一下这件事')
     assert '用户明确邀请一起梳理或帮助' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
 
     # A correction takes precedence over the previous confirmed preference and mode.
     edit = client.patch('/api/memory/' + saved['id'], json={'text': '我希望你直接给我建议'})
@@ -63,7 +65,7 @@ def test_explicit_confirm_then_later_override_correct_and_forget(harness):
     say(client, sid, '接着说')
     assert '跟随用户当前表达' in calls[-1][1]
     assert '我希望你直接给我建议' not in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
 
 
 def test_quoted_or_unconfirmed_text_never_sets_preference(harness):
@@ -73,7 +75,7 @@ def test_quoted_or_unconfirmed_text_never_sets_preference(harness):
     core.add_memory(sid, 'fact', '如果我希望你先听我说', source='用户手动添加', status='confirmed')
     say(client, sid, '继续聊')
     assert '跟随用户当前表达' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
 
 
 def test_conflicting_confirmed_preferences_do_not_choose_arbitrarily(harness):
@@ -84,11 +86,11 @@ def test_conflicting_confirmed_preferences_do_not_choose_arbitrarily(harness):
     core.update_memory(second['id'], status='confirmed')
     say(client, sid, '我今天很累')
     assert '跟随用户当前表达' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
     assert '遇到冲突时不要自行选择' in calls[-1][0]
     core.delete_memory(second['id'])
     say(client, sid, '我还想再说说')
-    assert '这是用户确认过的回应偏好' in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' in calls[-1][1]
     assert '用户明确选择先听他说' in calls[-1][1]
 
 
@@ -103,9 +105,9 @@ def test_one_click_confirmation_resets_old_mode_and_explicit_auto_overrides_for_
     assert core.get_session(sid)['response_mode'] == 'auto'
     say(client, sid, '不用只听我说，帮我一起想想')
     assert '跟随用户当前表达' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
     say(client, sid, '又想说一件事')
-    assert '这是用户确认过的回应偏好' in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' in calls[-1][1]
 
 
 def test_forgetting_preference_preserves_newer_explicit_session_mode(harness):
@@ -120,7 +122,7 @@ def test_forgetting_preference_preserves_newer_explicit_session_mode(harness):
     assert client.delete('/api/memory/' + saved['id']).status_code == 200
     say(client, sid, '接着聊')
     assert '用户明确选择先听他说' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
     assert '我希望你先听我说' not in calls[-1][1]
 
 
@@ -132,11 +134,11 @@ def test_delete_confirmed_preference_removes_default_without_overriding_session(
     }).json()
     assert core.get_session(sid)['response_mode'] == 'auto'
     say(client, sid, '接着聊')
-    assert '这是用户确认过的回应偏好' in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' in calls[-1][1]
     assert client.delete('/api/memory/' + saved['id']).status_code == 200
     say(client, sid, '另一件事')
     assert '跟随用户当前表达' in calls[-1][1]
-    assert '这是用户确认过的回应偏好' not in calls[-1][1]
+    assert '这是来自用户明确表达的回应偏好' not in calls[-1][1]
 
 
 @pytest.mark.parametrize('operation', ['delete', 'edit'])

@@ -1,5 +1,6 @@
 """Isolated source/job boundary tests; no account, model, or network credentials."""
 import json
+import sqlite3
 import sys
 import threading
 import time
@@ -476,3 +477,33 @@ def test_space_switch_during_generation_supersedes_even_if_switched_back(environ
     next_job = intro.start(sid, 'local_files', attachment)
     assert next_job['id'] != job['id']
     assert wait(next_job, sid)['status'] == 'completed'
+
+
+def test_legacy_local_conversation_migrates_to_existing_default_persona(tmp_path, monkeypatch):
+    database = str(tmp_path / "legacy-local.db")
+    conn = sqlite3.connect(database)
+    conn.executescript("""
+        CREATE TABLE sessions(id TEXT PRIMARY KEY, created_at TEXT, mode TEXT, source_text TEXT,
+            source_label TEXT, state TEXT);
+        CREATE TABLE messages(id TEXT PRIMARY KEY, session_id TEXT, role TEXT, text TEXT,
+            citations TEXT DEFAULT '[]', suggestions TEXT DEFAULT '[]', created_at TEXT);
+        INSERT INTO sessions VALUES('old', 'now', 'empty', '', '旧对话', 'listening');
+        INSERT INTO messages VALUES('reply', 'old', 'assistant', '旧回复', '[]', '[]', 'now');
+    """)
+    conn.close()
+    monkeypatch.setattr(core, "DB_PATH", database)
+    core.init_db()
+    session = core.get_session('old')
+    message = core.get_messages('old')[0]
+    assert (session['persona_id'], session['interaction_mode']) == ('nianxiang', 'companion')
+    assert (message['persona_id'], message['interaction_mode']) == ('nianxiang', 'companion')
+    assert message['text'] == '旧回复'
+
+
+def test_user_message_records_current_persona_and_mode(environment):
+    _, sid = environment
+    core.set_session_persona(sid, 'whale')
+    core.set_session_mode(sid, 'work')
+    result = core.add_message(sid, 'user', '接着聊')
+    message = next(row for row in core.get_messages(sid) if row['id'] == result['id'])
+    assert (message['persona_id'], message['interaction_mode']) == ('whale', 'work')

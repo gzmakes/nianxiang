@@ -10,10 +10,13 @@ from starlette.responses import JSONResponse
 from . import api_contract, paired_access
 
 MAX_REQUEST_BYTES = 3 * 1024 * 1024
+# A 4 MiB image expands to ~5.34 MiB in base64; preserve the smaller limit for all other routes.
+MAX_CHAT_REQUEST_BYTES = 6 * 1024 * 1024
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 ID = r'[A-Za-z0-9_.:-]{1,128}'
 # Modes: no SID, body SID, query SID, path SID, memory ownership, followup ownership.
 ROUTES = [
+    ('GET',rf'/api/session/({ID})/auto-memory','path'), ('PUT',rf'/api/session/({ID})/auto-memory','path'),
     ('GET',r'/api/conversation','none'), ('GET',r'/api/conversation/changes','none'), ('GET',rf'/api/session/({ID})','path'),
     ('POST',r'/api/chat','body'), ('GET',rf'/api/chat/turn/{ID}','query'),
     ('POST',rf'/api/chat/turn/{ID}/cancel','body'), ('POST',rf'/api/session/({ID})/delivery/stop','path'),
@@ -125,15 +128,16 @@ class PairedApp:
             if method==scope['method'] and match:
                 selected=(mode,match);break
         if selected is None:return await reject(403,'paired_operation_forbidden')
+        request_limit = MAX_CHAT_REQUEST_BYTES if path == '/api/chat' and scope['method'] == 'POST' else MAX_REQUEST_BYTES
         try:
-            if int(headers.get('content-length','0'))>MAX_REQUEST_BYTES:return await reject(413,'paired_request_too_large')
+            if int(headers.get('content-length','0'))>request_limit:return await reject(413,'paired_request_too_large')
         except ValueError:return await reject(400,'paired_invalid_request')
         raw=bytearray()
         while True:
             message=await receive()
             if message['type']=='http.disconnect':return
             raw.extend(message.get('body',b''))
-            if len(raw)>MAX_REQUEST_BYTES:return await reject(413,'paired_request_too_large')
+            if len(raw)>request_limit:return await reject(413,'paired_request_too_large')
             if not message.get('more_body',False):break
         try:body=_json_object(raw) if raw else {}
         except (ValueError,UnicodeError,RecursionError):return await reject(400,'paired_invalid_request')
