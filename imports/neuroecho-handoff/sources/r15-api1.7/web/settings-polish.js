@@ -1,10 +1,11 @@
 /* 设置页补充（2026-10-31，产品要求）：
    1) 「伙伴角色」里直接列出 念响 / 小鲸鱼 两个选项（当前的打勾），点了就切换（走 persona-switch.js 的 switchTo）；
-   2) 「自动记录记忆」的两段说明压成一段短话；勾选框和文字的对齐在 design-system.css。
+   2) 「自动记录记忆」：勾选框挪到最上面，两段说明压成一句短话；样式在 design-system.css。
    这两块都是别的模块渲染的 DOM：挂上后补一次，重新渲染时再补一次；每一步都是幂等的，不会和观察器打转。 */
 (() => {
   const personas = () => window.XinjiSpaces?.PERSONAS || { nianxiang: { name: '念响' }, whale: { name: '小鲸鱼' } };
-  const SHORT = '默认关闭。开启后，本对话中符合规则的原话会自动存为本地记忆，并可能随对话发给当前模型服务；识别可能出错，随时可查看、修改或删除。关闭后不再新增，未确认的自动记录不用于回复；手动记住和已确认的记忆不受影响。';
+  // 勾选在上，说明只留一句（约 20 字）。
+  const SHORT = '开启后自动把原话记到本地，可随时修改或删除。';
 
   function personaOptions() {
     const details = document.querySelector('#app #settings-persona');
@@ -31,10 +32,13 @@
   }
 
   function shortenAutoMemory() {
-    const notes = document.querySelectorAll('#app #auto-memory-settings details > p.note');
-    if (notes.length < 2) return;
-    if (notes[0].textContent !== SHORT) notes[0].textContent = SHORT;
-    notes[1].remove();
+    const details = document.querySelector('#app #auto-memory-settings details');
+    if (!details) return;
+    const notes = details.querySelectorAll(':scope > p.note');
+    if (notes.length > 1) for (const note of [...notes].slice(1)) note.remove();
+    if (notes[0] && notes[0].textContent !== SHORT) notes[0].textContent = SHORT;
+    const summary = details.querySelector(':scope > summary'), label = details.querySelector(':scope > label');
+    if (summary && label && summary.nextElementSibling !== label) summary.insertAdjacentElement('afterend', label);
   }
 
   function run() { personaOptions(); shortenAutoMemory(); }

@@ -889,3 +889,68 @@ html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba
   #app #auto-memory-settings input[type=checkbox]{flex:none;width:16px;height:16px;margin:0;accent-color:var(--ink)}
   #app #auto-memory-settings [data-auto-memory-status]{margin:0;font-size:12px;line-height:1.6;color:var(--ink-mute)}
 }
+/* Web 改版 23 (2026-10-31，产品要求)：
+   设置页：「自动记录记忆」勾选在上、说明一句更浅更小；「声音与音乐」卡改成同款玻璃；「数据与记录」整块不再显示；
+   连接页：来源图标按蓝 / 绿 / 黄 / 粉 轮换着色（和心情平面、记忆分类同一套）；
+   弹窗统一：搜索、标记此刻、我打算这样做、记下一件事 等所有弹窗都用磨砂玻璃卡，标题 17/600、正文 13、说明 12，按钮和右侧面板同款胶囊，
+   打开时淡入 + 轻微放大。 */
+@media(min-width:900px){
+  #app #auto-memory-settings label{margin:6px 0 8px}
+  #app #auto-memory-settings p.note{margin:0 0 4px;font-size:11px;line-height:1.6;color:rgba(86,98,122,.72)}
+  #app #auto-memory-settings [data-auto-memory-status]{font-size:11px;color:rgba(86,98,122,.72)}
+  #app .context .soundscape-settings{margin:12px 0;padding:18px;border:1px solid rgba(255,255,255,.75);border-radius:24px;background:rgba(255,255,255,.34);color:var(--ink);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)}
+  #app .context .soundscape-heading h3{font-size:15px;line-height:1.4;font-weight:600}
+  #app .context .soundscape-heading>span{font-size:18px;color:var(--ink-mute)}
+  #app .context .soundscape-heading p,#app .context .soundscape-note,#app .context .soundscape-status,#app .context .soundscape-toggle small,#app .context .soundscape-breath small,#app .context .soundscape-breath p{color:var(--ink-mute);font-size:12px;line-height:1.6}
+  #app .context .soundscape-toggle b,#app .context .soundscape-select span,#app .context .soundscape-volume span,#app .context .soundscape-breath b{font-size:13px;color:var(--ink)}
+  #app .context .soundscape-toggle,#app .context .soundscape-breath{border-color:rgba(27,36,51,.08)}
+  #app .context .soundscape-settings input[type=checkbox],#app .context .soundscape-volume input{accent-color:var(--ink)}
+  #app .context .soundscape-select select{padding:8px 12px;border:1px solid rgba(27,36,51,.10);border-radius:14px;background:rgba(255,255,255,.85);color:var(--ink);font-size:13px}
+  #app .context .soundscape-settings :focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+  #app #tab-design div.settings-section:has(> .panel-title-row){display:none}
+  #app #tab-apps .app-card:nth-child(4n+1) .ico{color:#4A5FA8;background:#E3EBFA}
+  #app #tab-apps .app-card:nth-child(4n+2) .ico{color:#4E8A5F;background:#DDEDE0}
+  #app #tab-apps .app-card:nth-child(4n+3) .ico{color:#8A7430;background:#F7EDC4}
+  #app #tab-apps .app-card:nth-child(4n+4) .ico{color:#B35A67;background:#F8DEE1}
+}
+@keyframes dialog-pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes dialog-fade{from{opacity:0}to{opacity:1}}
+body:has(#app) .modal:not(.is-hidden),body:has(#app) .design-search:not(.is-hidden){animation:dialog-fade .18s ease-out}
+body:has(#app) .modal:not(.is-hidden) .modal-card,body:has(#app) .design-search:not(.is-hidden) .design-search-card,body:has(#app) .echo-user-dialog[open],body:has(#app) #onboarding:not(.is-hidden) .onboarding-card{animation:dialog-pop .24s cubic-bezier(.2,.8,.2,1)}
+body:has(#app) .echo-user-dialog[open]::backdrop{animation:dialog-fade .18s ease-out}
+body:has(#app) .modal{background:rgba(27,36,51,.26);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body:has(#app) .echo-user-dialog::backdrop{background:rgba(27,36,51,.26);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body:has(#app) .modal-card,body:has(#app) .echo-user-dialog,body:has(#app) .design-search-card{
+  background:rgba(255,255,255,.62)!important;border:1px solid rgba(255,255,255,.85)!important;border-radius:26px!important;color:var(--ink);font-family:var(--sans);
+  -webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 20px 60px rgba(27,36,51,.18)!important}
+body:has(#app) .modal-card{padding:22px 22px 20px}
+body:has(#app) .echo-user-dialog{padding:22px}
+body:has(#app) .modal-card .eyebrow{font-family:var(--sans);font-size:12px;line-height:1.5;letter-spacing:0;text-transform:none;color:var(--ink-mute)}
+body:has(#app) .modal-card h3,body:has(#app) .modal-card h2,body:has(#app) .echo-user-dialog h2{font-size:17px;line-height:1.35;font-weight:600;letter-spacing:0;margin:4px 0 10px;color:var(--ink)}
+body:has(#app) .modal-card p,body:has(#app) .modal-card .note,body:has(#app) .modal-card li,body:has(#app) .echo-user-dialog p{font-size:13px;line-height:1.6;color:var(--ink-mute);margin:0 0 10px}
+body:has(#app) .modal-card .plan-steps{margin:0 0 10px;padding-left:18px}
+body:has(#app) .modal-card .plan-steps li{margin:0 0 4px}
+body:has(#app) .modal-card label,body:has(#app) .modal-card .field>span,body:has(#app) .modal-card .check-row>span,body:has(#app) .echo-dialog-field>span{font-size:13px;line-height:1.5;font-weight:500;color:var(--ink)}
+body:has(#app) .modal-card label.check-row:has(input[type=checkbox]){display:flex;align-items:center;gap:8px}
+body:has(#app) .modal-card input:not([type=checkbox]):not([type=radio]),body:has(#app) .modal-card textarea,body:has(#app) .modal-card select,body:has(#app) .echo-user-dialog textarea{
+  width:100%;box-sizing:border-box;margin:6px 0 10px;padding:10px 14px;border:1px solid rgba(27,36,51,.10)!important;border-radius:16px!important;background:rgba(255,255,255,.85)!important;color:var(--ink);font-size:14px;line-height:1.5;outline:none!important;box-shadow:none!important}
+body:has(#app) .modal-card input:focus,body:has(#app) .modal-card textarea:focus,body:has(#app) .modal-card select:focus,body:has(#app) .echo-user-dialog textarea:focus{border-color:rgba(27,36,51,.24)!important;background:#fff!important;box-shadow:0 0 0 3px rgba(27,36,51,.06)!important}
+body:has(#app) .modal-card input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--ink)}
+body:has(#app) .modal-card button,body:has(#app) .echo-dialog-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;min-width:0;padding:6px 14px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:13px;line-height:20px;font-weight:500;letter-spacing:0;box-shadow:none;transform:none;cursor:pointer}
+body:has(#app) .modal-card button:hover,body:has(#app) .echo-dialog-actions button:hover{background:#fff;border-color:rgba(27,36,51,.18);color:var(--ink)}
+body:has(#app) .modal-card .btn.primary,body:has(#app) .modal-card button.primary,body:has(#app) .echo-dialog-actions [data-confirm]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+body:has(#app) .modal-card .btn.primary:hover,body:has(#app) .echo-dialog-actions [data-confirm]:hover{background:#2E3849;border-color:#2E3849;color:#fff}
+body:has(#app) .echo-dialog-actions [data-confirm].danger,body:has(#app) .modal-card .btn.danger,body:has(#app) .modal-card button.danger{background:var(--danger,#B3261E);border-color:var(--danger,#B3261E);color:#fff}
+body:has(#app) .modal-actions,body:has(#app) .echo-dialog-actions{gap:8px;margin-top:16px}
+body:has(#app) .modal-card :focus-visible,body:has(#app) .echo-user-dialog :focus-visible{outline:none!important;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+body:has(#app) .design-search-card{padding:14px}
+body:has(#app) .design-search-head input{height:44px;min-height:44px;font-size:14px;border-radius:22px;background:rgba(255,255,255,.85)!important;border:1px solid rgba(27,36,51,.10)!important}
+body:has(#app) .design-search-head .icon-btn{width:36px;height:36px;min-height:36px;border-radius:18px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink-mute);font-size:18px}
+body:has(#app) .design-search-card>.note{margin:10px 8px 2px;font-size:12px;line-height:1.6;color:var(--ink-mute)}
+body:has(#app) .design-search-results button{margin:8px 0 0;padding:10px 14px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:13px;line-height:1.5;text-align:left}
+body:has(#app) .design-search-results button span{font-size:12px;color:var(--ink-mute)}
+body:has(#app) .design-search-results p{font-size:13px;line-height:1.6;color:var(--ink-mute);margin:8px 8px 2px}
+html[data-reduce-transparency=true] body:has(#app) .modal-card,html[data-reduce-transparency=true] body:has(#app) .echo-user-dialog,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-reduce-motion=true] body:has(#app) .modal,html[data-reduce-motion=true] body:has(#app) .modal-card,html[data-reduce-motion=true] body:has(#app) .design-search,html[data-reduce-motion=true] body:has(#app) .design-search-card,html[data-reduce-motion=true] body:has(#app) .echo-user-dialog,html[data-reduce-motion=true] body:has(#app) .onboarding-card{animation:none}
+@media(prefers-reduced-motion:reduce){body:has(#app) .modal,body:has(#app) .modal-card,body:has(#app) .design-search,body:has(#app) .design-search-card,body:has(#app) .echo-user-dialog,body:has(#app) .onboarding-card{animation:none}}
