@@ -8,12 +8,15 @@
   const reducedMotion = () => root.dataset.reduceMotion === 'true' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const panelOpen = () => root.dataset.panelCollapsed !== 'true';
   const panelButton = host.querySelector('[data-tool=panel]');
+  // 胶囊只显示图标：悬停提示沿用各按钮的 aria-label。
+  for (const button of host.querySelectorAll('[data-tool]')) if (!button.title) button.title = button.getAttribute('aria-label') || '';
 
   function syncPanel() {
     const open = panelOpen();
     panelButton.setAttribute('aria-expanded', String(open));
     const label = panelButton.querySelector('[data-tool-panel-label]');
     if (label) label.textContent = open ? '收起面板' : '展开面板';
+    panelButton.title = open ? '收起面板' : '展开面板';
   }
   new MutationObserver(syncPanel).observe(root, { attributes: true, attributeFilter: ['data-panel-collapsed'] });
   syncPanel();
@@ -38,6 +41,7 @@
     musicButton.setAttribute('aria-pressed', String(playing));
     const label = musicButton.querySelector('[data-tool-music-label]');
     if (label) label.textContent = playing ? '暂停音乐' : '播放音乐';
+    musicButton.title = playing ? '暂停音乐' : '播放音乐';
   }
   if (musicButton) {
     musicButton.onclick = async () => { await window.XinjiAmbientMusic?.toggle?.(); syncMusic(); };
