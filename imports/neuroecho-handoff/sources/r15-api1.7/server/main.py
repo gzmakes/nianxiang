@@ -26,10 +26,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources
+from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources, system_source
 from .core import BudgetExceeded
 from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents
-from . import notion_cli_source, git_source, prompts
+from . import notion_cli_source, git_source, gmail_cli_source, connector_auth, prompts
 from .runtime_lock import DatabaseLease
 from . import visitors
 from . import api_contract as contract
@@ -500,8 +500,9 @@ class SourceIn(BaseModel):
 
 
 class GmailIn(BaseModel):
-    address: str
-    password: str
+    address: str = ""
+    password: str = ""
+    method: str = Field(default="imap", pattern="^(imap|cli)$")
 
 
 class NotionIn(BaseModel):
@@ -821,7 +822,7 @@ def onboarding_real_start(body: SourceIn):
 
 @app.post("/api/gmail/preview", response_model=contract.SourceReadResponse, response_model_exclude_unset=True)
 def gmail_preview(body: GmailIn):
-    out = gmail_source.read(body.address, body.password)
+    out = gmail_cli_source.read() if body.method == "cli" else gmail_source.read(body.address, body.password)
     return {**out, "preview_id": _save_preview("gmail", out)} if out.get("ok") else {**out, "error_code": out.get("error_code", "source_unavailable")}
 
 
@@ -938,6 +939,8 @@ def onboarding_recommend(body: ScenarioIn):
 def _read_connector(connector_id: str) -> dict:
     if connector_id in ("apple_reminders", "apple_calendar"):
         return apple_source.read_reminders() if connector_id == "apple_reminders" else apple_source.read_calendar()
+    if connector_id in ("windows_reminders", "windows_calendar"):
+        return system_source.read_reminders() if connector_id == "windows_reminders" else system_source.read_calendar()
     if connector_id == "local_files":
         return local_source.read()
     return connectors.read(connector_id)
@@ -1788,3 +1791,14 @@ if __name__ == "__main__":
 
     core.init_db()
     uvicorn.run("server.main:app", host="127.0.0.1", port=int(os.getenv("PORT", "18787")), reload=False)
+
+
+# Local-only adapters; not registered on the paired remote application.
+@app.post("/api/connector-auth/{provider}/start", response_model=connector_auth.LoginStatus)
+def connector_login_start(provider: str):
+    return connector_auth.login_start(provider)
+
+
+@app.get("/api/connector-auth/{provider}/status", response_model=connector_auth.LoginStatus)
+def connector_login_status(provider: str):
+    return connector_auth.login_status(provider)

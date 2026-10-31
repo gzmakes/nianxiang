@@ -71,7 +71,7 @@
   }
 
   function start() {
-    const messages = document.querySelector('#app #messages');
+    const messages = document.querySelector('#app #messages, #m-app #m-messages');
     if (!messages) return;
     scan(messages);
     new MutationObserver(() => scan(messages)).observe(messages, { childList: true });

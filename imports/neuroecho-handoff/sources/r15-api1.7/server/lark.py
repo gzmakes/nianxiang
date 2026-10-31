@@ -15,9 +15,28 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import faults
+from . import faults, cli_runtime
 
-LARK_BIN = os.getenv("XINJI_LARK_BIN") or shutil.which("lark-cli") or "/Users/yuntun/.npm-global/bin/lark-cli"
+def resolve_cli() -> str:
+    """Prefer a native executable on Windows so no command shell is needed."""
+    override = os.getenv("XINJI_LARK_BIN", "").strip()
+    if override:
+        return override
+    found = cli_runtime.resolve("lark-cli", "XINJI_LARK_BIN")
+    if os.name == "nt":
+        candidates = [Path(Path(__file__).resolve().anchor) / "codex" / "tools" / "lark-cli"]
+        if found:
+            if Path(found).suffix.lower() == ".exe":
+                return found
+            candidates.insert(0, Path(found).parent)
+        for root in candidates:
+            native = root / "node_modules" / "@larksuite" / "cli" / "bin" / "lark-cli.exe"
+            if native.is_file():
+                return str(native)
+    return found or "lark-cli"
+
+
+LARK_BIN = resolve_cli()
 LARK_HOME = Path(__file__).resolve().parent.parent / ".lark-home"
 LARK_REAL_CONFIG = Path.home() / ".lark-cli"
 TIMEOUT = 25
@@ -26,10 +45,12 @@ MAX_CHARS = 12000
 
 def cli_env() -> dict:
     """默认用真实 HOME（钥匙串可用）；可用 XINJI_LARK_HOME 显式覆盖。"""
-    env = os.environ.copy()
+    env = cli_runtime.environment()
     override = os.getenv("XINJI_LARK_HOME", "").strip()
     if override:
         env["HOME"] = override
+        if os.name == "nt":
+            env["USERPROFILE"] = override
     return env
 
 

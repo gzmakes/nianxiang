@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from server import apple_source, connectors, core, device_bridge, faults, gmail_source, lark, lark_auth, local_source, model, model_settings, notion_source, plugin_bridge, real_sources, prompts  # noqa: E402
+from server import apple_source, connectors, core, device_bridge, faults, gmail_source, lark, lark_auth, local_source, model, model_settings, notion_source, plugin_bridge, real_sources, prompts, system_source  # noqa: E402
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 
@@ -23,9 +23,13 @@ def _read_connector(connector_id: str) -> dict:
         out = apple_source.read_reminders() if connector_id == "apple_reminders" else apple_source.read_calendar()
         if out.get("ok"):
             return out
-        demo = connectors.read(connector_id)
-        demo["fallback_reason"] = out.get("error")
-        return demo
+        return out
+    if connector_id in ("windows_reminders", "windows_calendar"):
+        out = (system_source.read_reminders() if connector_id == "windows_reminders"
+               else system_source.read_calendar())
+        if out.get("ok"):
+            return out
+        return out
     if connector_id == "local_files":
         out = local_source.read()
         if out.get("ok"):

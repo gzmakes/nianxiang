@@ -46,6 +46,8 @@ def _cli_error(p: subprocess.CompletedProcess, action: str) -> str:
     raw = ((p.stderr or "") + " " + (p.stdout or "")).lower()
     if any(k in raw for k in ("keychain", "operation not permitted", "sandbox")):
         return _friendly("keychain")
+    if "not_configured" in raw or "not configured" in raw:
+        return "飞书连接尚未准备完成，请重新点击连接飞书。"
     if "scope" in raw or "permission" in raw:
         return f"{action}失败：飞书权限或应用配置不足，请检查所需授权范围。"
     return f"{action}失败：飞书 CLI 返回错误（退出码 {p.returncode}）。"
@@ -63,7 +65,7 @@ def setup_keychain() -> dict:
 
 
 def _public() -> dict:
-    return {k: STATE.get(k) for k in ("status", "url", "qr", "error", "started_at")}
+    return {k: STATE.get(k) for k in ("status", "url", "qr", "error", "started_at", "phase")}
 
 
 def _update(attempt: int, **values) -> None:
@@ -89,6 +91,40 @@ def _complete(device_code: str, attempt: int, reservation: object) -> None:
         coordinator.finish("document", reservation)
 
 
+def _initialize(attempt, reservation):
+    from . import lark_setup
+    handed_off = False
+    try:
+        def show(url):
+            try:
+                qr = _qr_data_url(url)
+            except Exception:
+                qr = ""
+            _update(attempt, status="pending", phase="setup", url=url, qr=qr, error="")
+        if not lark_setup.initialize(show):
+            raise RuntimeError("setup failed")
+        _update(attempt, status="starting", phase="authorize", url="", qr="")
+        p = _run(["auth", "login", "--no-wait", "--json", "--scope", SCOPE], timeout=20)
+        if p.returncode != 0:
+            raise RuntimeError("login failed")
+        data = json.loads(p.stdout or "{}")
+        url, code = data.get("verification_url"), data.get("device_code")
+        if not url or not code or data.get("ok") is False:
+            raise RuntimeError("missing grant")
+        try:
+            qr = _qr_data_url(url)
+        except Exception:
+            qr = ""
+        _update(attempt, status="pending", phase="authorize", url=url, qr=qr, error="")
+        handed_off = True
+        _complete(code, attempt, reservation)
+    except Exception:
+        _update(attempt, status="error", url="", qr="",
+                error="飞书连接未完成或已超时，请重新点击连接；若持续失败，请联系管理员检查服务网络和飞书应用权限。")
+    finally:
+        if not handed_off:
+            coordinator.finish("document", reservation)
+
 def start() -> dict:
     disposition, reservation = coordinator.begin("document")
     if disposition == "conflict":
@@ -99,7 +135,7 @@ def start() -> dict:
         return current if current["status"] in ("starting", "pending") else {"status": "starting"}
     with _LOCK:
         attempt = STATE.get("attempt", 0) + 1
-        STATE.update(status="starting", url="", qr="", error="", started_at=time.time(), attempt=attempt)
+        STATE.update(status="starting", url="", qr="", error="", started_at=time.time(), attempt=attempt, phase="authorize")
     try:
         st = lark.auth_status()
         if lark.user_ready(st):
@@ -108,6 +144,12 @@ def start() -> dict:
             with _LOCK:
                 return _public()
         p = _run(["auth", "login", "--no-wait", "--json", "--scope", SCOPE], timeout=20)
+        if p.returncode != 0 and any(word in ((p.stdout or "") + (p.stderr or "")).lower()
+                                     for word in ("not_configured", "not configured")):
+            _update(attempt, phase="setup")
+            threading.Thread(target=_initialize, args=(attempt, reservation), daemon=True).start()
+            with _LOCK:
+                return _public()
         if p.returncode != 0:
             _update(attempt, status="error", error=_cli_error(p, "启动授权"))
             coordinator.finish("document", reservation)

@@ -14,7 +14,7 @@ def allowed(path):
     if path.suffix.lower() in {'.pyc','.db','.sqlite','.sqlite3','.server.lock','.key','.pem','.p12','.pfx','.crt','.cer','.der'}:return False
     return True
 
-release=json.loads((ROOT/'shared/release.json').read_text())
+release=json.loads((ROOT/'shared/release.json').read_text(encoding='utf-8'))
 source=[path for path in ROOT.rglob('*') if allowed(path)]
 for path in source:
     if path.suffix in {'.md','.py','.js','.json','.txt','.html','.swift','.kt','.kts','.sh','.mjs','.css'}:

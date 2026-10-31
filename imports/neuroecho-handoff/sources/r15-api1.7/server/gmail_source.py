@@ -98,6 +98,10 @@ def read(address: str, password: str, limit: int = 5) -> dict:
     if not items:
         return {"ok": False, "error": "收件箱没有未读邮件", "hint": "先留一封未读再试"}
 
+    return package(items)
+
+
+def package(items):
     titles = [i["title"] for i in items]
     facts = [f"{i['title']}：{i['meta']}" for i in items[:3]]
     inferences = [f"你有 {len(items)} 封未读，最近的是「{titles[0]}」。",

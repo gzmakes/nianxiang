@@ -86,19 +86,19 @@
     return label(spaceOf(id)) === filter;
   }
 
-  function workspace() { return window.XinjiWorkspace; }
+  function workspace() { return window.XinjiWorkspace || window.XinjiMobileWorkspace; }
   function applyFilter() { workspace()?.setTopic(label(current)); }
 
   // 顶部：人格名胶囊可点，弹出两个人格；话题行换成 陪伴 / 工作。
   let menu = null;
   function renderHeading() {
-    const heading = document.querySelector('#app .conversation-persona h2');
+    const heading = document.querySelector('.conversation-persona h2');
     if (!heading) return;
     heading.textContent = PERSONAS[persona()].name;
     heading.classList.add('persona-name');
     if (!heading.hasAttribute('tabindex')) { heading.setAttribute('tabindex', '0'); heading.setAttribute('role', 'button'); heading.setAttribute('aria-haspopup', 'menu'); heading.setAttribute('title', '切换人格'); }
     heading.setAttribute('aria-expanded', String(!!menu && !menu.hidden));
-    const hello = document.querySelector('#app .chat-hello');
+    const hello = document.querySelector('.chat-hello');
     if (hello) hello.textContent = PERSONAS[persona()].hello;
     for (const button of document.querySelectorAll('.space-modes [data-space-mode]')) {
       const active = button.dataset.spaceMode === mode();
@@ -114,12 +114,13 @@
     closeMenu();
     renderHeading();
     applyFilter();
+    // 手机上不自动聚焦，免得每次切换都弹键盘。
     document.querySelector('#app #composer textarea')?.focus();
   }
   function closeMenu() { if (menu) menu.hidden = true; renderHeading(); }
   function openMenu() { if (!menu) return; menu.hidden = false; renderHeading(); menu.querySelector('[aria-checked="true"]')?.focus(); }
   function mountMenu() {
-    const persona_ = document.querySelector('#app .conversation-persona');
+    const persona_ = document.querySelector('.conversation-persona');
     const heading = persona_?.querySelector('h2');
     if (!persona_ || !heading || menu) return;
     menu = document.createElement('div');
@@ -134,7 +135,7 @@
     document.addEventListener('pointerdown', event => { if (menu && !menu.hidden && !menu.contains(event.target) && event.target !== heading) closeMenu(); });
   }
   function mountModes() {
-    const topics = document.querySelector('#app #design-topics');
+    const topics = document.querySelector('#app #design-topics, #m-app #m-design-topics');
     if (!topics || document.querySelector('.space-modes')) return;
     const modes = document.createElement('div');
     modes.className = 'topic-tabs space-modes'; modes.setAttribute('aria-label', '对话模式');
@@ -155,7 +156,7 @@
   }
 
   async function start() {
-    const messages = document.querySelector('#app #messages');
+    const messages = document.querySelector('#app #messages, #m-app #m-messages');
     const ws = workspace();
     if (!messages || !ws?.topics) { delete root.dataset.spaceArming; return; }
     await hydrateFromServer();
@@ -175,7 +176,7 @@
     });
     const started = Date.now();
     const poll = setInterval(() => {
-      const app = document.querySelector('#app'), empty = document.querySelector('#chat-empty');
+      const app = document.querySelector('#app, #m-app'), empty = document.querySelector('#chat-empty, #m-chat-empty');
       if (armed || (app && !app.classList.contains('is-hidden') && ((empty && !empty.classList.contains('is-hidden')) || messages.querySelector(':scope > .msg[data-message-id]'))) || Date.now() - started > 8000) { clearInterval(poll); arm(); }
     }, 250);
     observer.observe(messages, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });

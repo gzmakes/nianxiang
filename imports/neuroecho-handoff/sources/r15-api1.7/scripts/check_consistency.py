@@ -15,10 +15,10 @@ def check(value,message):
     if not value:raise SystemExit('FAIL: '+message)
     checks+=1
 
-schema=json.loads((ROOT/'shared/api/openapi.json').read_text())
+schema=json.loads((ROOT/'shared/api/openapi.json').read_text(encoding='utf-8'))
 methods={'get','post','patch','put','delete','head','options'}
 declared=set()
-for node in ast.walk(ast.parse((ROOT/'server/main.py').read_text())):
+for node in ast.walk(ast.parse((ROOT/'server/main.py').read_text(encoding='utf-8'))):
     if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
         for dec in node.decorator_list:
             if isinstance(dec,ast.Call) and isinstance(dec.func,ast.Attribute) and isinstance(dec.func.value,ast.Name) and dec.func.value.id=='app' and dec.func.attr in methods and dec.args and isinstance(dec.args[0],ast.Constant):
@@ -28,7 +28,7 @@ check(declared==exported,'declared routes differ from the exported contract; reg
 critical=[('get','/api/conversation/changes'),('get','/api/conversation'),('post','/api/chat'),('get','/api/chat/turn/{request_id}'),('post','/api/local-files/confirm'),('post','/api/lark/preview'),('post','/api/lark/attach'),('patch','/api/memory/{mid}'),('post','/api/source/revoke'),('post','/api/action/{aid}/commit')]
 critical += [('get','/api/companion-boundary'),('put','/api/companion-boundary'),('post','/api/followups/{followup_id}/contact/claim'),('post','/api/followup-contacts/{claim_id}/recheck'),('post','/api/followup-contacts/{claim_id}/finish')]
 check(set(critical)<=exported,'critical endpoints are missing')
-behavior=json.loads((ROOT/'shared/product/behavior.json').read_text())
+behavior=json.loads((ROOT/'shared/product/behavior.json').read_text(encoding='utf-8'))
 models=schema['components']['schemas']
 check(models['ChatIn']['properties']['text']['maxLength']==4000,'chat limit changed')
 check(models['FollowupCreateIn']['properties']['allow_contact'].get('default') is False,'proactive contact must default to no consent')
@@ -37,9 +37,9 @@ check(models['LocalFileIn']['properties']['text']['maxLength']==behavior['files'
 check(models['LocalFilesConfirmIn']['properties']['files']['maxItems']==behavior['files']['max_batch'],'file batch contract changed')
 check(behavior['conversation']['display_session_id'] is False and behavior['conversation']['cloud_sync_implemented'] is False,'do not confuse canonical local conversation with cloud sync')
 check(behavior['actions']['native_real'] is False and behavior['actions']['success_state']=='committed','native action safety contract changed')
-design=json.loads((ROOT/'shared/design/tokens.json').read_text());spec=(ROOT/'design.md').read_text().upper()
+design=json.loads((ROOT/'shared/design/tokens.json').read_text(encoding='utf-8'));spec=(ROOT/'design.md').read_text(encoding='utf-8').upper()
 check(all(value.upper() in spec for value in design['colors'].values() if value.startswith('#')),'design colors differ from design.md')
-for name,content in outputs().items():check((ROOT/'shared/generated'/name).read_text()==content,'generated reference drift: '+name)
+for name,content in outputs().items():check((ROOT/'shared/generated'/name).read_text(encoding='utf-8')==content,'generated reference drift: '+name)
 missing=[]
 for method,path in critical:
     success=[response for code,response in schema['paths'][path][method].get('responses',{}).items() if str(code).startswith('2')]

@@ -71,7 +71,7 @@ def runtime_adoption_issues(root=ROOT):
         if not condition: issues.append(message)
     def read(path):
         target=root/path
-        return code_without_comments(target.read_text()) if target.is_file() else ''
+        return code_without_comments(target.read_text(encoding='utf-8')) if target.is_file() else ''
     present=surfaces(root)
     require(bool(present), 'No runtime client is present; runtime adoption cannot be validated.')
     if 'web' in present:
@@ -79,7 +79,7 @@ def runtime_adoption_issues(root=ROOT):
             path=root/'web'/name
             require(path.is_file(), f'web/{name} is missing')
             if not path.is_file(): continue
-            imports=Imports(); imports.feed(path.read_text())
+            imports=Imports(); imports.feed(path.read_text(encoding='utf-8'))
             scripts=[Path(path).name for path,_ in imports.scripts]
             styles=[Path(path).name for path in imports.styles]
             require('generated-design.css' in styles, f'web/{name} must import generated-design.css as a real stylesheet')
@@ -128,7 +128,7 @@ def runtime_adoption_issues(root=ROOT):
         for name in ('index.html', 'm.html'):
             path=root/'web'/name
             if path.is_file():
-                imports=Imports(); imports.feed(path.read_text())
+                imports=Imports(); imports.feed(path.read_text(encoding='utf-8'))
                 consumers.update(Path(src).name for src,_ in imports.scripts)
         code='\n'.join(read('web/'+name) for name in consumers if name not in ('generated-shared.js',))
         for key in keys:
