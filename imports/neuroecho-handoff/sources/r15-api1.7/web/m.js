@@ -3,6 +3,11 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  document.addEventListener("xinji-space-sync-error", (event) => {
+    const text = event.detail?.error?.message || "当前人格和陪伴方式未能同步，请检查服务连接后重试。";
+    const toast = $("#m-toast");
+    if (toast) { toast.textContent = text; toast.classList.remove("is-hidden"); setTimeout(() => toast.classList.add("is-hidden"), 2600); }
+  });
   const feishuDisclosure = "读取时请求整篇文档，提取正文后保留最多 12000 字；下方可以滚动查看全部保留的正文。确认后保存在本机；生成理解时可能向当前模型服务发送摘要和提取内容。之后每次聊天，可能根据你的问题从已保存正文中检索每份来源最多 3 段；当前对话的所有来源合计最多 8 段、3200 字（含来源标注），连同问题及必要上下文发送给当前模型服务；无匹配时不发送检索片段，但摘要等其他上下文仍可能发送。可移除当前对话来源以停止使用。";
 
   function feishuPreviewMarkup(data) {

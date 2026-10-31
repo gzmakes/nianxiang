@@ -26,6 +26,8 @@ class SessionResponse(OpenResponse):
     state: str | None = None
     source_label: str | None = None
     conversation_style: str | None = None
+    persona_id: str | None = None
+    interaction_mode: Literal['companion', 'work'] | None = None
 
 
 class MessageResponse(OpenResponse):
@@ -35,6 +37,8 @@ class MessageResponse(OpenResponse):
     citations: list[dict[str, Any]] | None = None
     suggestions: list[str] | None = None
     created_at: str | None = None
+    persona_id: str | None = None
+    interaction_mode: Literal['companion', 'work'] | None = None
     bubbles: list[str] | None = Field(default=None, description="Currently delivered parts of this reply, in order.")
     delivery_pending: bool | None = Field(default=None, description="Additional reply parts are still scheduled.")
     delivery_next_ms: int | None = Field(default=None, description="Suggested delay before refreshing pending parts.")
@@ -150,6 +154,18 @@ class ConversationResponse(OpenResponse):
     memories: list[MemoryResponse]
     bookmark: BookmarkResponse | None = None
     context: ContextResponse | None = None
+
+
+class PersonaResponse(OpenResponse):
+    id: Literal['nianxiang', 'whale']
+    name: str
+    description: str
+    tags: list[str]
+
+
+class PersonaListResponse(OpenResponse):
+    default_persona: Literal['nianxiang', 'whale']
+    personas: list[PersonaResponse]
 
 
 class ConnectorResponse(OpenResponse):

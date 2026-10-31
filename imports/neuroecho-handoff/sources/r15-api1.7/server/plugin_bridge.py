@@ -1,6 +1,7 @@
-"""本机 DSH 插件桥（BYO）：读取用户已安装的 dsh-meme / dsh-pet。
+"""表情桥：服务端素材包 + 本机 DSH 插件（BYO）。
 
-- 不分发插件素材，只读本机已安装目录；
+- 服务端包：随服务发布的素材，所有人共用（server/stickers/<pack>/memes/<tag>/<file>）；
+- 本机插件：只读用户已安装的 dsh-meme，不分发插件素材；
 - dsh-meme 图库的 manifest 可能标 personal，仅本机使用；
 - dsh-pet 只做状态识别与启动说明，不复制动画。
 """
@@ -12,6 +13,7 @@ from urllib.parse import quote
 from pathlib import Path
 
 PROFILES = Path.home() / ".dsh" / "profiles"
+SERVER_STICKERS = Path(__file__).resolve().parent / "stickers"
 EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 BUILTIN = {"happy": "开心", "comfort": "安慰", "curious": "疑惑", "cheer": "鼓励"}
 _MARKER = re.compile(r"\[表情[:：]\s*([^\]\r\n]{1,240}?)\s*\]")
@@ -23,6 +25,56 @@ def _builtin_items():
              "url": f"/static/stickers/{key}.svg"}
             for key, label in BUILTIN.items() if (root / f"{key}.svg").is_file()]
 
+
+def _pack_items(root: Path, *, subdir: str = "", label_by_pack: bool = False):
+    """Items + pack descriptors for `root/<subdir>/<pack>/memes/<tag>/<file>` trees."""
+    items, packs = [], []
+    if not root.is_dir():
+        return items, packs
+    pattern = f"{subdir}/*/manifest.json" if subdir else "*/manifest.json"
+    for manifest in sorted(root.glob(pattern)):
+        pack = manifest.parent.name
+        try:
+            meta = json.loads(manifest.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+        packs.append({"id": pack, "name": meta.get("name") or pack,
+                      "license": meta.get("license") or "unknown"})
+        for f in sorted(manifest.parent.glob("memes/*/*")):
+            if not f.is_file() or f.suffix.lower() not in EXTS:
+                continue
+            tag = f.parent.name
+            if any(c in f"{pack}{tag}{f.name}" for c in "[]\\\r\n"):
+                continue
+            items.append({
+                "id": f"{pack}/{tag}/{f.name}",
+                "label": meta.get("name") if label_by_pack else f.stem,
+                "tags": [tag, pack],
+                "pack": pack,
+                "url": "/plugin-memes/" + "/".join(quote(x, safe="") for x in (pack, tag, f.name)),
+            })
+    return items, packs
+
+
+def _server_items():
+    return _pack_items(SERVER_STICKERS, label_by_pack=True)
+
+
+def _local_items():
+    root = _find("dsh-meme")
+    return _pack_items(root, subdir="memes") if root else ([], [])
+
+
+def _all_items():
+    """Builtin first, then server packs, then this machine's plugin packs."""
+    builtin, (server, _), (local, _) = _builtin_items(), _server_items(), _local_items()
+    seen, out = set(), []
+    for item in [*builtin, *server, *local]:
+        if item["id"] in seen:
+            continue
+        seen.add(item["id"])
+        out.append(item)
+    return out
 
 
 def _find(pkg: str) -> Path | None:
@@ -43,33 +95,17 @@ def _version(root: Path | None) -> str:
 
 def memes() -> dict:
     root = _find("dsh-meme")
-    items = _builtin_items()
-    packs = [{"id": "builtin", "name": "回响原创表情", "license": "project"}] if items else []
+    builtin = _builtin_items()
+    server_items, server_packs = _server_items()
+    items = [*builtin, *server_items]
+    packs = ([{"id": "builtin", "name": "回响原创表情", "license": "project"}] if builtin else []) + server_packs
     if not root:
-        return {"installed": bool(items), "version": "", "items": items, "packs": packs, "local_plugin": False}
-    for manifest in sorted(root.glob("memes/*/manifest.json")):
-        try:
-            meta = json.loads(manifest.read_text())
-        except Exception:
-            meta = {}
-        pack = manifest.parent.name
-        packs.append({"id": pack, "name": meta.get("name") or pack,
-                      "license": meta.get("license") or "unknown"})
-        for f in sorted(manifest.parent.glob("memes/*/*")):
-            if not f.is_file() or f.suffix.lower() not in EXTS:
-                continue
-            tag = f.parent.name
-            if any(c in f"{pack}{tag}{f.name}" for c in "[]\\\r\n") or meme_file(pack, tag, f.name) is None:
-                continue
-            items.append({
-                "id": f"{pack}/{tag}/{f.name}",
-                "label": f.stem,
-                "tags": [tag, pack],
-                "pack": pack,
-                "url": "/plugin-memes/" + "/".join(quote(x, safe="") for x in (pack, tag, f.name)),
-            })
+        return {"installed": bool(items), "version": "", "items": _all_items()[:120],
+                "packs": packs, "local_plugin": False}
+    local_items, local_packs = _local_items()
+    packs += local_packs
     return {"installed": True, "version": _version(root), "root": str(root),
-            "items": items[:120], "packs": packs}
+            "items": _all_items()[:120], "packs": packs}
 
 
 def pet() -> dict:
@@ -85,8 +121,19 @@ def pet() -> dict:
 
 
 def meme_file(pack: str, tag: str, name: str) -> Path | None:
+    """Resolve a sticker file: shipped packs first, then this machine's plugin."""
+    if any(x in (pack, tag, name) for x in ("..", "/", "\\")):
+        return None
+    try:
+        root = SERVER_STICKERS.resolve()
+        target = (root / pack / "memes" / tag / name).resolve()
+        target.relative_to(root)
+        if target.is_file() and target.suffix.lower() in EXTS:
+            return target
+    except (ValueError, OSError):
+        pass
     root = _find("dsh-meme")
-    if not root or any(x in (pack, tag, name) for x in ("..", "/", "\\")):
+    if not root:
         return None
     base = (root / "memes").resolve()
     target = (base / pack / "memes" / tag / name).resolve()
@@ -98,13 +145,24 @@ def meme_file(pack: str, tag: str, name: str) -> Path | None:
 
 
 def meme_prompt_catalog() -> list[dict[str, str]]:
-    available = {item["tags"][0] for item in _builtin_items()}
-    return [{"id": key, "meaning": label} for key, label in BUILTIN.items() if key in available]
+    """Tag -> human-readable meaning, for the model's sticker marker."""
+    catalog, seen = [], set()
+    for item in _all_items():
+        tag = item["tags"][0]
+        if tag in seen:
+            continue
+        seen.add(tag)
+        catalog.append({"id": tag, "meaning": str(item.get("label") or tag)})
+    return catalog
 
 
 def sanitize_meme_markers(text: str) -> str:
-    choices = {item["tags"][0]: item["id"] for item in _builtin_items()}
+    choices = {}
+    for item in _all_items():
+        choices.setdefault(item["tags"][0], item["id"])
+
     def resolve(match):
         selected = choices.get(match.group(1).strip())
         return f"[表情: {selected}]" if selected else ""
+
     return _MARKER.sub(resolve, str(text or ""))

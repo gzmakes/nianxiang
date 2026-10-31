@@ -29,14 +29,19 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources, system_source
 from .core import BudgetExceeded
 from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents
-from . import notion_cli_source, git_source, gmail_cli_source, connector_auth
+from . import notion_cli_source, git_source, gmail_cli_source, connector_auth, prompts
 from .runtime_lock import DatabaseLease
+from . import visitors
 from . import api_contract as contract
 from . import paired_access, conversation_changes
 
 BASE = Path(__file__).resolve().parent
 WEB = BASE.parent / "web"
 DIST = BASE.parent / "dist"
+
+# Set to the public HTTPS origin (e.g. https://svc-xxxx.sh.app.tcloudbase.com)
+# when the service is reachable from the internet. Empty = local-only guard.
+PUBLIC_ORIGIN = os.getenv("XINJI_PUBLIC_ORIGIN", "").strip().rstrip("/")
 
 
 def _latest(prefix: str) -> Path | None:
@@ -103,7 +108,7 @@ async def local_origin_guard(request: Request, call_next):
     """
     principal=paired_access.principal_from_scope(request.scope)
     if principal is not None:
-        if str(principal.database)!=str(core.DB_PATH) or not paired_access.active(principal):
+        if str(principal.database)!=str(core.db_path()) or not paired_access.active(principal):
             return JSONResponse({'detail':'paired_authentication_required','error_code':'paired_authentication_required'},
                                 status_code=401,headers={'Cache-Control':'no-store'})
         return await call_next(request)
@@ -122,6 +127,16 @@ async def local_origin_guard(request: Request, call_next):
     expected_origin = f"{request.url.scheme}://{host}"
     origin = request.headers.get("origin")
     fetch_site = request.headers.get("sec-fetch-site", "").lower()
+    if PUBLIC_ORIGIN:
+        # Hosted mode: loopback checks cannot hold behind the platform proxy,
+        # so enforce same-origin instead of local peer/host.
+        if ("@" in host
+                or (origin is not None and origin.rstrip("/") != PUBLIC_ORIGIN)
+                or fetch_site == "cross-site"
+                or (fetch_site == "same-site" and request.method not in ("GET", "HEAD", "OPTIONS"))):
+            return JSONResponse({"detail": "same-origin requests only", "error_code": "origin_required"},
+                                status_code=403, headers={"Cache-Control": "no-store"})
+        return await call_next(request)
     if (not (local_peer or is_test) or not allowed_host or "@" in host
             or (origin is not None and origin != expected_origin)
             or fetch_site == "cross-site"
@@ -131,9 +146,52 @@ async def local_origin_guard(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def anonymous_visitor_scope(request: Request, call_next):
+    """Give each browser its own database, without accounts.
+
+    Identity = signed cookie. Cookie-less clients either get a fresh random
+    space (default) or, when XINJI_VISITOR_IP_FALLBACK is on, a keyed hash of
+    IP + user agent (coarser: everyone behind one NAT shares it). This is
+    partitioning, not authentication: clearing cookies yields a new space.
+    """
+    if not visitors.ENABLED:
+        return await call_next(request)
+    raw = request.cookies.get(visitors.COOKIE)
+    visitor_id = visitors.from_cookie(raw)
+    if visitor_id is None:
+        if visitors.IP_FALLBACK:
+            peer = request.client.host if request.client else ''
+            visitor_id = visitors.from_address(peer, request.headers.get('user-agent', ''))
+        else:
+            visitor_id = visitors.new_id()
+    database = visitors.db_file(visitor_id)
+    visitors.ensure(database)
+    token = core.use_db(database)
+    try:
+        response = await call_next(request)
+    finally:
+        core.reset_db(token)
+    if visitors.from_cookie(raw) != visitor_id:
+        response.set_cookie(visitors.COOKIE, visitors.cookie_value(visitor_id),
+                            max_age=visitors.MAX_AGE, httponly=True, samesite='lax',
+                            secure=request.url.scheme == 'https', path='/')
+    return response
+
+
 class SessionIn(BaseModel):
     mode: str = Field(default="empty", pattern="^(sample|paste|empty)$")
     text: str = ""
+    persona_id: Literal['nianxiang', 'whale'] = 'nianxiang'
+    interaction_mode: Literal['companion', 'work'] = 'companion'
+
+
+class PersonaIn(BaseModel):
+    persona_id: Literal['nianxiang', 'whale']
+
+
+class InteractionModeIn(BaseModel):
+    interaction_mode: str
 
 
 class ChatIn(BaseModel):
@@ -607,21 +665,21 @@ def paired_device_check(request: Request,response: Response):
 def create_paired_device(body: PairedCreateIn,response: Response):
     response.headers['Cache-Control']='no-store'
     if body.confirmed is not True:raise contract.ContractError(400,'confirmation_required','Explicit approval required.')
-    try:return paired_access.create(core.DB_PATH,core.conversation_id(),body.label,body.expires_in_seconds)
+    try:return paired_access.create(core.db_path(),core.conversation_id(),body.label,body.expires_in_seconds)
     except ValueError as error:raise contract.ContractError(400,'invalid_request',str(error)) from error
 
 
 @app.get('/api/paired-devices',response_model=PairedDevicesList)
 def list_paired_devices(response: Response):
     response.headers['Cache-Control']='no-store'
-    return paired_access.list_devices(core.DB_PATH,core.conversation_id())
+    return paired_access.list_devices(core.db_path(),core.conversation_id())
 
 
 @app.post('/api/paired-devices/{device_id}/revoke',response_model=PairedRevokeResponse)
 def revoke_paired_device(device_id: str,body: PairedRevokeIn,response: Response):
     response.headers['Cache-Control']='no-store'
     if body.confirmed is not True:raise contract.ContractError(400,'confirmation_required','Explicit approval required.')
-    value=paired_access.revoke(core.DB_PATH,device_id)
+    value=paired_access.revoke(core.db_path(),device_id)
     if value is None:raise HTTPException(404,'Device not found.')
     return value
 
@@ -1034,7 +1092,13 @@ def lark_attach(body: LarkAttachIn):
 
 @app.post("/api/session", response_model=contract.ConversationResponse, response_model_exclude_unset=True)
 def create_session(body: SessionIn):
-    return core.create_session(mode=body.mode, text=body.text)
+    return core.create_session(mode=body.mode, text=body.text, persona_id=body.persona_id,
+                               interaction_mode=body.interaction_mode)
+
+
+@app.get('/api/personas', response_model=contract.PersonaListResponse)
+def personas():
+    return {'default_persona': 'nianxiang', 'personas': prompts.persona_manifest()}
 
 
 @app.get('/api/conversation/changes',response_model=contract.ConversationChangesResponse)
@@ -1042,7 +1106,7 @@ def conversation_change_feed(request: Request,response: Response,after: str | No
     response.headers['Cache-Control']='no-store'
     if len(request.query_params.getlist('after'))>1:
         raise contract.ContractError(400,'invalid_changes_cursor','Invalid change cursor.')
-    try:return conversation_changes.read(core.DB_PATH,after)
+    try:return conversation_changes.read(core.db_path(),after)
     except conversation_changes.InvalidCursor:
         raise contract.ContractError(400,'invalid_changes_cursor','Invalid change cursor.') from None
     except conversation_changes.ConversationNotInitialized:
@@ -1079,20 +1143,20 @@ def _mood_call(function, *args):
 @app.get('/api/moods', response_model=contract.MoodListResponse)
 def get_moods(response: Response, session_id: str = Query(min_length=1, max_length=128)):
     response.headers['Cache-Control'] = 'no-store'
-    return {'moods': _mood_call(moods.list_entries, core.DB_PATH, session_id)}
+    return {'moods': _mood_call(moods.list_entries, core.db_path(), session_id)}
 
 
 @app.put('/api/moods/{day}', response_model=contract.MoodEntryResponse)
 def save_mood(day: str, body: MoodSaveIn):
     if not body.confirmed:
         raise contract.ContractError(400, 'confirmation_required', '请先确认这条心情记录。')
-    return _mood_call(moods.save, core.DB_PATH, body.session_id, day, body.x, body.y, body.note, body.expected_updated_at)
+    return _mood_call(moods.save, core.db_path(), body.session_id, day, body.x, body.y, body.note, body.expected_updated_at)
 
 
 @app.delete('/api/moods/{day}', response_model=contract.MoodDeleteResponse)
 def delete_mood(day: str, session_id: str = Query(min_length=1, max_length=128),
                 expected_updated_at: str = Query(min_length=1, max_length=64)):
-    return {'deleted': _mood_call(moods.delete, core.DB_PATH, session_id, day, expected_updated_at)}
+    return {'deleted': _mood_call(moods.delete, core.db_path(), session_id, day, expected_updated_at)}
 
 
 @app.post('/api/mood-suggestions', response_model=contract.MoodSuggestionResponse)
@@ -1100,7 +1164,7 @@ def suggest_mood(body: MoodSuggestionIn, response: Response):
     response.headers['Cache-Control'] = 'no-store'
     if not body.consent:
         raise contract.ContractError(400, 'confirmation_required', '请先同意分析这次提供的文字。')
-    return _mood_call(moods.suggestion, core.DB_PATH, body.session_id, body.text)
+    return _mood_call(moods.suggestion, core.db_path(), body.session_id, body.text)
 
 
 def _mood_operation_call(function, *args):
@@ -1119,7 +1183,7 @@ def apply_mood_operation(body: MoodOperationIn, response: Response):
     response.headers['Cache-Control'] = 'no-store'
     if not body.confirmed:
         raise contract.ContractError(400, 'confirmation_required', '请先确认这次心情操作。')
-    return _mood_operation_call(mood_operations.apply, core.DB_PATH, body.session_id,
+    return _mood_operation_call(mood_operations.apply, core.db_path(), body.session_id,
                                 body.request_id, body.operation_json)
 
 
@@ -1128,7 +1192,7 @@ def get_mood_operation(response: Response,
                        request_id: str = ApiPath(min_length=8, max_length=128, pattern=r'^[A-Za-z0-9][A-Za-z0-9._:-]+$'),
                        session_id: str = Query(min_length=1, max_length=128)):
     response.headers['Cache-Control'] = 'no-store'
-    return _mood_operation_call(mood_operations.get, core.DB_PATH, session_id, request_id)
+    return _mood_operation_call(mood_operations.get, core.db_path(), session_id, request_id)
 
 
 @app.post('/api/mood-operations/{request_id}/cancel', response_model=contract.MoodOperationResponse)
@@ -1137,7 +1201,7 @@ def cancel_mood_operation(body: MoodOperationCancelIn, response: Response,
     response.headers['Cache-Control'] = 'no-store'
     if not body.confirmed:
         raise contract.ContractError(400, 'confirmation_required', '请先确认停止这次心情操作。')
-    return _mood_operation_call(mood_operations.cancel, core.DB_PATH, body.session_id,
+    return _mood_operation_call(mood_operations.cancel, core.db_path(), body.session_id,
                                 request_id, body.operation_sha256, body.kind)
 
 
@@ -1157,29 +1221,29 @@ def _contact_policy_call(function,*args,**kwargs):
 @app.get('/api/companion-boundary',response_model=BoundaryResponse)
 def get_companion_boundary(response:Response,session_id:str=Query(min_length=1,max_length=128)):
     response.headers['Cache-Control']='no-store'
-    return _contact_policy_call(companion_boundary.get,core.DB_PATH,session_id)
+    return _contact_policy_call(companion_boundary.get,core.db_path(),session_id)
 
 
 @app.put('/api/companion-boundary',response_model=BoundaryResponse)
 def put_companion_boundary(body:BoundaryIn):
     if not body.confirmed:raise contract.ContractError(400,'confirmation_required','请先确认这次陪伴边界。')
-    return _contact_policy_call(companion_boundary.put,core.DB_PATH,body.session_id,
+    return _contact_policy_call(companion_boundary.put,core.db_path(),body.session_id,
         expected_revision=body.expected_revision,mode=body.mode,until=body.until,time_zone=body.time_zone)
 
 
 @app.post('/api/followups/{followup_id}/contact/claim',response_model=ContactClaimResponse)
 def claim_contact(followup_id:str,body:ContactClaimIn):
-    return _contact_policy_call(proactive_policy.claim,core.DB_PATH,body.session_id,followup_id,body.occurrence_at,channel=body.channel)
+    return _contact_policy_call(proactive_policy.claim,core.db_path(),body.session_id,followup_id,body.occurrence_at,channel=body.channel)
 
 
 @app.post('/api/followup-contacts/{claim_id}/recheck',response_model=ContactRecheckResponse)
 def recheck_contact(claim_id:str,body:NotificationRecheckIn):
-    return _contact_policy_call(proactive_policy.recheck,core.DB_PATH,body.session_id,claim_id)
+    return _contact_policy_call(proactive_policy.recheck,core.db_path(),body.session_id,claim_id)
 
 
 @app.post('/api/followup-contacts/{claim_id}/finish',response_model=ContactFinishResponse)
 def finish_contact(claim_id:str,body:NotificationFinishIn):
-    return _contact_policy_call(proactive_policy.finish,core.DB_PATH,body.session_id,claim_id,body.state)
+    return _contact_policy_call(proactive_policy.finish,core.db_path(),body.session_id,claim_id,body.state)
 
 
 def _notification_policy_call(function, *args, **kwargs):
@@ -1196,12 +1260,12 @@ def _notification_policy_call(function, *args, **kwargs):
 @app.get('/api/followup-notification-settings', response_model=NotificationSettingsResponse)
 def notification_settings(response: Response, session_id: str = Query(min_length=1, max_length=128)):
     response.headers['Cache-Control'] = 'no-store'
-    return _notification_policy_call(proactive_policy.get_settings, core.DB_PATH, session_id)
+    return _notification_policy_call(proactive_policy.get_settings, core.db_path(), session_id)
 
 
 @app.put('/api/followup-notification-settings', response_model=NotificationSettingsResponse)
 def update_notification_settings(body: NotificationSettingsIn):
-    return _notification_policy_call(proactive_policy.set_settings, core.DB_PATH, body.session_id,
+    return _notification_policy_call(proactive_policy.set_settings, core.db_path(), body.session_id,
         enabled=body.enabled, time_zone=body.time_zone, quiet_start=body.quiet_start, quiet_end=body.quiet_end,
         cooldown_minutes=body.cooldown_minutes, daily_limit=body.daily_limit, pause_until=body.pause_until,
         expected_revision=body.expected_revision)
@@ -1209,17 +1273,17 @@ def update_notification_settings(body: NotificationSettingsIn):
 
 @app.post('/api/followups/{followup_id}/desktop-notification/claim', response_model=NotificationClaimResponse)
 def claim_followup_notification(followup_id: str, body: NotificationClaimIn):
-    return _notification_policy_call(proactive_policy.claim, core.DB_PATH, body.session_id, followup_id, body.occurrence_at)
+    return _notification_policy_call(proactive_policy.claim, core.db_path(), body.session_id, followup_id, body.occurrence_at)
 
 
 @app.post('/api/followup-notifications/{claim_id}/recheck', response_model=NotificationRecheckResponse)
 def recheck_followup_notification(claim_id: str, body: NotificationRecheckIn):
-    return _notification_policy_call(proactive_policy.recheck, core.DB_PATH, body.session_id, claim_id)
+    return _notification_policy_call(proactive_policy.recheck, core.db_path(), body.session_id, claim_id)
 
 
 @app.post('/api/followup-notifications/{claim_id}/finish', response_model=NotificationFinishResponse)
 def finish_followup_notification(claim_id: str, body: NotificationFinishIn):
-    return _notification_policy_call(proactive_policy.finish, core.DB_PATH, body.session_id, claim_id, body.state)
+    return _notification_policy_call(proactive_policy.finish, core.db_path(), body.session_id, claim_id, body.state)
 
 
 
@@ -1227,7 +1291,7 @@ def finish_followup_notification(claim_id: str, body: NotificationFinishIn):
 def get_followups(session_id: str = Query(min_length=1, max_length=128)):
     if not core.get_session(session_id):
         raise HTTPException(404, "对话不存在。")
-    return {"followups": followups.list_for_session(core.DB_PATH, session_id)}
+    return {"followups": followups.list_for_session(core.db_path(), session_id)}
 
 
 @app.post("/api/followups", response_model=contract.FollowupResponse, response_model_exclude_unset=True)
@@ -1235,7 +1299,7 @@ def create_followup(body: FollowupCreateIn):
     if not body.confirmed:
         raise contract.ContractError(400, "confirmation_required", "请先确认要保存这条跟进。")
     try:
-        return followups.create(core.DB_PATH, body.session_id, body.content, body.due_at, body.request_id, repeat_rule=body.repeat_rule, time_zone=body.time_zone, quiet_start=body.quiet_start, quiet_end=body.quiet_end, allow_contact=body.allow_contact, contact_window_minutes=body.contact_window_minutes, contact_topic=body.contact_topic)
+        return followups.create(core.db_path(), body.session_id, body.content, body.due_at, body.request_id, repeat_rule=body.repeat_rule, time_zone=body.time_zone, quiet_start=body.quiet_start, quiet_end=body.quiet_end, allow_contact=body.allow_contact, contact_window_minutes=body.contact_window_minutes, contact_topic=body.contact_topic)
     except followups.FollowupConflict as error:
         raise contract.ContractError(409, "followup_conflict", str(error)) from error
     except LookupError as error:
@@ -1248,7 +1312,7 @@ def create_followup(body: FollowupCreateIn):
 @app.patch("/api/followups/{followup_id}", response_model=contract.FollowupResponse, response_model_exclude_unset=True)
 def change_followup(followup_id: str, body: FollowupChangeIn):
     try:
-        return followups.transition(core.DB_PATH, body.session_id, followup_id, body.status, occurrence_at=body.occurrence_at)
+        return followups.transition(core.db_path(), body.session_id, followup_id, body.status, occurrence_at=body.occurrence_at)
     except followups.FollowupConflict as error:
         raise contract.ContractError(409, "followup_conflict", str(error)) from error
     except LookupError as error:
@@ -1288,6 +1352,28 @@ def get_session(sid: str):
     }
 
 
+@app.put('/api/session/{sid}/persona', response_model=contract.SessionResponse)
+def set_session_persona(sid: str, body: PersonaIn):
+    try:
+        out = core.set_session_persona(sid, body.persona_id)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    if not out:
+        raise HTTPException(404, 'session not found')
+    return out
+
+
+@app.put('/api/session/{sid}/mode', response_model=contract.SessionResponse)
+def set_session_mode(sid: str, body: InteractionModeIn):
+    try:
+        out = core.set_session_mode(sid, body.interaction_mode)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    if not out:
+        raise HTTPException(404, 'session not found')
+    return out
+
+
 _turn_stores = {}
 _turn_stores_lock = threading.RLock()
 
@@ -1295,7 +1381,7 @@ _turn_stores_lock = threading.RLock()
 def _turn_store():
     # Tests use a temporary DB per case; the live app uses one local process.
     with _turn_stores_lock:
-        key = str(core.DB_PATH)
+        key = str(core.db_path())
         if key not in _turn_stores:
             _turn_stores[key] = chat_turns.ChatTurnStore(key)
         return _turn_stores[key]
