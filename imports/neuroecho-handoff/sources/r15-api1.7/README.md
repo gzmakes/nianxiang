@@ -79,7 +79,7 @@ GPT-SoVITS；团队后端也可以把 R15 配置为调用 `voice-gateway`：
 ```text
 NIANXIANG_TTS_ENABLED=true
 NIANXIANG_TTS_PROVIDER=remote
-NIANXIANG_TTS_BASE_URL=https://你的网关域名/v1
+  NIANXIANG_TTS_BASE_URL=https://voice.aicloudsky.com/v1
 NIANXIANG_TTS_TOKEN=仅服务端保存的个人 Token
 NIANXIANG_TTS_PERSONA_ID=whale
 NIANXIANG_TTS_TIMEOUT=120
