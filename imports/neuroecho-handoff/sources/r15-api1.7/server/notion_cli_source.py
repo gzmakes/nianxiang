@@ -7,20 +7,19 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
-from . import notion_source
+from . import notion_source, cli_runtime
 
 TIMEOUT = 15
 BASE = Path(__file__).resolve().parent.parent
 
 
 def executable() -> str | None:
-    candidates = [os.environ.get("XINJI_NOTION_CLI"), shutil.which("ntn"),
+    candidates = [cli_runtime.resolve("ntn", "XINJI_NOTION_CLI"),
                   str(BASE.parent.parent / "work" / "ntn-runtime" / "node_modules" / ".bin" / "ntn")]
-    return next((path for path in candidates if path and Path(path).is_file() and os.access(path, os.X_OK)), None)
+    return next((path for path in candidates if path and Path(path).is_file() and (os.name == "nt" or os.access(path, os.X_OK))), None)
 
 
 def status() -> dict:
@@ -54,7 +53,7 @@ def _get(path: str, query: list[str] | None = None) -> dict:
     args = [cli, "api", path, "-X", "GET", "--notion-version", notion_source.VERSION, *(query or [])]
     try:
         process = subprocess.run(args, stdin=subprocess.DEVNULL, capture_output=True,
-                                 text=True, timeout=TIMEOUT, cwd=BASE)
+                                 text=True, timeout=TIMEOUT, cwd=BASE, env=cli_runtime.environment())
     except FileNotFoundError:
         raise ReadError("missing") from None
     except subprocess.TimeoutExpired:

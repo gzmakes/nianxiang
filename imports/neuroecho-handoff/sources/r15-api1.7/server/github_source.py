@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 
-GH = shutil.which("gh") or "/opt/homebrew/bin/gh"
+from . import cli_runtime
+
 TIMEOUT = 12
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run([GH, *args], capture_output=True, text=True, timeout=TIMEOUT)
+    # Resolve on every call so installing/logging into gh while the service is
+    # open is reflected without restarting the web process.
+    prefix = cli_runtime.command("gh", "XINJI_GH_CLI") or ["gh"]
+    return subprocess.run([*prefix, *args], capture_output=True, text=True, timeout=TIMEOUT, stdin=subprocess.DEVNULL, env=cli_runtime.environment())
 
 
 def status() -> dict:

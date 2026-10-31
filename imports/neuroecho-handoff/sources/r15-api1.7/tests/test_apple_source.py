@@ -8,6 +8,8 @@ from server.main import app
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
+    # These tests replace osascript output; explicitly simulate Mac on any host.
+    monkeypatch.setattr(apple_source, "platform_supported", lambda: True)
     monkeypatch.setattr(core, "DB_PATH", str(tmp_path / "test.db"))
     core.init_db()
     return TestClient(app)

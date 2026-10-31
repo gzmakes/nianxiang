@@ -23,11 +23,11 @@ def main():
     args = parser.parse_args()
     for name in ('index.html','m.html'):
         target = ROOT/'web'/name
-        source = target.read_text()
+        source = target.read_text(encoding='utf-8')
         result = stamp(source)
         if args.check and source != result:
             raise SystemExit('ASSET_URL_DRIFT: '+name+'; run scripts/stamp_web_assets.py')
-        if not args.check: target.write_text(result)
+        if not args.check: target.write_text(result, encoding='utf-8')
     print('ASSET_HASHES_MATCH' if args.check else 'Local JS/CSS URLs stamped with content hashes.')
 
 if __name__ == '__main__': main()

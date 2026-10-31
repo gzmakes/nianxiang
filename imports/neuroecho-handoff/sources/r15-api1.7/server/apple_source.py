@@ -24,11 +24,15 @@ def _unsupported() -> dict:
 
 REMINDERS_SCRIPT = r'''
 set output to ""
+set itemCount to 0
 tell application "Reminders"
   repeat with l in lists
     repeat with r in (reminders of l whose completed is false)
       set output to output & (name of r) & "||" & (name of l) & linefeed
+      set itemCount to itemCount + 1
+      if itemCount >= 8 then exit repeat
     end repeat
+    if itemCount >= 8 then exit repeat
   end repeat
 end tell
 return output
@@ -36,13 +40,17 @@ return output
 
 CALENDAR_SCRIPT = r'''
 set output to ""
+set itemCount to 0
 set now to (current date)
 set later to now + 7 * days
 tell application "Calendar"
   repeat with c in calendars
     repeat with e in (every event of c whose start date is greater than or equal to now and start date is less than or equal to later)
       set output to output & (summary of e) & "||" & (start date of e as string) & "||" & (name of c) & linefeed
+      set itemCount to itemCount + 1
+      if itemCount >= 8 then exit repeat
     end repeat
+    if itemCount >= 8 then exit repeat
   end repeat
 end tell
 return output
@@ -92,7 +100,7 @@ tell application "Calendar" to tell calendar 1 to make new event with properties
 def _run(script: str) -> str:
     if not platform_supported():
         raise RuntimeError('当前服务平台不支持 Mac 系统操作')
-    p = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=TIMEOUT)
+    p = subprocess.run(["/usr/bin/osascript", "-e", script], capture_output=True, text=True, timeout=TIMEOUT)
     if p.returncode != 0:
         raise RuntimeError((p.stderr or "osascript failed").strip()[:200])
     return p.stdout

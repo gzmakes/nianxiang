@@ -372,9 +372,9 @@
     $("#m-read-btn").classList.add("is-hidden");
     $("#m-read-items").innerHTML = "";
     $("#m-read-scope").innerHTML = "";
-    $("#m-read-head").innerHTML = `<p class="lede">填写运行本服务的这台 Mac 上的完整目录。只读取所选代码库最近最多 8 条提交，不读取代码文件，也不会修改仓库。</p>
+    $("#m-read-head").innerHTML = `<p class="lede">填写运行本服务的这台电脑上的完整目录。只读取所选代码库最近最多 8 条提交，不读取代码文件，也不会修改仓库。</p>
       <p class="synthetic">仅本机 H5 可用；手机远程连接尚未开放。本次先展示提交元信息。确认接入后，聊天时可能将必要条目发送给当前模型服务。</p>
-      <div class="mobile-source-form"><label>代码库目录<input id="m-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 /Users/你的用户名/Projects/my-project"></label>
+      <div class="mobile-source-form"><label>代码库目录<input id="m-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 C:\\Users\\你的用户名\\Projects\\my-project 或 ~/Projects/my-project"></label>
       <button class="btn ghost wide" id="m-git-preview">同意并读取提交</button><p class="synthetic" id="m-git-hint" role="status">支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
     const input = $("#m-git-path"), button = $("#m-git-preview"), hint = $("#m-git-hint");
     input.oninput = () => { clearMobileSourceForm(); $("#m-read-items").innerHTML = ""; hint.textContent = "目录已更改，请重新读取。"; button.disabled = false; };

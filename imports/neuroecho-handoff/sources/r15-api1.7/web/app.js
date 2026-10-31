@@ -397,6 +397,7 @@
     if (id === "github" && ["needs_auth", "needs_install"].includes(meta?.status)) {
       $("#wz-read").classList.add("is-hidden");
       $("#read-head").insertAdjacentHTML("beforeend", `<p class="note">${esc(meta.hint || "请先在终端完成 GitHub CLI 登录。")}</p><button class="btn ghost small" id="wz-github-recheck">我已处理，重新检查</button>`);
+      globalThis.XinjiConnectorAuth?.mount($("#read-head"), "github");
       $("#wz-github-recheck").onclick = async () => {
         const button = $("#wz-github-recheck");
         const request = beginCredentialRequest();
@@ -429,9 +430,9 @@
     $("#read-items").innerHTML = "";
     $("#read-scope").innerHTML = "";
     $("#read-head").innerHTML = `<div class="real-lark"><b>选择本机代码库</b>
-      <p class="note">填写这台 Mac 上的代码库完整目录。只读取该库最近最多 8 条提交的标题、仓库名、提交 ID 和相对时间，不读取代码文件，也不会修改仓库。读取后先展示快照供你核对。</p>
+      <p class="note">填写运行念响的这台电脑上的代码库完整目录。只读取该库最近最多 8 条提交的标题、仓库名、提交 ID 和相对时间，不读取代码文件，也不会修改仓库。读取后先展示快照供你核对。</p>
       <p class="note">本次先展示提交元信息，不从标题猜测你的习惯。确认接入后，聊天时可能将必要条目发送给当前模型服务。</p>
-      <label>代码库目录<input id="wz-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 /Users/你的用户名/Projects/my-project" /></label>
+      <label>代码库目录<input id="wz-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 C:\\Users\\你的用户名\\Projects\\my-project 或 ~/Projects/my-project" /></label>
       <button class="btn ghost small" id="wz-git-preview">同意并读取提交</button><p class="note" id="wz-git-hint" role="status">也支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
     const input = $("#wz-git-path"), button = $("#wz-git-preview"), hint = $("#wz-git-hint");
     input.oninput = () => { clearCredentialForms(); $("#read-items").innerHTML = ""; hint.textContent = "目录已更改，请重新读取。"; button.disabled = false; };
@@ -619,8 +620,8 @@
     head.querySelector(".real-gmail")?.remove();
     head.insertAdjacentHTML("beforeend", `
       <div class="real-gmail real-lark">
-        <div class="mem-group-label" style="margin-top:12px"><span>或者：真实 Gmail 未读（只读）</span><span class="muted">IMAP</span></div>
-        <input id="wz-gmail-address" placeholder="Gmail 地址" />
+        <div class="mem-group-label" style="margin-top:12px"><span>Gmail 未读邮件（只读）</span><span class="muted">Google / IMAP</span></div>
+        <label>连接方式<select id="wz-gmail-method"><option value="cli">Google 官方登录</option><option value="imap">应用专用密码（备用）</option></select></label><input id="wz-gmail-address" placeholder="Gmail 地址" />
         <input id="wz-gmail-password" type="password" placeholder="应用专用密码（仅本次请求使用，不保存）" />
         <div class="lark-actions">
           <button class="btn ghost small" id="wz-gmail-preview">读取未读邮件</button>
@@ -628,18 +629,30 @@
         </div>
         <div id="wz-gmail-result" class="lark-preview is-hidden"></div>
       </div>`);
+    globalThis.XinjiConnectorAuth?.mount(head.querySelector(".real-gmail"), "gmail");
+    $("#wz-gmail-method").onchange = () => {
+      const cli = $("#wz-gmail-method").value === "cli";
+      $("#wz-gmail-address").disabled = cli;
+      $("#wz-gmail-password").disabled = cli;
+      $("#wz-gmail-password").value = "";
+      $("#wz-gmail-result").classList.add("is-hidden");
+      $("#wz-gmail-result").innerHTML = "";
+      $("#wz-gmail-hint").textContent = cli ? "先连接 Google 账号，再读取最近最多 5 封未读邮件头；不读取正文。" : "填写地址和应用专用密码；仅本次请求使用。";
+    };
+    $("#wz-gmail-method").onchange();
     $("#wz-gmail-preview").onclick = async () => {
+      const method = $("#wz-gmail-method").value;
       const address = $("#wz-gmail-address").value.trim();
       const password = $("#wz-gmail-password").value.trim();
       const hint = $("#wz-gmail-hint");
-      if (!address || !password) { hint.textContent = "地址和应用专用密码都要填"; return; }
+      if (method !== "cli" && (!address || !password)) { hint.textContent = "地址和应用专用密码都要填"; return; }
       $("#wz-gmail-result").classList.add("is-hidden");
       $("#wz-gmail-result").innerHTML = "";
       hint.textContent = "读取中…";
       const request = beginCredentialRequest();
       $("#wz-gmail-password").value = "";
       try {
-        const d = await api("/api/gmail/preview", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ address, password }) });
+        const d = await api("/api/gmail/preview", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ address, password, method }) });
         if (!credentialRequestCurrent(request)) return;
         if (!d.ok) { hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
         const box = $("#wz-gmail-result");
@@ -751,7 +764,7 @@
     head.insertAdjacentHTML("beforeend", `
       <div class="real-notion real-lark">
         <div class="mem-group-label" style="margin-top:12px"><span>或者：真实 Notion 页面 / 数据库（只读）</span><span class="muted">integration token</span></div>
-        <label>连接方式<select id="wz-notion-method"><option value="token">集成 Token</option><option value="cli">本机已登录的 Notion CLI</option></select></label><p class="note">CLI 方式无需填写 Token，仅支持单页；首次使用需完成官方 ntn 登录。<a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">官方连接说明</a></p><input id="wz-notion-token" type="password" placeholder="Notion integration token（仅本次请求使用，不保存）" />
+        <label>连接方式<select id="wz-notion-method"><option value="cli">连接 Notion 账号</option><option value="token">集成 Token（备用）</option></select></label><p class="note">账号连接方式无需填写 Token，仅支持单页；请点击下方连接账号，在官方页面完成登录。<a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">官方连接说明</a></p><input id="wz-notion-token" type="password" placeholder="Notion integration token（仅本次请求使用，不保存）" />
         <input id="wz-notion-url" placeholder="粘贴 Notion 页面/数据库链接（https://www.notion.so/…）" />
         <div class="lark-actions">
           <button class="btn ghost small" id="wz-notion-preview">读取真实页面</button>
@@ -760,6 +773,8 @@
         <div id="wz-notion-result" class="lark-preview is-hidden"></div>
       </div>`);
     $("#wz-notion-method").onchange = () => { clearCredentialForms(); $("#wz-notion-hint").textContent = $("#wz-notion-method").value === "cli" ? "使用本机 ntn 已有登录；填写一个页面链接即可，只读前 50 个顶层文本块。" : "需在 Notion 中把目标页面连接给集成，填写 Token 和页面或数据库链接。"; $("#wz-notion-token").value = ""; $("#wz-notion-token").disabled = $("#wz-notion-method").value === "cli"; $("#wz-notion-result").innerHTML = ""; };
+    globalThis.XinjiConnectorAuth?.mount(head.querySelector(".real-notion") || head, "notion");
+    $("#wz-notion-method").onchange();
     $("#wz-notion-preview").onclick = async () => {
       const method = $("#wz-notion-method").value || "token";
       const token = $("#wz-notion-token").value.trim();
@@ -2319,7 +2334,7 @@
       if (d.status !== "starting" && d.status !== "pending") {
         authActive = false;
         $("#auth-hint").textContent = d.error || "无法启动授权";
-        $("#auth-status").textContent = "请确认本机已安装并登录 lark-cli";
+        $("#auth-status").textContent = "请重新点击连接飞书；若持续失败，请联系管理员。";
         return;
       }
       if (d.status === "starting") $("#auth-hint").textContent = "授权正在准备，请稍候…";
@@ -2333,10 +2348,11 @@
   }
 
   function showLarkPending(d, purpose) {
+    $("#auth-status").textContent = d.phase === "setup" ? "第 1 步（共 2 步）：在飞书确认应用连接。完成后此处会换成文档授权链接。" : (d.phase === "authorize" ? "第 2 步（共 2 步）：应用已连接。请打开下方新的授权链接，允许读取文档。" : "等待你在飞书中确认…");
     $("#auth-hint").textContent = (purpose === "search" ? "将申请搜索云空间权限。" : "") +
       (d.qr ? "请用飞书扫描二维码，或在飞书中打开授权链接。" : "请打开飞书授权链接继续。");
     if (d.qr) { $("#auth-qr").src = d.qr; $("#auth-qr").classList.remove("is-hidden"); }
-    if (d.url) { $("#auth-url").href = d.url; $("#auth-url").classList.remove("is-hidden"); }
+    if (d.url) { $("#auth-url").href = d.url; $("#auth-url").textContent = d.phase === "setup" ? "第 1 步：在飞书连接应用" : "第 2 步：在飞书允许读取文档"; $("#auth-url").classList.remove("is-hidden"); }
   }
 
   async function pollLarkAuth(generation, purpose) {
@@ -2345,6 +2361,7 @@
       const d = await api(purpose === "search" ? "/api/auth/lark/search/status" : "/api/auth/lark/status");
       if (!authCurrent(generation)) return;
       if (d.status === "success") { authDone(generation, purpose); return; }
+      if (d.status === "starting") { $("#auth-hint").textContent = "正在准备下一步授权…"; $("#auth-url").classList.add("is-hidden"); $("#auth-qr").classList.add("is-hidden"); }
       if (d.status === "pending" && d.url) showLarkPending(d, purpose);
       if (d.status === "error") {
         authActive = false; clearInterval(authPollTimer); authPollTimer = null;
@@ -2396,7 +2413,7 @@
       grid.querySelectorAll("[data-app-source]").forEach(button => button.onclick = async () => {
         if (state.session?.id !== sid || state.tab !== "apps") return;
         const id = button.dataset.appSource;
-        if (id === "feishu" || id === "apple_calendar" || id === "local_files") return openCompanionSource({feishu:"feishu", apple_calendar:"calendar", local_files:"local"}[id]);
+        if (id === "feishu" || id === "apple_calendar" || id === "windows_calendar" || id === "local_files") return openCompanionSource({feishu:"feishu", apple_calendar:"calendar", windows_calendar:"calendar", local_files:"local"}[id]);
         prepareSourceDialog(); await openRealSource(id, list.find(source => source.id === id));
       });
       $("#apps-rokid")?.addEventListener("click", () => { if (state.session?.id === sid) openCompanionSource("rokid"); });

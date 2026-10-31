@@ -5,6 +5,8 @@ import subprocess
 import os
 from pathlib import Path
 
+from . import cli_runtime
+
 BASE = Path(__file__).resolve().parent.parent
 TIMEOUT = 8
 
@@ -22,7 +24,7 @@ def repos() -> list[Path]:
 
 
 def _run(cmd: list[str]) -> str:
-    env = {key: value for key, value in os.environ.items()
+    env = {key: value for key, value in cli_runtime.environment().items()
            if key not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE",
                           "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_COUNT"}
            and not key.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"))}
@@ -39,17 +41,17 @@ def read(limit: int = 8, path: str | Path | None = None) -> dict:
     if path is not None:
         raw = str(path).strip()
         if not raw or "\x00" in raw:
-            return {"ok": False, "error": "请填写代码库目录", "hint": "例如 /Users/你的用户名/Projects/my-project；仅读取该库最近最多 8 条提交"}
+            return {"ok": False, "error": "请填写代码库目录", "hint": "例如 Windows 的 C:\\Users\\你的用户名\\Projects\\my-project，或 macOS 的 ~/Projects/my-project；仅读取该库最近最多 8 条提交"}
         try:
             candidate = Path(raw).expanduser()
         except (OSError, RuntimeError):
-            return {"ok": False, "error": "无法识别这个用户目录", "hint": "请使用 /Users/用户名/... 的完整目录路径"}
+            return {"ok": False, "error": "无法识别这个用户目录", "hint": "请使用 Windows 或 macOS 的完整目录路径"}
         if not candidate.is_absolute():
-            return {"ok": False, "error": "请填写完整目录路径", "hint": "使用以 / 或 ~/ 开头的目录路径，不要输入终端命令"}
+            return {"ok": False, "error": "请填写完整目录路径", "hint": "使用完整目录路径，不要输入终端命令"}
         try:
             selected = candidate.resolve(strict=True)
         except (OSError, RuntimeError):
-            return {"ok": False, "error": "这个目录不存在或无法访问", "hint": "在 Finder 中找到代码库，复制其完整路径后重试"}
+            return {"ok": False, "error": "这个目录不存在或无法访问", "hint": "在文件管理器中找到代码库，复制其完整路径后重试"}
         if not selected.is_dir():
             return {"ok": False, "error": "请选择目录，不是文件", "hint": "填写包含 Git 工作树的代码库目录"}
         try:

@@ -13,10 +13,10 @@ schema = app.openapi()
 content = json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
 target = ROOT / 'shared/api/openapi.json'
 if args.check:
-    if not target.exists() or target.read_text() != content:
+    if not target.exists() or target.read_text(encoding='utf-8') != content:
         raise SystemExit('API schema changed. Review client impact, then run scripts/export_api_contract.py.')
     print('Declared API schema matches server source. Response coverage is tracked separately.')
 else:
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content)
+    target.write_text(content, encoding='utf-8')
     print('Exported declared schema:', len(schema.get('paths', {})), 'paths. No server started.')
