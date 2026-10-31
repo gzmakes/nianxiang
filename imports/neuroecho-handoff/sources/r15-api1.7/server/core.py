@@ -1328,7 +1328,13 @@ def _model_context_stamp(sid: str, conn: sqlite3.Connection | None = None) -> st
             item = dict(row)
             item['source_text'] = hashlib.sha256((item['source_text'] or '').encode()).hexdigest()
             sources.append(item)
-        snapshot = {'session':dict(session) if session else None,'memories':memories,'sources':sources,
+        session_snapshot = dict(session) if session else None
+        # interaction_mode is retained for legacy clients and historical data,
+        # but it is retired from model behavior. Changing the deprecated field
+        # must not invalidate an otherwise identical generation context.
+        if session_snapshot is not None:
+            session_snapshot.pop('interaction_mode', None)
+        snapshot = {'session':session_snapshot,'memories':memories,'sources':sources,
                     'boundary':companion_boundary.public(companion_boundary.snapshot(conn,sid,followups._current(None)))}
         return hashlib.sha256(json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     finally:
@@ -1364,15 +1370,42 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
         effective_mode, mode_from_preference = current_mode, False
     ctx = _active_source_context(sid)
     excerpts = _source_excerpts(sid, text)
+    persona_id = session.get("persona_id", "nianxiang") or "nianxiang"
+
+    def sticker_state():
+        """Summarize recent assistant sticker use without adding DB state."""
+        conn = get_db()
+        try:
+            rows = conn.execute(
+                "SELECT text FROM messages WHERE session_id=? AND role='assistant' "
+                "AND suppressed=0 ORDER BY rowid DESC LIMIT 12", (sid,)).fetchall()
+        finally:
+            conn.close()
+        marker = re.compile(r"\[表情[:：]\s*([^\]\r\n]{1,240}?)\s*\]")
+        for turns_ago, row in enumerate(rows):
+            match = marker.search(row["text"] or "")
+            if match:
+                return turns_ago, match.group(1).strip()
+        return None, ""
+
+    last_sticker_turns_ago, last_sticker_id = sticker_state()
+    sticker_due = last_sticker_turns_ago is None or last_sticker_turns_ago >= 2
     audit(sid, "model.call",
           f"model={client.model} · facts={len(facts)} · inferences={len(inferences)} · items={len(ctx.get('items') or [])}",
           "发送必要上下文（不含正文内容）")
     try:
-        system = prompts.system_prompt(session.get("persona_id", "nianxiang"), session.get("interaction_mode", "companion"))
-        catalog = plugin_bridge.meme_prompt_catalog()
+        # The old interaction_mode argument is accepted by system_prompt for
+        # compatibility, but no longer changes the generated instructions.
+        system = prompts.system_prompt(session.get("persona_id", "nianxiang"))
+        catalog = plugin_bridge.meme_prompt_catalog(persona_id)
         if catalog:
-            system += ("\n轻松聊天中如果确实合适，可以在正文末尾使用一个表情标记，例如 [表情: happy]；"
-                       "认真倾诉和严肃问题不发表情。不必每次都用。仅可使用以下当前可用类别："
+            system += ("\n表情包是可选的自然回应，不要为了凑频率乱发。轻松日常对话中，"
+                       "如果语境合适可以主动选择一张；严肃、敏感、危机、正式技术长文通常不发。"
+                       "每条完整回复最多一张，不能连续重复同一张；只能使用目录中的精确 id，"
+                       "格式为 [表情: pack/tag/file]。"
+                       f"最近一次表情距当前完整回复 {('尚未发送' if last_sticker_turns_ago is None else str(last_sticker_turns_ago) + ' 轮')}，"
+                       f"上一次素材为 {last_sticker_id or '无'}；"
+                       f"本轮{'可以优先考虑' if sticker_due else '通常跳过'}。可用目录："
                        + json.dumps(catalog, ensure_ascii=False))
         user = prompts.build_user_prompt(facts, inferences, questions, recent, remote_text,
                                       items=ctx.get("items"), insights=ctx.get("insights"),
@@ -1384,7 +1417,7 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
                                                search=lambda query: _source_excerpts(sid, query))
         else:
             out, proposal = client.complete(system, user), None
-        out = plugin_bridge.sanitize_meme_markers(out)
+        out = plugin_bridge.sanitize_meme_markers(out, persona_id=persona_id, max_count=1)
         if not out.strip():
             raise ValueError("model response contained no displayable content")
         if get_session(sid) is None:
@@ -1472,7 +1505,9 @@ def generate_reply(sid: str, text: str, *,
                     conn.execute('INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at,persona_id,interaction_mode) VALUES(?,?,?,?,?,?,?,?,?)',
                                  (assistant_id, sid, 'assistant', reply, '[]', '[]', now(), session.get('persona_id') or 'nianxiang', session.get('interaction_mode') or 'companion'))
                     if action == "model.reply":
-                        chat_delivery.register(conn, sid, assistant_id, reply, mode=session.get('interaction_mode') or 'companion')
+                        # Delivery is unified across legacy companion/work
+                        # sessions; the persisted field is metadata only.
+                        chat_delivery.register(conn, sid, assistant_id, reply, mode='auto')
                     conn.execute('UPDATE sessions SET state=? WHERE id=?', (state, sid))
                     if action == "model.reply" and proposal_out:
                         agent_runtime.persist_proposal(conn, sid, assistant_id, proposal_out[0], agent_runtime.context_stamp(conn, sid))

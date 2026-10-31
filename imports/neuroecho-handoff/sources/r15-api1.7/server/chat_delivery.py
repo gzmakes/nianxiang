@@ -111,15 +111,23 @@ def _cap_parts(parts, limit=4):
     return parts[:limit - 1] + [' '.join(parts[limit - 1:])]
 
 
-def _work_parts(text):
+def _explicit_parts(text):
+    """Split on explicit bubble markers outside fenced code blocks.
+
+    The marker is an internal delivery protocol, so it is removed from the
+    delivered text.  A marker inside a fenced code block remains literal and
+    must never trigger a split.
+    """
     marker = '<!--NX-BUBBLE-->'
     parts, start, cursor, fenced = [], 0, 0, False
+    found = False
     while cursor < len(text):
         if text.startswith('```', cursor):
             fenced = not fenced
             cursor += 3
             continue
         if not fenced and text.startswith(marker, cursor):
+            found = True
             piece = text[start:cursor].strip()
             if piece:
                 parts.append(piece)
@@ -130,7 +138,12 @@ def _work_parts(text):
     tail = text[start:].strip()
     if tail:
         parts.append(tail)
-    return parts or [text.strip()]
+    return parts if found else None
+
+
+def _work_parts(text):
+    """Backward-compatible work helper; markers are now mode-independent."""
+    return _explicit_parts(text) or [str(text or '').strip()]
 
 
 def split_reply(text, mode='auto'):
@@ -143,8 +156,9 @@ def split_reply(text, mode='auto'):
     text = str(text or '')
     if not text.strip():
         return []
-    if mode == 'work':
-        return _work_parts(text)
+    explicit = _explicit_parts(text)
+    if explicit is not None:
+        return _cap_parts(explicit)
     if mode not in ('auto', 'paragraph', 'sentence'):
         mode = 'auto'
     if _rich_reply(text) or mode == 'paragraph':

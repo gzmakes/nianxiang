@@ -1774,6 +1774,7 @@
       "InteractionModeIn": {
         "properties": {
           "interaction_mode": {
+            "description": "Deprecated compatibility input. The value is retained for old clients and does not alter dialogue behavior.",
             "title": "Interaction Mode",
             "type": "string"
           }
@@ -2350,6 +2351,7 @@
                 "type": "null"
               }
             ],
+            "description": "Deprecated compatibility field retained for historical messages; it does not select delivery behavior.",
             "title": "Interaction Mode"
           },
           "persona_id": {
@@ -3463,6 +3465,7 @@
         "properties": {
           "interaction_mode": {
             "default": "companion",
+            "description": "Deprecated compatibility field. Stored for legacy clients; no longer changes dialogue behavior.",
             "enum": [
               "companion",
               "work"
@@ -3551,6 +3554,7 @@
                 "type": "null"
               }
             ],
+            "description": "Deprecated compatibility field retained for historical sessions; it does not select model behavior.",
             "title": "Interaction Mode"
           },
           "mode": {
@@ -15406,6 +15410,7 @@
     },
     "/api/session/{sid}/mode": {
       "put": {
+        "deprecated": true,
         "operationId": "set_session_mode_api_session__sid__mode_put",
         "parameters": [
           {

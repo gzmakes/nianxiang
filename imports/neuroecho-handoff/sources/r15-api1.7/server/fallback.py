@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sys
+import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -119,7 +120,7 @@ class Handler(BaseHTTPRequestHandler):
                 if f:
                     data = f.read_bytes()
                     self.send_response(200)
-                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Type", mimetypes.guess_type(str(f))[0] or "application/octet-stream")
                     self.send_header("Content-Length", str(len(data)))
                     self.end_headers()
                     self.wfile.write(data)
@@ -265,7 +266,7 @@ class Handler(BaseHTTPRequestHandler):
                 if f:
                     data = f.read_bytes()
                     self.send_response(200)
-                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Type", mimetypes.guess_type(str(f))[0] or "application/octet-stream")
                     self.send_header("Content-Length", str(len(data)))
                     self.end_headers()
                     self.wfile.write(data)
@@ -365,7 +366,7 @@ class Handler(BaseHTTPRequestHandler):
                 if f:
                     data = f.read_bytes()
                     self.send_response(200)
-                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Type", mimetypes.guess_type(str(f))[0] or "application/octet-stream")
                     self.send_header("Content-Length", str(len(data)))
                     self.end_headers()
                     self.wfile.write(data)

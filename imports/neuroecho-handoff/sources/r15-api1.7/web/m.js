@@ -4,7 +4,7 @@
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   document.addEventListener("xinji-space-sync-error", (event) => {
-    const text = event.detail?.error?.message || "当前人格和陪伴方式未能同步，请检查服务连接后重试。";
+    const text = event.detail?.error?.message || "当前人格未能同步，请检查服务连接后重试。";
     const toast = $("#m-toast");
     if (toast) { toast.textContent = text; toast.classList.remove("is-hidden"); setTimeout(() => toast.classList.add("is-hidden"), 2600); }
   });

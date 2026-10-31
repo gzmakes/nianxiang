@@ -183,7 +183,10 @@ class SessionIn(BaseModel):
     mode: str = Field(default="empty", pattern="^(sample|paste|empty)$")
     text: str = ""
     persona_id: Literal['nianxiang', 'whale'] = 'nianxiang'
-    interaction_mode: Literal['companion', 'work'] = 'companion'
+    interaction_mode: Literal['companion', 'work'] = Field(
+        default='companion',
+        description='Deprecated compatibility field. Stored for legacy clients; no longer changes dialogue behavior.',
+    )
 
 
 class PersonaIn(BaseModel):
@@ -191,7 +194,9 @@ class PersonaIn(BaseModel):
 
 
 class InteractionModeIn(BaseModel):
-    interaction_mode: str
+    interaction_mode: str = Field(
+        description='Deprecated compatibility input. The value is retained for old clients and does not alter dialogue behavior.'
+    )
 
 
 class ChatIn(BaseModel):
@@ -1363,7 +1368,7 @@ def set_session_persona(sid: str, body: PersonaIn):
     return out
 
 
-@app.put('/api/session/{sid}/mode', response_model=contract.SessionResponse)
+@app.put('/api/session/{sid}/mode', response_model=contract.SessionResponse, deprecated=True)
 def set_session_mode(sid: str, body: InteractionModeIn):
     try:
         out = core.set_session_mode(sid, body.interaction_mode)

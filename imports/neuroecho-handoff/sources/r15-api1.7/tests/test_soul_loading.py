@@ -16,13 +16,13 @@ def test_persona_changes_are_read_on_each_model_request(tmp_path, monkeypatch):
 def test_missing_empty_invalid_or_oversized_soul_falls_back_to_guardrails(tmp_path, monkeypatch):
     path = tmp_path / 'SOUL.md'
     monkeypatch.setattr(prompts, 'SOUL_PATH', path)
-    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT
+    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT + "\n\n" + prompts.INTERACTION_POLICY
     path.write_text('', encoding='utf-8')
-    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT
+    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT + "\n\n" + prompts.INTERACTION_POLICY
     path.write_bytes(b'\xff')
-    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT
+    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT + "\n\n" + prompts.INTERACTION_POLICY
     path.write_bytes(b'x' * (prompts.MAX_SOUL_BYTES + 1))
-    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT
+    assert prompts.system_prompt() == prompts.SYSTEM_PROMPT + "\n\n" + prompts.INTERACTION_POLICY
 
 
 def test_chat_model_gets_current_persona_each_turn(tmp_path, monkeypatch):
