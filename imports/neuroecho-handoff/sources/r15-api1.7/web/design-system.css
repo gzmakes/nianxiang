@@ -863,3 +863,29 @@ html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba
   #app .context .memory-origin{background:rgba(27,36,51,.06);color:var(--ink-mute);border-radius:12px;padding:3px 10px}
   #app .context .mem-group-label{font-size:12px;line-height:1.6;letter-spacing:0;text-transform:none;color:var(--ink-mute);margin:0 0 8px}
 }
+/* Web 改版 22 (2026-10-31，产品要求)：
+   连接页：去掉「可选择」状态行，卡片按内容收紧、间距缩小；
+   记忆页：标题字号与其他页一致（memory-overview.css 在后面加载，这里用更高的特异性），分类卡内容居中、四边等距，去掉页脚那句话；
+   设置页：「伙伴角色」里列出 念响 / 小鲸鱼（settings-polish.js），「自动记录记忆」说明压短、勾选框与文字对齐。 */
+@media(min-width:900px){
+  #app #tab-apps .app-card .status{display:none}
+  #app #tab-apps .apps-grid{gap:8px;padding:0}
+  #app #tab-apps .app-card{padding:12px 14px;margin:0;gap:10px;align-items:center;flex-wrap:nowrap}
+  #app #tab-apps .app-card+.app-card{margin-top:0}
+  #app #tab-apps .app-card b{font-size:14px;line-height:1.4}
+  #app #tab-apps .app-card small{font-size:12px;line-height:1.5;margin-top:2px;color:var(--ink-mute)}
+  #app #tab-apps .app-card .ico{width:32px;height:32px;border-radius:10px;background:rgba(27,36,51,.06);color:var(--ink-mute);font-size:13px;font-weight:600}
+  #app #design-context .memory-summary-kicker{font-size:12px;line-height:1.6;font-weight:400;color:var(--ink-mute)}
+  #app #design-context .memory-summary-title{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;margin:4px 0 6px}
+  #app #design-context .memory-overview-section h4,#app #design-context .memory-overview-toolbar h4,#app #design-context .memory-overview-list-title{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;margin:0}
+  #app #design-context .memory-overview-section span{font-size:12px;line-height:1.6}
+  #app #design-context button.memory-category-card{align-items:center;justify-content:center;text-align:center;min-height:0;padding:16px 12px!important;gap:6px}
+  #app #design-context .memory-category-card strong,#app #design-context .memory-category-count{text-align:center}
+  #app #design-context .memory-overview-footnote{display:none}
+  #app .settings-persona-options{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+  #app .settings-persona-options [aria-checked=true]{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important}
+  #app #settings-choose-persona{display:none!important}
+  #app #auto-memory-settings label{display:flex;align-items:center;gap:8px;margin:8px 0 4px;font-size:13px;line-height:1.5;font-weight:500;color:var(--ink)}
+  #app #auto-memory-settings input[type=checkbox]{flex:none;width:16px;height:16px;margin:0;accent-color:var(--ink)}
+  #app #auto-memory-settings [data-auto-memory-status]{margin:0;font-size:12px;line-height:1.6;color:var(--ink-mute)}
+}
