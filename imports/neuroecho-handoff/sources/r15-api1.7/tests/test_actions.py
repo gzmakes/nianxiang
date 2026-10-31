@@ -14,7 +14,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_action_preview_then_commit(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     d = client.post("/api/action", json={"session_id": sid, "kind": "reminder", "title": "演示前彩排", "detail": "周三 15:00"}).json()
     assert d["status"] == "previewed"
     done = client.post(f"/api/action/{d['id']}/commit").json()
@@ -24,13 +24,13 @@ def test_action_preview_then_commit(client):
 
 
 def test_bad_action_kind(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     r = client.post("/api/action", json={"session_id": sid, "kind": "email", "title": "x"})
     assert r.status_code == 400
 
 
 def test_message_draft_is_not_sent(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     d = client.post("/api/action", json={"session_id": sid, "kind": "message",
                                           "title": "回复邮件", "detail": "收到，今晚给进展"}).json()
     done = client.post(f"/api/action/{d['id']}/commit").json()
@@ -40,7 +40,7 @@ def test_message_draft_is_not_sent(client):
 
 
 def test_bookmark_keeps_source_and_version(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     b = client.post("/api/bookmark", json={
         "session_id": sid, "note": "停在这一段", "choice": "保留取舍", "next_step": "先写开头",
         "source_memory_id": "mem_1", "source_version": 3,

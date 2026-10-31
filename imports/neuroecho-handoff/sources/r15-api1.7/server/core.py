@@ -20,7 +20,7 @@ from contextlib import nullcontext
 from contextvars import ContextVar
 from typing import Callable
 
-from . import agent_runtime, apple_source, chat_delivery, companion_boundary, conversation_changes, faults, followups, proactive_policy, model, moods, mood_operations, plugin_bridge, prompts, source_context
+from . import agent_runtime, apple_source, chat_delivery, companion_boundary, connection_intro, conversation_changes, faults, feishu_account, followups, proactive_policy, model, moods, mood_operations, plugin_bridge, prompts, source_context
 from .conversation_intent import confirmed_preference_mode, requested_response_mode, requested_conversation_style
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
@@ -123,6 +123,8 @@ def init_db() -> None:
     )
     chat_delivery.initialize(conn)
     agent_runtime.initialize(conn)
+    feishu_account.init_schema(conn)
+    connection_intro.init_schema(conn)
     cols = [r[1] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
     if "citations" not in cols:
         conn.execute("ALTER TABLE messages ADD COLUMN citations TEXT DEFAULT '[]'")
@@ -194,6 +196,9 @@ def init_db() -> None:
     moods.init_schema(conn)
     mood_operations.init_schema(conn)
     source_context.initialize(conn)
+    source_cols = [row[1] for row in conn.execute('PRAGMA table_info(source_attachments)')]
+    if 'read_scope' not in source_cols:
+        conn.execute("ALTER TABLE source_attachments ADD COLUMN read_scope TEXT NOT NULL DEFAULT '{}'")
     source_context.migrate_legacy(conn, now())
     conversation_changes.init_schema(conn)
     conn.commit()
@@ -363,7 +368,7 @@ def set_session_context(sid: str, connector_id: str, items: list, insights: list
         target = matching[-1] if matching else (attached[0] if len(attached) == 1 and attached[0]['legacy'] else None)
         items, insights, starters_list = items[:16], insights[:8], (starters_list or [])[:8]
         if target:
-            conn.execute('UPDATE source_attachments SET connector_id=?,items=?,insights=?,starters=?,stale=0,'
+            conn.execute("UPDATE source_attachments SET read_scope='{}',connector_id=?,items=?,insights=?,starters=?,stale=0,"
                          'fingerprint=?,updated_at=? WHERE id=?',
                          (connector_id, source_context.dumps(items), source_context.dumps(insights),
                           source_context.dumps(starters_list),
@@ -395,21 +400,22 @@ class SourceConflict(ValueError):
 
 def attach_source_to_empty_session(sid: str, source_label: str, source_text: str,
                                    understanding: dict, items: list, insights: list,
-                                   starters: list, connector_id: str = 'feishu') -> None:
+                                   starters: list, connector_id: str = 'feishu', read_scope: dict | None = None) -> list[str]:
     """Append one reviewed source, preserving conversation and other sources.
 
     The historical function name remains for callers. Each attachment owns only
     its derived cards; user statements and manual memories remain independent.
     """
-    attach_sources_to_session(sid, [{'label': source_label, 'text': source_text,
+    return attach_sources_to_session(sid, [{'label': source_label, 'text': source_text,
         'understanding': understanding, 'items': items, 'insights': insights,
-        'starters': starters, 'connector_id': connector_id}])
+        'starters': starters, 'connector_id': connector_id, 'read_scope': read_scope or {}}])
 
 
-def attach_sources_to_session(sid: str, sources: list[dict]) -> None:
+def attach_sources_to_session(sid: str, sources: list[dict]) -> list[str]:
     """Attach a reviewed batch atomically, keeping each source's lineage separate."""
     if not sources:
         raise ValueError('至少需要一份资料。')
+    attachment_ids = []
     conn = get_db()
     try:
         conn.execute('BEGIN IMMEDIATE')
@@ -445,11 +451,13 @@ def attach_sources_to_session(sid: str, sources: list[dict]) -> None:
                 raise SourceConflict('这份资料已经在当前对话或本次选择中，无需重复接入。')
             stamps.add(stamp)
             attachment, ts = uid('src'), now()
+            attachment_ids.append(attachment)
             conn.execute('INSERT INTO source_attachments(id,session_id,connector_id,label,source_text,items,insights,starters,'
-                         'stale,legacy,bookmark_start_rowid,fingerprint,created_at,updated_at) '
-                         'VALUES(?,?,?,?,?,?,?,?,0,0,?,?,?,?)',
+                         'stale,legacy,bookmark_start_rowid,fingerprint,created_at,updated_at,read_scope) '
+                         'VALUES(?,?,?,?,?,?,?,?,0,0,?,?,?,?,?)',
                          (attachment, sid, connector_id, source_label, source_text[:20000], source_context.dumps(items),
-                          source_context.dumps(insights), source_context.dumps(starters), bookmark_start, stamp, ts, ts))
+                          source_context.dumps(insights), source_context.dumps(starters), bookmark_start, stamp, ts, ts,
+                          json.dumps(source.get('read_scope') or {}, ensure_ascii=False)))
             cards = [(kind, text) for kind, key in (('fact','facts'), ('inference','inferences'), ('question','questions'))
                      for text in understanding.get(key, [])]
             cards.extend(('inference', f"洞察（{i['type']}）：{i['title']}——{i['text']}") for i in insights)
@@ -472,6 +480,9 @@ def attach_sources_to_session(sid: str, sources: list[dict]) -> None:
         raise
     finally:
         conn.close()
+    return attachment_ids
+
+
 def list_sources(sid: str) -> list[dict]:
     """Public metadata only; source_text is deliberately not returned."""
     conn = get_db()
@@ -594,6 +605,7 @@ def add_message(sid: str, role: str, text: str, citations: list | None = None,
         if role == "user":
             conn.execute("BEGIN IMMEDIATE")
             chat_delivery.interrupt(conn, sid)
+            connection_intro.cancel_for_user(conn, sid)
         persona_id = None
         interaction_mode = None
         if role == "assistant":
@@ -635,6 +647,13 @@ def get_messages(sid: str) -> list[dict]:
             d["suggestions"] = []
         out.append(d)
     chat_delivery.annotate(conn, sid, out)
+    intro_messages = {row['message_id']: row for row in conn.execute(
+        'SELECT id,source_id,message_id,scope FROM connection_intro_jobs WHERE session_id=? AND message_id IS NOT NULL', (sid,))}
+    for message in out:
+        if message['id'] in intro_messages:
+            intro_row = intro_messages[message['id']]
+            message['connection_intro'] = {'id': intro_row['id'], 'source_id': intro_row['source_id'],
+                                           'scope': json.loads(intro_row['scope'] or '{}')}
     proposals = agent_runtime.attach_proposals(conn, sid, out, agent_runtime.context_stamp(conn, sid))
     for message in out:
         if message["id"] in proposals:
@@ -1329,6 +1348,7 @@ def _model_context_stamp(sid: str, conn: sqlite3.Connection | None = None) -> st
             item['source_text'] = hashlib.sha256((item['source_text'] or '').encode()).hexdigest()
             sources.append(item)
         snapshot = {'session':dict(session) if session else None,'memories':memories,'sources':sources,
+                    'feishu_account':feishu_account.snapshot(conn, sid),
                     'boundary':companion_boundary.public(companion_boundary.snapshot(conn,sid,followups._current(None)))}
         return hashlib.sha256(json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     finally:
@@ -1339,7 +1359,8 @@ def _model_context_stamp(sid: str, conn: sqlite3.Connection | None = None) -> st
 
 def _model_reply(sid: str, text: str, user_message_id: str = "",
                  generation_stamp: list[str] | None = None,
-                 current_mode: str | None = None, proposal_out: list | None = None) -> tuple[str | None, str]:
+                 current_mode: str | None = None, proposal_out: list | None = None,
+                 citations_out: list | None = None, account_guard_out: list | None = None) -> tuple[str | None, str]:
     """Return the reply and whether the model succeeded, failed, or is unconfigured."""
     before = _model_context_stamp(sid)
     if generation_stamp is not None:
@@ -1347,6 +1368,13 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
     client = model.from_env()
     if client is None:
         return None, "unconfigured"
+    def account_snapshot():
+        account_conn = get_db()
+        try:
+            return feishu_account.snapshot(account_conn, sid)
+        finally:
+            account_conn.close()
+    account_access = feishu_account.TurnAccess(account_snapshot) if account_snapshot().get('enabled') else None
     facts, inferences, questions, candidates = _memory_groups(sid, text)
     # Exclude dialogue from before a correction, deletion or revocation.
     conn = get_db()
@@ -1383,9 +1411,11 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
                                       candidate_facts=candidates, source_excerpts=excerpts,
                                       response_mode=effective_mode, mode_from_preference=mode_from_preference,
                                       conversation_style=session.get("conversation_style", "warm"))
-        if agent_runtime.wants_agent_tools(text, bool(ctx)):
+        turn_citations: list[dict] = []
+        if account_access is not None or agent_runtime.wants_agent_tools(text, bool(ctx)):
             out, proposal = agent_runtime.run(client, system, user, user_text=text, has_sources=bool(ctx),
-                                               search=lambda query: _source_excerpts(sid, query))
+                                               search=lambda query: _source_excerpts(sid, query),
+                                               feishu_access=account_access, citations_out=turn_citations)
         else:
             out, proposal = client.complete(system, user), None
         out = plugin_bridge.sanitize_meme_markers(out)
@@ -1394,13 +1424,24 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
         if get_session(sid) is None:
             # Do not revive a session removed while the model was running.
             return None, "deleted"
-        if before != _model_context_stamp(sid):
+        if before != _model_context_stamp(sid) or (account_access is not None and account_access.has_context and not account_access.is_current()):
             audit(sid, "model.stale", "", "生成期间记忆或来源发生变化，未展示旧回复")
             return None, "changed"
         if proposal is not None and proposal_out is not None:
             proposal_out.append(proposal)
+        if citations_out is not None:
+            citations_out.extend(turn_citations)
+        if account_access is not None and account_access.has_context and account_guard_out is not None:
+            # The CLI account can change independently of our database. Check
+            # again just before committing, without holding the SQLite lock.
+            account_guard_out.append(account_access.is_current)
         audit(sid, "model.success", f"model={client.model}", "模型回复已生成")
         return out, "ok"
+    except agent_runtime.FeishuContextChanged:
+        if get_session(sid) is None:
+            return None, "deleted"
+        audit(sid, 'model.stale', '', '飞书连接已变化，停止发送本轮已读取内容')
+        return None, 'changed'
     except (model.ModelError, ValueError, TypeError) as e:
         if get_session(sid) is None:
             return None, "deleted"
@@ -1448,12 +1489,17 @@ def generate_reply(sid: str, text: str, *,
 
     generation_stamp: list[str] = []
     proposal_out: list[dict] = []
+    citations_out: list[dict] = []
+    account_guards: list[Callable[[], bool]] = []
 
     def finish(reply: str, action: str | None, state: str, **extra) -> dict:
         # Cancellation shares reply_lock with the request ledger. Context
         # validation and the actual answer commit share one SQLite write lock;
         # revocation cannot slip between the comparison and the insert.
         with reply_lock if reply_lock is not None else nullcontext():
+            if action == 'model.reply' and any(not guard() for guard in account_guards):
+                reply = '刚才飞书连接发生了变化，这次旧回复没有展示。你可以重新连接后再试。'
+                action, state, extra = 'model.stale', 'responding', {}
             conn = get_db()
             cancelled = False
             assistant_id = None
@@ -1474,7 +1520,8 @@ def generate_reply(sid: str, text: str, *,
                                      (uid('aud'), sid, 'model.stale', '', '提交前上下文已变化，未保存旧回复', now()))
                     assistant_id = uid('msg')
                     conn.execute('INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at,persona_id,interaction_mode) VALUES(?,?,?,?,?,?,?,?,?)',
-                                 (assistant_id, sid, 'assistant', reply, '[]', '[]', now(), session.get('persona_id') or 'nianxiang', session.get('interaction_mode') or 'companion'))
+                                 (assistant_id, sid, 'assistant', reply,
+                                  json.dumps(citations_out if action == 'model.reply' else [], ensure_ascii=False), '[]', now(), session.get('persona_id') or 'nianxiang', session.get('interaction_mode') or 'companion'))
                     if action == "model.reply":
                         chat_delivery.register(conn, sid, assistant_id, reply, mode=session.get('interaction_mode') or 'companion')
                     conn.execute('UPDATE sessions SET state=? WHERE id=?', (state, sid))
@@ -1547,7 +1594,7 @@ def generate_reply(sid: str, text: str, *,
         conn.close()
     response_mode, _ = _effective_response_mode(sid)
     response_mode = requested_mode or response_mode
-    model_reply, model_state = (None, "command") if command else _model_reply(sid, model_text, user_message["id"], generation_stamp, requested_mode, proposal_out)
+    model_reply, model_state = (None, "command") if command else _model_reply(sid, model_text, user_message["id"], generation_stamp, requested_mode, proposal_out, citations_out, account_guards)
     grounded = None if (command or model_reply or model_state == "changed" or response_mode == "listen") else _grounded_reply(sid, model_text)
     capability = None if (command or model_reply or grounded or model_state == "changed") else _capability_reply(sid, model_text)
 
@@ -1667,6 +1714,7 @@ def revoke_source(sid: str, source_id: str | None = None) -> dict:
             return {'ok': True, 'cleaned': 0, 'state': sess['state'], 'review_required': 0}
         companion_boundary.invalidate(conn,sid)
         selected_ids = {row['id'] for row in selected}
+        connection_intro.cancel_for_sources(conn, sid, selected_ids)
         mids, review_ids = set(), set()
         personal = ('用户手动添加', '对话中用户要求', '对话原话 · 用户选存', '对话原话 · 用户纠正')
         for attachment in selected:
@@ -1907,6 +1955,8 @@ def delete_session(sid: str) -> dict:
     for table, key in (("messages", "session_id"), ("memories", "session_id"),
                        ("memory_revisions", "session_id"), ("bookmarks", "session_id"),
                        ("actions", "session_id"), ("audit", "session_id"),
+                       ("feishu_account_connections", "session_id"),
+                       ("connection_intro_jobs", "session_id"),
                        ("session_context", "session_id"), ("source_attachments", "session_id"), ("sessions", "id")):
         if table not in counts:
             counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table} WHERE {key}=?", (sid,)).fetchone()[0]

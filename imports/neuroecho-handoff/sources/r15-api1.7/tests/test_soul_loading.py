@@ -41,7 +41,7 @@ def test_chat_model_gets_current_persona_each_turn(tmp_path, monkeypatch):
             return '我在听。'
     monkeypatch.setattr(core.model, 'from_env', lambda: Fake())
     client = TestClient(app)
-    sid = client.post('/api/session', json={'mode': 'sample'}).json()['session']['id']
+    sid = client.post('/api/session', json={'mode': 'paste', 'text': '测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。'}).json()['session']['id']
     path.write_text('人格版本一', encoding='utf-8')
     assert client.post('/api/chat', json={'session_id': sid, 'text': '今天很累'}).status_code == 200
     path.write_text('人格版本二', encoding='utf-8')

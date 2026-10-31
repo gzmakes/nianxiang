@@ -14,7 +14,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_history_records_each_correction(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     mem = client.get(f"/api/memory?session_id={sid}").json()["memories"][0]
     h = client.get(f"/api/memory/{mem['id']}/history").json()["revisions"]
     assert len(h) == 1 and h[0]["version"] == 1
@@ -28,13 +28,13 @@ def test_history_records_each_correction(client):
 
 
 def test_history_deleted_with_memory(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     mem = client.get(f"/api/memory?session_id={sid}").json()["memories"][0]
     client.delete(f"/api/memory/{mem['id']}")
     assert client.get(f"/api/memory/{mem['id']}/history").json()["revisions"] == []
 
 
 def test_export_includes_revisions(client):
-    sid = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    sid = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     data = client.get(f"/api/export?session_id={sid}").json()
     assert "memory_revisions" in data and len(data["memory_revisions"]) >= 1

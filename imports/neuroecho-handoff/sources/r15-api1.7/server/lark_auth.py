@@ -17,7 +17,8 @@ import time
 from . import lark, lark_auth_coordinator as coordinator
 
 SCOPE = "docx:document:readonly"
-STATE: dict = {"status": "idle", "url": "", "qr": "", "error": "", "started_at": 0}
+STATE: dict = {"status": "idle", "url": "", "qr": "", "error": "", "started_at": 0,
+               "error_code": "", "setup_url": ""}
 _LOCK = threading.Lock()
 
 
@@ -43,6 +44,9 @@ def _friendly(msg: str) -> str:
 
 def _cli_error(p: subprocess.CompletedProcess, action: str) -> str:
     """Return a useful category without forwarding arbitrary credential-bearing output."""
+    dependency = lark.cli_dependency_failure(p)
+    if dependency:
+        return dependency["error"]
     raw = ((p.stderr or "") + " " + (p.stdout or "")).lower()
     if any(k in raw for k in ("keychain", "operation not permitted", "sandbox")):
         return _friendly("keychain")
@@ -65,7 +69,7 @@ def setup_keychain() -> dict:
 
 
 def _public() -> dict:
-    return {k: STATE.get(k) for k in ("status", "url", "qr", "error", "started_at", "phase")}
+    return {k: STATE.get(k, "") for k in ("status", "url", "qr", "error", "started_at", "error_code", "setup_url", "phase")}
 
 
 def _update(attempt: int, **values) -> None:
@@ -125,7 +129,7 @@ def _initialize(attempt, reservation):
         if not handed_off:
             coordinator.finish("document", reservation)
 
-def start() -> dict:
+def start(force: bool = False) -> dict:
     disposition, reservation = coordinator.begin("document")
     if disposition == "conflict":
         return {"status": "error", "error": "另一项飞书授权仍在进行，请等待完成或过期后重试。"}
@@ -135,23 +139,35 @@ def start() -> dict:
         return current if current["status"] in ("starting", "pending") else {"status": "starting"}
     with _LOCK:
         attempt = STATE.get("attempt", 0) + 1
-        STATE.update(status="starting", url="", qr="", error="", started_at=time.time(), attempt=attempt, phase="authorize")
+        STATE.update(status="starting", url="", qr="", error="", error_code="", setup_url="",
+                     started_at=time.time(), attempt=attempt, phase="authorize")
     try:
         st = lark.auth_status()
-        if lark.user_ready(st):
-            _update(attempt, status="success", url="", qr="", error="", started_at=time.time())
+        if st.get("error_code") in ("needs_app_setup", "configuration_unavailable"):
+            _update(attempt, status="error", url="", qr="", error=st["error"],
+                    error_code=st["error_code"], setup_url=st.get("setup_url", ""))
+            coordinator.finish("document", reservation)
+            with _LOCK:
+                return _public()
+        if force is not True and lark.user_ready(st):
+            _update(attempt, status="success", url="", qr="", error="", error_code="", setup_url="", started_at=time.time())
             coordinator.finish("document", reservation)
             with _LOCK:
                 return _public()
         p = _run(["auth", "login", "--no-wait", "--json", "--scope", SCOPE], timeout=20)
-        if p.returncode != 0 and any(word in ((p.stdout or "") + (p.stderr or "")).lower()
-                                     for word in ("not_configured", "not configured")):
+        if p.returncode != 0 and not lark.cli_configuration_failure(p) and any(
+                word in ((p.stdout or "") + (p.stderr or "")).lower()
+                for word in ("not_configured", "not configured")):
             _update(attempt, phase="setup")
             threading.Thread(target=_initialize, args=(attempt, reservation), daemon=True).start()
             with _LOCK:
                 return _public()
         if p.returncode != 0:
-            _update(attempt, status="error", error=_cli_error(p, "启动授权"))
+            missing = lark.cli_configuration_failure(p)
+            _update(attempt, status="error", url="", qr="",
+                    error=missing["error"] if missing else _cli_error(p, "启动授权"),
+                    error_code=missing["error_code"] if missing else "authorization_start_failed",
+                    setup_url=missing["setup_url"] if missing else "")
             coordinator.finish("document", reservation)
             with _LOCK:
                 return _public()
@@ -165,10 +181,11 @@ def start() -> dict:
             qr = _qr_data_url(url)
         except Exception:
             qr = ""
-        _update(attempt, status="pending", url=url, qr=qr, error="", started_at=time.time())
+        _update(attempt, status="pending", url=url, qr=qr, error="", error_code="", setup_url="", started_at=time.time())
         threading.Thread(target=_complete, args=(code, attempt, reservation), daemon=True).start()
     except Exception:
-        _update(attempt, status="error", url="", qr="", error="无法启动飞书授权，请重试。")
+        _update(attempt, status="error", url="", qr="", error="无法启动飞书授权，请重试。",
+                error_code="authorization_start_failed", setup_url="")
         coordinator.finish("document", reservation)
     with _LOCK:
         return _public()
@@ -178,7 +195,9 @@ def status() -> dict:
     with _LOCK:
         cur = _public()
         attempt = STATE.get("attempt", 0)
-    if cur["status"] in ("starting", "pending"):
+    if cur["status"] in ("starting", "pending", "error", "cancelled"):
+        # A fresh attempt's failure must not become success merely because an
+        # older grant still exists. Only that worker may complete its attempt.
         return cur
     st = lark.auth_status()
     with _LOCK:
@@ -186,7 +205,7 @@ def status() -> dict:
         if STATE.get("attempt", 0) != attempt or STATE.get("status") != cur["status"]:
             return _public()
         if lark.user_ready(st):
-            STATE.update(status="success", url="", qr="", error="")
+            STATE.update(status="success", url="", qr="", error="", error_code="", setup_url="")
         elif cur["status"] == "success":
-            STATE.update(status="idle", url="", qr="", error="授权未就绪或已过期，请重新授权")
+            STATE.update(status="idle", url="", qr="", error="授权未就绪或已过期，请重新授权", error_code="authorization_not_ready", setup_url="")
         return _public()

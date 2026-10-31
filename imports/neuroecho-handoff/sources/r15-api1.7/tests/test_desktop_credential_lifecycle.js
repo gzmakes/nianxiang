@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const flush=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
 const src = fs.readFileSync('web/app.js', 'utf8');
 function clip(a, b) { const i = src.indexOf(a), j = src.indexOf(b, i); assert.ok(i >= 0 && j > i); return src.slice(i, j); }
 function element() {
@@ -14,7 +15,7 @@ function storage() {const m = new Map(); return {getItem:k=>m.get(k) ?? null, se
 function setup(kind, api, localStorage=storage(), enterSession = () => { throw Error('stale session must not open'); }) {
   const nodes = new Map();
   const $ = s => {if (!nodes.has(s)) nodes.set(s, element()); return nodes.get(s)};
-  const ctx = vm.createContext({$, $$: () => [], state:{session:null}, AbortController, localStorage, api, esc: x => x, enterSession});
+  const ctx = vm.createContext({$, $$: () => [], state:{session:null}, els:{onboarding:element()}, AbortController, localStorage, api, esc: x => x, enterSession});
   vm.runInContext('let activeTurn=null, queuedTurns=[], turnQueue=[];'+clip('  const credentialPendingKey = ', '  async function loadCatalog()') + clip(`  function render${kind}Real()`, kind === 'Gmail' ? '  function renderFeishuPicker()' : '  function renderInsights()') + `\nthis.open=render${kind}Real;this.clear=clearCredentialForms;this.back=()=>showWz(2);this.showPending=renderCredentialPendingNotice;`,ctx);
   ctx.open();
   return {ctx, $, localStorage};
@@ -37,7 +38,7 @@ for (const [kind, input, target, preview, result, hint, start] of [
   });
   test(`${kind}: late first preview cannot overwrite newer preview or its typed credential`, async () => {
     const one=deferred(),two=deferred();let count=0;const {ctx,$}=setup(kind,async()=>++count===1?one.promise:two.promise);
-    $(input).value='first-secret'; $(target).value='fixture'; const p1=$(preview).onclick(); $(input).value='second-secret'; const p2=$(preview).onclick();
+    $(input).value='first-secret'; $(target).value='fixture'; const p1=$(preview).onclick(); ctx.clear();ctx.open();$(target).value='fixture'; $(input).value='second-secret'; const p2=$(preview).onclick();
     $(input).value='next-secret'; two.resolve({ok:true,preview_id:'new',title:'new-preview',items:[{title:'new',summary:'new'}]}); await p2;
     const updated=$(result).innerHTML; one.resolve({ok:true,preview_id:'old',title:'old-preview',items:[{title:'old',summary:'old'}]});await p1;
     assert.equal($(input).value,'next-secret');assert.equal($(result).innerHTML,updated);assert.doesNotMatch(updated,/old-preview/);
@@ -62,7 +63,7 @@ for (const [kind, input, target, preview, result, hint, start] of [
   });
   test(`${kind}: a late start response after close does not navigate`, async()=>{
     const started=deferred(); const {ctx,$,localStorage}=setup(kind,async path => path.endsWith('/preview') ? {ok:true,preview_id:'p',title:'x',items:[]} : started.promise);
-    $(input).value='fixture-secret';$(target).value='fixture';await $(preview).onclick(); const pending=$(start).onclick();ctx.clear();assert.equal($('#source-uncertain-notice').classList.contains('is-hidden'),false); started.resolve({session:{id:'fixture'}});await pending;
+    $(input).value='fixture-secret';$(target).value='fixture';const pending=$(preview).onclick();await flush();ctx.clear();assert.equal($('#source-uncertain-notice').classList.contains('is-hidden'),false); started.resolve({session:{id:'fixture'}});await pending;
     const reopened=setup(kind,async()=>({}),localStorage);reopened.ctx.showPending();assert.equal(reopened.$('#source-uncertain-notice').classList.contains('is-hidden'),false);
   });
 }

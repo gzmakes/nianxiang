@@ -14,7 +14,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_delete_session_cleans_everything(client):
-    d = client.post("/api/session", json={"mode": "sample"}).json()
+    d = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()
     sid = d["session"]["id"]
     client.post("/api/chat", json={"session_id": sid, "text": "记住：测试"})
     b = client.post("/api/bookmark", json={"session_id": sid, "note": "n"}).json()
