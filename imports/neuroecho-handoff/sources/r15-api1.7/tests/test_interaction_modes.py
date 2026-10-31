@@ -95,7 +95,7 @@ def test_work_reply_uses_one_complete_delivery_block_and_records_mode(tmp_path, 
             return "结论先说。\n\n详细说明如下。\n- 保持结构。"
 
     monkeypatch.setattr(core.model, "from_env", lambda: FakeModel())
-    result = core.generate_reply(sid, "请分析这个问题")
+    result = core.generate_reply(sid, "请分析这个问题，我不想看表情")
     assistant = result["messages"][-1]
 
     assert "【工作模式】" not in sent[0][0]

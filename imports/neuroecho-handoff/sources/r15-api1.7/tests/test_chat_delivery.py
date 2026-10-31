@@ -38,6 +38,14 @@ class DeliveryTests(unittest.TestCase):
     long = '这是一段很长的文字。' * 40
     self.assertEqual(chat_delivery.split_reply(long), [long])
 
+ def test_sticker_marker_is_delivered_as_its_own_bubble(self):
+    self.assertEqual(chat_delivery.split_reply('先接住你。\n\n[表情: builtin/happy.svg]'), [
+        '先接住你。', '[表情: builtin/happy.svg]'])
+    self.assertEqual(chat_delivery.split_reply('[表情: builtin/comfort.svg]\n我会陪着你。'), [
+        '[表情: builtin/comfort.svg]', '我会陪着你。'])
+    self.assertEqual(chat_delivery.split_reply('```text\n[表情: builtin/happy.svg]\n```'), [
+        '```text\n[表情: builtin/happy.svg]\n```'])
+
  def test_five_paragraphs_have_four_ordered_persisted_sends(self):
     db = sqlite3.connect(':memory:'); db.row_factory = sqlite3.Row
     db.execute('create table messages(id text primary key, session_id text, text text)')

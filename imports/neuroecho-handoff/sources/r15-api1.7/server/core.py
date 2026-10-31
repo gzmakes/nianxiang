@@ -1343,6 +1343,53 @@ def _model_context_stamp(sid: str, conn: sqlite3.Connection | None = None) -> st
             conn.close()
 
 
+_STICKER_MARKER = re.compile(r"\[表情[:：]\s*([^\]\r\n]{1,240}?)\s*\]")
+
+
+def _has_display_sticker_marker(text: str) -> bool:
+    """Detect a sticker marker outside fenced code examples."""
+    cursor, fenced = 0, False
+    value = str(text or "")
+    while cursor < len(value):
+        if value.startswith("```", cursor):
+            fenced = not fenced
+            cursor += 3
+            continue
+        if not fenced and _STICKER_MARKER.match(value, cursor):
+            return True
+        cursor += 1
+    return False
+
+
+def _sticker_allowed_for_warm_start(text: str) -> bool:
+    """Whether a new conversation may receive its welcoming sticker.
+
+    The first two turns are intentionally warm, but an explicit opt-out or a
+    safety-sensitive/serious message always wins over the cadence rule.
+    """
+    compact = ''.join(str(text or '').lower().split())
+    blocked = (
+        '不要表情', '别发表情', '不想看表情', '不想看到表情', '不需要表情',
+        '自杀', '自残', '自伤', '伤害自己', '想死', '不想活',
+        '去世', '死亡', '葬礼', '癌症', '创伤', '急救', '报警',
+        '法律', '医疗', '诊断', '用药', '事故', '危险',
+    )
+    return not any(''.join(item.lower().split()) in compact for item in blocked)
+
+
+def _warm_start_sticker_id(text: str, catalog: list[dict]) -> str:
+    """Pick a safe welcoming sticker from the already allowlisted catalog."""
+    if not catalog:
+        return ""
+    compact = ''.join(str(text or '').lower().split())
+    preferred = "comfort" if any(word in compact for word in ("难受", "难过", "委屈", "焦虑", "烦", "累", "压力")) else ""
+    if preferred:
+        item = next((item for item in catalog if preferred in str(item.get("id", ""))), None)
+        if item:
+            return item["id"]
+    return next((item["id"] for item in catalog if item.get("id")), "")
+
+
 def _model_reply(sid: str, text: str, user_message_id: str = "",
                  generation_stamp: list[str] | None = None,
                  current_mode: str | None = None, proposal_out: list | None = None) -> tuple[str | None, str]:
@@ -1373,23 +1420,27 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
     persona_id = session.get("persona_id", "nianxiang") or "nianxiang"
 
     def sticker_state():
-        """Summarize recent assistant sticker use without adding DB state."""
+        """Summarize sticker cadence and the current new-user turn."""
         conn = get_db()
         try:
             rows = conn.execute(
                 "SELECT text FROM messages WHERE session_id=? AND role='assistant' "
                 "AND suppressed=0 ORDER BY rowid DESC LIMIT 12", (sid,)).fetchall()
+            user_turns = conn.execute(
+                "SELECT COUNT(*) AS count FROM messages WHERE session_id=? "
+                "AND role='user' AND suppressed=0", (sid,)).fetchone()["count"]
         finally:
             conn.close()
         marker = re.compile(r"\[表情[:：]\s*([^\]\r\n]{1,240}?)\s*\]")
         for turns_ago, row in enumerate(rows):
             match = marker.search(row["text"] or "")
             if match:
-                return turns_ago, match.group(1).strip()
-        return None, ""
+                return turns_ago, match.group(1).strip(), int(user_turns or 0)
+        return None, "", int(user_turns or 0)
 
-    last_sticker_turns_ago, last_sticker_id = sticker_state()
+    last_sticker_turns_ago, last_sticker_id, user_turn_count = sticker_state()
     sticker_due = last_sticker_turns_ago is None or last_sticker_turns_ago >= 2
+    warm_start_required = user_turn_count <= 2 and _sticker_allowed_for_warm_start(text)
     audit(sid, "model.call",
           f"model={client.model} · facts={len(facts)} · inferences={len(inferences)} · items={len(ctx.get('items') or [])}",
           "发送必要上下文（不含正文内容）")
@@ -1405,7 +1456,8 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
                        "格式为 [表情: pack/tag/file]。"
                        f"最近一次表情距当前完整回复 {('尚未发送' if last_sticker_turns_ago is None else str(last_sticker_turns_ago) + ' 轮')}，"
                        f"上一次素材为 {last_sticker_id or '无'}；"
-                       f"本轮{'可以优先考虑' if sticker_due else '通常跳过'}。可用目录："
+                       f"当前是本会话第 {user_turn_count} 条用户消息；"
+                       f"本轮{'必须选择一张合适表情' if warm_start_required else ('可以优先考虑' if sticker_due else '通常跳过')}。可用目录："
                        + json.dumps(catalog, ensure_ascii=False))
         user = prompts.build_user_prompt(facts, inferences, questions, recent, remote_text,
                                       items=ctx.get("items"), insights=ctx.get("insights"),
@@ -1418,6 +1470,13 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
         else:
             out, proposal = client.complete(system, user), None
         out = plugin_bridge.sanitize_meme_markers(out, persona_id=persona_id, max_count=1)
+        if out.strip() and warm_start_required and not _has_display_sticker_marker(out):
+            # Keep the first two turns visually welcoming even when the model
+            # forgets the internal marker. The catalog is already allowlisted;
+            # this never invents a path or uses a private plugin asset.
+            default_sticker = _warm_start_sticker_id(text, catalog)
+            if default_sticker:
+                out = out.rstrip() + f"\n\n[表情: {default_sticker}]"
         if not out.strip():
             raise ValueError("model response contained no displayable content")
         if get_session(sid) is None:
