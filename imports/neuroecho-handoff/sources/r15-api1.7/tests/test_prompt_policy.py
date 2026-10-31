@@ -3,7 +3,7 @@ from server import prompts
 
 def test_system_prompt_keeps_guardrails_separate_from_common_policy_and_persona(tmp_path, monkeypatch):
     soul = tmp_path / "SOUL.md"
-    soul.write_text("人格只描述小鲸鱼的身份和语气。", encoding="utf-8")
+    soul.write_text("人格只描述念响的身份和语气。", encoding="utf-8")
     monkeypatch.setattr(prompts, "SOUL_PATH", soul)
 
     rendered = prompts.system_prompt()

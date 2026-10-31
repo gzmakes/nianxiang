@@ -10,11 +10,13 @@
 <link rel="manifest" href="/static/manifest.webmanifest" />
 <link rel="stylesheet" href="/static/m.css?v=a79436d458ff8e9d" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=18b52b5b6dd32531" />
+<link rel="stylesheet" href="/static/design-system.css?v=7907f58c72e29366" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
 <link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
+<link rel="stylesheet" href="/static/connection-flow.css?v=3806a56fe7f8e637" />
+<link rel="stylesheet" href="/static/soundscape.css?v=0cdf2c8cdf2caed3" />
 </head>
 <body>
 <div class="grain"></div>
@@ -66,7 +68,6 @@
     <div class="m-top-actions"><button type="button" id="m-design-search" aria-label="搜索对话和记忆">⌕</button><button type="button" id="m-design-settings" aria-label="打开设置与连接">⚙</button></div>
     <div class="m-chips" style="display:none">
       <span id="m-engine" class="chip">在线</span>
-      <span id="m-device-chip" class="chip">设备未开</span>
     </div>
   </header>
 
@@ -86,9 +87,9 @@
       <div class="m-connect-invite">
         <div class="m-entry-heading"><b>让回响多了解你一点</b><span>随时可以，慢慢来</span></div>
         <div class="m-entry-grid" aria-label="选择资料或了解设备">
-          <button type="button" class="m-entry" data-m-entry="feishu"><span class="m-entry-icon feishu-icon" aria-hidden="true">↗</span><span><b>飞书</b><small>选一篇文档</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+          <button type="button" class="m-entry" data-m-entry="feishu"><span class="m-entry-icon feishu-icon" aria-hidden="true">↗</span><span><b>飞书</b><small>按问题自动查阅</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
           <button type="button" class="m-entry" data-m-entry="rokid"><span class="m-entry-icon rokid-icon" aria-hidden="true">⌁</span><span><b>Rokid 眼镜</b><small>待联调 · 看看设想</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
-          <button type="button" class="m-entry" data-m-entry="apple_calendar"><span class="m-entry-icon calendar-icon" aria-hidden="true">▦</span><span><b>日历</b><small>未来 7 天 · 先确认</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
+          <button type="button" class="m-entry" data-m-entry="apple_calendar"><span class="m-entry-icon calendar-icon" aria-hidden="true">▦</span><span><b>日历</b><small>看看最近 7 天</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
           <button type="button" class="m-entry" data-m-entry="local_files"><span class="m-entry-icon local-icon" aria-hidden="true">⌂</span><span><b>本机电脑</b><small>只选需要的文件</small></span><span class="m-entry-arrow" aria-hidden="true">›</span></button>
         </div>
         <p>先聊聊也很好。资料读取前，都会请你确认。</p>
@@ -97,6 +98,7 @@
       </div>
     </div>
     <div id="m-messages" class="messages"></div>
+    <div id="m-connection-intro" class="connection-intro is-hidden" aria-live="polite"></div>
     <div id="m-next" class="next-card is-hidden"></div>
   </main>
   <button type="button" id="m-chat-new-messages" class="chat-new-messages is-hidden">新消息 ↓</button>
@@ -112,8 +114,6 @@
 
   <div id="m-starters" class="m-starters is-hidden"></div>
 
-  <div id="m-memory-proposal" class="is-hidden" role="status" style="padding:10px 14px; background:#f6f3eb; border-radius:12px; margin:6px 12px; font-size:13px"></div>
-  <label class="memory-preference-toggle"><input type="checkbox" id="m-memory-proposal-enabled"> 偶尔提议记住我的原话（由我决定）</label>
   <p id="m-chat-error" class="chat-error is-hidden" role="status"></p>
   <button type="button" id="m-chat-recover" class="text-btn is-hidden">核对发送状态</button>
   <div id="m-source-uncertain-notice" class="m-source-uncertain is-hidden" role="status">
@@ -204,7 +204,7 @@
     <p id="m-auth-hint" class="synthetic">正在唤起飞书授权…</p>
     <a id="m-auth-url" class="btn primary wide is-hidden" target="_blank" rel="noopener">在飞书中打开授权</a>
     <p id="m-auth-status" class="synthetic">等待你在飞书中确认…</p>
-    <button class="btn ghost wide is-hidden" id="m-auth-fix">了解并更改凭据存储</button>
+    <button type="button" class="btn ghost wide is-hidden" id="m-auth-retry">重新发起授权</button>
     <p class="note">关闭此窗口不会撤销已发起的授权；授权链接可能在有效期内继续生效。</p><div class="m-actions"><button class="btn ghost" id="m-auth-cancel">关闭</button></div>
   </div>
 </div>
@@ -221,31 +221,36 @@
 <div id="m-toast" class="toast is-hidden"></div>
 <script src="/static/startup-guard.js?v=fb9700ea37a70d76"></script>
 <script src="/static/action-cards.js?v=dbe0125a989a3987"></script>
-<script src="/static/memory-proposal.js?v=2b762001652794c3"></script>
 <script src="/static/companion-choices.js?v=f8fddd4115b6e179"></script>
 <script src="/static/contact-contract.js?v=feaef733761dc498"></script>
 <script src="/static/companion-boundary.js?v=9f7064ef5da3f82e"></script>
-<script src="/static/proactive-contact.js?v=1b420ff27a413139"></script>
+<script src="/static/proactive-contact.js?v=e383d4fd1260404d"></script>
 <script src="/static/mood.js?v=127121994941f5e6"></script>
 <script src="/static/followups.js?v=5b2e33e357d5472a"></script>
 <script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
-<script src="/static/file-picker.js?v=391f3ce87a22a3e5"></script>
-<script src="/static/chat-transport.js?v=1019294a1df91170"></script>
+<script src="/static/file-picker.js?v=95503f23c22ea9cb"></script>
+<script src="/static/connection-intro.js?v=2d71358d315b113d"></script>
+<script src="/static/feishu-account-picker.js?v=2fd2542059000621"></script>
+<script src="/static/public-link-picker.js?v=7ce2e27329319c37"></script>
+<script src="/static/chat-transport.js?v=bf3d75e3e6f2d4db"></script>
 <script src="/static/generated-shared.js?v=279e6e0bf8a3189a"></script>
 <script src="/static/client-sync.js?v=aa4d3bc740cb6441"></script>
 <script src="/static/companion-welcome.js?v=6aaed23ecb72760e"></script>
 <script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
-<script src="/static/design-system.js?v=fcda8c16048fd4e5"></script>
+<script src="/static/design-system.js?v=9ec75bbfb3f54f99"></script>
 <script src="/static/paired-devices.js?v=8641114376d41d40"></script>
-<script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
+<script src="/static/voice-reply.js?v=5a35a4d5059fa00a"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
-<script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
-<script src="/static/m.js?v=45db1bdaae948213"></script>
+<script src="/static/chat-delivery.js?v=f49bbe7cd442ceec"></script>
+<script src="/static/soundscape.js?v=f617132d43d4ea24"></script>
+<script src="/static/response-parser.js?v=b36dffc77f374ee6"></script>
+<script src="/static/auto-memory-settings.js?v=dfa61e0f873a4b1c"></script>
+<script src="/static/m.js?v=cf1112f8fbc9751a"></script>
 <script src="/static/emoji-reactions.js?v=984098af2341e32a"></script>
 <script src="/static/message-voice.js?v=d2f5f242df660536"></script>
 <script src="/static/orb-face.js?v=40a8f976250f2036"></script>
 <script src="/static/mood-polish.js?v=1c748d608167772c"></script>
-<script src="/static/persona-switch.js?v=e387ce97ee3beb99"></script>
+<script src="/static/persona-switch.js?v=7835fc03f1158074"></script>
 <script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
 </body>
 </html>

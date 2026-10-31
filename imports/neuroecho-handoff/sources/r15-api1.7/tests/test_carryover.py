@@ -14,11 +14,11 @@ def client(tmp_path, monkeypatch):
 
 
 def test_carryover_and_import(client):
-    a = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    a = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     m = core.add_memory(a, "fact", "你更喜欢先看结论", source="用户确认", status="confirmed")
     core.add_memory(a, "fact", "还没确认的猜测", source="推测", status="candidate")
 
-    b = client.post("/api/session", json={"mode": "sample"}).json()["session"]["id"]
+    b = client.post("/api/session", json={"mode": "paste", "text": "测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"}).json()["session"]["id"]
     d = client.get(f"/api/carryover?session_id={b}").json()["memories"]
     assert len(d) == 1 and d[0]["text"] == "你更喜欢先看结论"
 

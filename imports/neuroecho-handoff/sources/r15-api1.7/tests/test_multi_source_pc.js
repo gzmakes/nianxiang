@@ -65,7 +65,7 @@ test('memory provenance resolves the exact attachment title without inventing a 
 test('real enterSession refresh preserves pending words, composer draft and current view for the same session',()=>{
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},words=[{id:'local-1',role:'user',text:'正在发送的话'}];
  const input=element();input.value='输入框还没发的草稿';const state={session:{id:'s'},messages:words,memories:[],tab:'memory'},tabs=[];
- const ctx=vm.createContext({$,state,els:{input,onboarding:element(),app:element(),sourceLabel:element(),sessionMeta:element()},localStorage:{setItem(){}},location:{search:''},URLSearchParams,Date,clearTimeout(){},setTimeout(){},clearCredentialForms(){},loadEngine(){},setOrb(){},renderAll(){},loadAudit(){},loadNextStep(){},switchTab:name=>tabs.push(name),loadToday(){},renderInsightPanel(){},loadCarryover(){},bindIntro(){},showIntro(){}});
+ const ctx=vm.createContext({$,state,document:{},window:{XinjiConnectionIntro:{syncBadges(){}}},connectionIntro:{start(){}},els:{input,onboarding:element(),app:element(),sourceLabel:element(),sessionMeta:element()},localStorage:{setItem(){}},location:{search:''},URLSearchParams,Date,clearTimeout(){},setTimeout(){},clearCredentialForms(){},loadEngine(){},setOrb(){},renderAll(){},loadAudit(){},loadNextStep(){},switchTab:name=>tabs.push(name),loadToday(){},renderInsightPanel(){},loadCarryover(){},bindIntro(){},showIntro(){}});
  vm.runInContext('let onboardingExitTimer=null,sourceUiEpoch=0;'+clip('  function enterSession(', '  async function startSession(')+'\nthis.enter=enterSession;',ctx);
  const remaining={sources:[{id:'b',title:'剩余资料'}]};ctx.enter({session:{id:'s'},messages:[{text:'权威已保存的旧消息'}],memories:[{text:'权威剩余记忆'}],context:remaining},{preserveDrafts:true});
  assert.equal(state.messages,words);assert.equal(input.value,'输入框还没发的草稿');assert.equal(state.memories[0].text,'权威剩余记忆');assert.equal(state.context,remaining);assert.equal(tabs[0],'memory');
@@ -92,4 +92,16 @@ test('a correction refreshes scoped source status without touching conversation 
 test('late correction metadata cannot replace a newly selected conversation',async()=>{
  let release;const pending=new Promise(r=>release=r),env=fixture({renderStarterBar(){}});env.ctx.api=()=>pending;
  vm.runInContext(clip('  function showMemoryContextNotice()', '  // ---------------- memory actions')+'\nthis.refresh=refreshSourceContext;',env.ctx);const running=env.ctx.refresh();env.state.session={id:'other'};const other={sources:[{id:'other-source'}]};env.state.context=other;release({session:{id:'s'},context:{sources:[]}});await running;assert.equal(env.state.context,other);
+});
+
+// A pending attachment must never race a source-withdrawal refresh.
+test('withdrawal cannot begin while attachment is saving', async()=>{
+ const env=fixture({api:async()=>assert.fail('no overlapping source write')});
+ env.state.attachingSource=true;await env.ctx.revoke('source-a');
+ assert.equal(env.confirms.length,0);assert.equal(env.entered.length,0);
+});
+test('withdrawal rechecks attachment state after its confirmation dialog', async()=>{
+ const env=fixture({api:async()=>assert.fail('no overlapping source write')});
+ env.ctx.confirm=()=>{env.state.attachingSource=true;return true};
+ await env.ctx.revoke('source-a');assert.equal(env.entered.length,0);
 });

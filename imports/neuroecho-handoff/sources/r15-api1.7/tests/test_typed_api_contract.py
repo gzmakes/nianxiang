@@ -97,6 +97,8 @@ def test_capabilities_do_not_access_accounts_hardware_or_database(client, monkey
     assert data['contract_version'] == api_contract.CONTRACT_VERSION
     assert data['features']['memory_expected_version_patch'] is True
     assert data['features']['memory_expected_version_delete'] is True
+    assert data['features']['source_connection_intro'] is True
+    assert data['features']['source_recent7_read'] is True
     assert data['features']['remote_user_authentication'] is False
     assert data['features']['realtime_multi_device_sync'] is False
     assert data['connection_status'] == 'not_probed'

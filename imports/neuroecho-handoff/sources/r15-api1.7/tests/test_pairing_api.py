@@ -192,3 +192,32 @@ def test_principal_never_follows_changed_instance_conversation_or_bad_expiry(cli
         conn.execute('UPDATE paired_devices SET expires_at=?,conversation_id=? WHERE id=?',(g['device']['expires_at'],other,g['device']['id']))
         conn.execute("UPDATE app_state SET value=? WHERE key='canonical_conversation'",(other,))
     assert not paired_access.active(principal) and paired_access.public_principal(principal) is None
+
+
+def test_paired_chat_accepts_valid_image_over_three_mib_but_other_limits_remain(clients, monkeypatch):
+    import base64
+    import random
+    from io import BytesIO
+    from PIL import Image
+    _, remote, grant = clients
+    sid = grant['conversation_id']
+    seen = []
+    class Fake:
+        model = 'synthetic'
+        def complete(self, system, user, **kwargs):
+            seen.append(kwargs.get('image_data_url'))
+            return '合成图片。'
+    monkeypatch.setattr(core.model, 'from_env', lambda: Fake())
+    pixels = random.Random(42).randbytes(1100 * 1100 * 3)
+    output = BytesIO()
+    Image.frombytes('RGB', (1100, 1100), pixels).save(output, format='PNG')
+    raw = output.getvalue()
+    assert 3 * 1024 * 1024 < len(raw) < 4 * 1024 * 1024
+    image = 'data:image/png;base64,' + base64.b64encode(raw).decode()
+    response = remote.post('/api/chat', headers=headers(grant), json={
+        'session_id':sid, 'request_id':'synthetic-large-picture', 'text':'看看', 'image_data_url':image})
+    assert response.status_code == 200 and seen == [image]
+    too_large = remote.post('/api/chat', headers=headers(grant), content=b' ' * (6 * 1024 * 1024 + 1))
+    assert too_large.status_code == 413
+    other = remote.post('/api/memory', headers=headers(grant), content=b' ' * (3 * 1024 * 1024 + 1))
+    assert other.status_code == 413

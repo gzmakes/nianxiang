@@ -303,6 +303,9 @@ html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=tru
   #app .echo-slogan{font-family:"Echo Slogan","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi",serif;font-size:24px;letter-spacing:.08em}
 }
 #app #tab-design .settings-section{margin-top:24px}
+#app #tab-design details.settings-section,#m-sheet-body details.m-today-card{padding:18px 20px;border:1px solid var(--line);border-radius:20px;background:#ffffffb8}
+#app #tab-design details.settings-section summary,#m-sheet-body details.m-today-card summary{cursor:pointer;font-weight:650;min-height:32px}
+#app #tab-design details.settings-section summary:focus-visible,#m-sheet-body details.m-today-card summary:focus-visible{outline:2px solid #667caa;outline-offset:4px}
 #app #tab-design .settings-section .action-row{gap:8px}
 /* 输入框：一行白色胶囊，左 ＋，中间输入，右侧 表情 / 语音 / 发送（圆形主按钮）；内容多时自动长高 */
 #app .conversation>.composer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:4px;min-height:56px;padding:8px;box-sizing:border-box;
@@ -690,3 +693,276 @@ html[data-reduce-motion=true] #app .msg .meta{transition:none}
 @keyframes music-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
 html[data-reduce-motion=true] #app .conversation-tools [data-tool=music] .ui-icon{animation:none}
 @media(prefers-reduced-motion:reduce){#app .conversation-tools [data-tool=music] .ui-icon{animation:none}}
+/* Web 改版 18 (2026-10-31，产品要求)：对话栏右侧胶囊只留图标、整体变短（文字仍在 aria-label / 悬停提示里）；
+   首条消息上方那行「按你的节奏 / 暂时没能核对关心设置…」不再显示。 */
+@media(min-width:900px){
+  #app .conversation-tools{padding:2px;border-radius:17px}
+  #app .conversation-tools .text-btn{gap:0;padding:4px 9px;min-width:34px;justify-content:center}
+  #app .conversation-tools .text-btn>span{display:none}
+  #app .conversation-tools .text-btn .ui-icon{width:16px;height:16px}
+  #app #messages::before{display:none}
+}
+/* Web 改版 19 (2026-10-31，产品要求)：
+   1) 输入框任何状态都不画描边；2) 去掉「陪伴 / 工作」切换，只剩一种模式；3) 气泡里的链接去掉下划线、做成小胶囊；
+   4) 右侧面板统一：同一套玻璃卡片、同一套按钮（白色胶囊 / 墨色主按钮）、同一套字号行距、左右对齐；
+   5) 接入资料（onboarding）改成对话式：光球在上，问题是回响的气泡，选项是胶囊，粘贴框是输入条。 */
+#app .composer textarea,#app .composer textarea:focus,#app .composer textarea:focus-visible,#app .composer textarea:active,#app .composer:focus-within textarea{outline:0!important;outline-width:0!important;outline-style:none!important;outline-offset:0!important;box-shadow:none!important;border:0!important;-webkit-appearance:none;appearance:none}
+#app .space-modes{display:none!important}
+#app #messages a{color:inherit;text-decoration:none!important}
+#app .msg .bubble a{display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:12px;line-height:18px;text-decoration:none!important}
+#app .msg .bubble a:hover{background:#fff;border-color:rgba(27,36,51,.18)}
+#app .msg .cite{text-decoration:none;border-radius:12px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:12px;line-height:18px;padding:3px 10px}
+@media(min-width:900px){
+  /* 右侧面板：字 */
+  #app .context{font-family:var(--sans);font-size:13px;line-height:1.6;color:var(--ink)}
+  #app .context h3,#app .context .today-head h3,#app .context .panel-title-row h3,#app .context .mood-intro h3,#app .context .followup-head h3{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;color:var(--ink)}
+  #app .context h4{font-size:14px;line-height:1.4;font-weight:600;margin:0 0 6px}
+  #app .context b,#app .context strong,#app .context .today-card b,#app .context .panel b,#app .context .app-card b,#app .context .followup-head b{font-size:14px;line-height:1.5;font-weight:600;color:var(--ink)}
+  #app .context p,#app .context .note,#app .context .muted,#app .context small,#app .context .small,#app .context .k,#app .context .kicker,#app .context .today-kicker,#app .context .followup-eyebrow,#app .context .section-label,#app .context .source-label,#app .context .paired-network-note{font-size:12px;line-height:1.6;color:var(--ink-mute);letter-spacing:0}
+  #app .context p{margin:0 0 8px}
+  #app .context p:last-child{margin-bottom:0}
+  #app .context label,#app .context summary,#app .context .paired-field{font-size:13px;line-height:1.5;color:var(--ink);font-weight:500}
+  #app .context span.muted,#app .context .muted.small{font-size:12px;line-height:1.6}
+  /* 右侧面板：卡片同一种玻璃、同一种内边距，左右贴齐面板内边 */
+  #app .context .tab-panel{padding-inline:18px}
+  #app .context .design-settings,#app .context .paired-devices,#app .context section.paired-devices,#app .context .settings-section,#app .context .bookmark-card,#app .context .insight-chip,#app .context .connector-card,#app .context .mem-group,#app .context .today-next,#app .context .notification-settings{
+    background:rgba(255,255,255,.34)!important;border:1px solid rgba(255,255,255,.75)!important;border-radius:24px;padding:18px;margin-inline:0;width:auto;box-sizing:border-box;
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)!important}
+  #app .context .emoji-pref,#app .context .paired-network-note,#app .context .mood-state,#app .context .today-hint{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:10px 14px;box-shadow:none}
+  #app .context .today-card,#app .context .panel,#app .context .data-block,#app .context .mem-item,#app .context .mem-card,#app .context .app-card,#app .context .followup-card,#app .context .mood-card{padding:18px;margin-inline:0;width:auto;box-sizing:border-box}
+  #app .context .today-card+.today-card,#app .context .data-block+.data-block,#app .context .panel+.panel,#app .context .mem-item+.mem-item,#app .context .app-card+.app-card{margin-top:12px}
+  #app .context .tab-panel>*+*{margin-top:12px}
+  #app .context .tab-panel>.panel-title-row{margin-top:0}
+  #app .context .panel-title-row,#app .context .today-head{margin:0 0 12px;padding:0}
+  /* 右侧面板：按钮两种——白色胶囊、墨色主按钮；危险操作红字 */
+  #app .context button:not(.tab):not(.context-close):not(.icon-btn):not(.mood-date):not(.tab-indicator),#app .context .btn,#app .context .mini-btn,#app .context .text-btn,#app .context .mood-open{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;height:auto;padding:6px 14px!important;border-radius:16px;border:1px solid rgba(27,36,51,.10)!important;
+    background:rgba(255,255,255,.72)!important;color:var(--ink)!important;font-size:12px!important;line-height:20px;font-weight:500;letter-spacing:0;box-shadow:none;transform:none;cursor:pointer}
+  #app .context button:not(.tab):not(.context-close):not(.icon-btn):not(.mood-date):hover,#app .context .btn:hover,#app .context .text-btn:hover{background:#fff!important;border-color:rgba(27,36,51,.18)!important;color:var(--ink)!important}
+  #app .context .btn.primary,#app .context .mini-btn.confirm,#app .context .mood-save,#app .context button.primary,#app .context [data-mood-save]{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important;font-weight:600}
+  #app .context .btn.primary:hover,#app .context .mini-btn.confirm:hover,#app .context .mood-save:hover{background:#2E3849!important;border-color:#2E3849!important;color:#fff!important}
+  #app .context .text-btn.danger,#app .context button.danger{color:var(--danger,#B3261E)!important}
+  #app .context button:disabled{opacity:.45;cursor:default}
+  #app .context .btn.wide{width:100%}
+  /* 开关、输入 */
+  #app .context input[type=text],#app .context input[type=search],#app .context input[type=password],#app .context input[type=url],#app .context textarea,#app .context select{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:14px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.85)}
+}
+/* 接入资料：对话式 */
+#onboarding.onboarding{padding:24px;background:linear-gradient(160deg,rgba(238,241,252,.9),rgba(228,233,250,.92));-webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);font-family:var(--sans);color:var(--ink)}
+#onboarding .onboarding-card{width:min(600px,100%);max-height:calc(100dvh - 48px);padding:12px 8px 8px;border:0;background:transparent;box-shadow:none}
+#onboarding .onboarding-return{top:0;right:0;min-height:32px;padding:6px 12px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink-mute);font-size:12px}
+#onboarding .onboarding-return:hover{background:#fff;color:var(--ink)}
+#onboarding .onboarding-orb{display:grid;place-items:center;width:64px;height:64px;margin:4px auto 2px;background:transparent;border:0;box-shadow:none}
+#onboarding .onboarding-orb .presence-light{width:64px;height:64px}
+#onboarding .wizard-top{justify-content:center;margin:0 0 14px;padding:0}
+#onboarding .eyebrow{font-family:var(--sans);font-size:12px;letter-spacing:.04em;color:var(--ink-mute);text-transform:none}
+#onboarding .wz-step{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+#onboarding .wz-step.is-hidden{display:none}
+#onboarding .wz-step h1,#onboarding .wz-step .wz-title,#onboarding .wz-step .lede,#onboarding #read-head .lede,#onboarding #read-head .wz-title{
+  font-family:var(--sans);font-size:14px;line-height:1.6;font-weight:400;letter-spacing:0;margin:0;max-width:88%;width:fit-content;padding:10px 16px;
+  border-radius:22px 22px 22px 6px;background:rgba(255,255,255,.86);border:1px solid rgba(27,36,51,.10);color:var(--ink);box-shadow:0 2px 8px rgba(80,100,170,.06)}
+#onboarding .wz-step h1 em{font-style:normal;color:inherit;font-weight:600}
+#onboarding .wz-step h1 br{display:none}
+#onboarding .section-label{margin:4px 0 0 4px;font-size:12px;letter-spacing:0;color:var(--ink-mute)}
+#onboarding .scenario-grid{display:flex;flex-wrap:wrap;gap:8px}
+#onboarding .scenario-card,#onboarding .alt-row .btn,#onboarding .wizard-actions .btn,#onboarding .scope-row button,#onboarding .connector-card .btn,#onboarding .paste-box .btn,#onboarding #local-file-btn{
+  width:auto;min-height:34px;padding:7px 14px;border-radius:18px;border:1px solid rgba(86,98,122,.24);background:rgba(255,255,255,.84);color:var(--ink);font-family:var(--sans);font-size:13px;font-weight:500;line-height:20px;text-align:left;box-shadow:none;transform:none}
+#onboarding .scenario-card:hover,#onboarding .alt-row .btn:hover,#onboarding .wizard-actions .btn:hover,#onboarding .connector-card .btn:hover{background:#fff;border-color:rgba(27,36,51,.3);transform:none}
+#onboarding .scenario-card b{display:inline;font-family:var(--sans);font-size:13px;font-weight:500;margin:0}
+#onboarding .scenario-card small{display:none}
+#onboarding .wizard-actions .btn.primary,#onboarding #wz-read,#onboarding #wz-start{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+#onboarding .wizard-actions .btn.primary:hover{background:#2E3849}
+#onboarding .alt-row,#onboarding .wizard-actions,#onboarding .scope-row{margin:0;gap:8px}
+#onboarding #alt-panel{width:100%;display:flex;flex-direction:column;gap:8px}
+#onboarding #alt-panel.is-hidden{display:none}
+#onboarding .paste-box{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;width:100%;padding:8px 8px 8px 16px;box-sizing:border-box;border-radius:28px;border:1px solid rgba(27,36,51,.10);background:#fff;box-shadow:0 4px 16px rgba(80,100,170,.10)}
+#onboarding .paste-box .paste-label{grid-column:1/-1;font-size:12px;color:var(--ink-mute);padding-top:4px}
+#onboarding .paste-box textarea{margin:0;padding:8px 0;min-height:40px;border:0;border-radius:0;background:transparent;font-size:14px;line-height:1.5;outline:0!important;box-shadow:none!important;resize:none}
+#onboarding .paste-box .btn{margin:0}
+#onboarding .synthetic-note{align-self:center;margin:6px 0 0;font-size:12px;color:var(--ink-mute);letter-spacing:0}
+#onboarding .synthetic-note .dot{background:var(--ink-mute);opacity:.5}
+#onboarding .connector-list{width:100%;gap:8px}
+#onboarding .connector-card{border-radius:18px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.6);padding:12px 14px;gap:12px}
+#onboarding .connector-icon{border-radius:12px;background:rgba(255,255,255,.9);font-family:var(--sans)}
+#onboarding .connector-body b{font-family:var(--sans);font-size:14px;font-weight:600}
+#onboarding .connector-body p,#onboarding .connector-body .muted{font-size:12px;line-height:1.6;color:var(--ink-mute)}
+#onboarding .read-items,#onboarding .insight-list,#onboarding #wz-understanding{width:100%}
+#onboarding .read-item,#onboarding .insight-card,#onboarding .insight-chip{border:1px solid rgba(255,255,255,.75);border-left-width:1px;border-radius:16px;background:rgba(255,255,255,.6);padding:10px 14px}
+#onboarding .read-item b,#onboarding .insight-card b,#onboarding .insight-chip b{font-family:var(--sans);font-size:13px;font-weight:600}
+#onboarding .insight-card .t,#onboarding .insight-chip .t{font-family:var(--sans);font-size:11px;letter-spacing:.04em;color:var(--ink-mute)}
+#onboarding .insight-card p,#onboarding .insight-chip p,#onboarding .read-item span{font-size:12px;line-height:1.6;color:var(--ink-mute)}
+#onboarding #wz-back-2{align-self:flex-start;min-height:32px;padding:6px 12px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink-mute);font-size:12px}
+#onboarding .tag{font-family:var(--sans);font-size:11px;letter-spacing:0;border-radius:10px;padding:1px 8px;background:rgba(27,36,51,.06);color:var(--ink-mute)}
+html[data-reduce-transparency=true] #onboarding.onboarding{background:#eef1fc;-webkit-backdrop-filter:none;backdrop-filter:none}
+@media(min-width:1200px){#app .context .context-close{display:none!important}}
+@media(min-width:900px){
+  #app .context .notification-settings{padding:10px 14px;border-radius:16px;box-shadow:none!important}
+  #app .msg a:not(.bubble a){display:inline-flex;align-items:center;gap:4px;margin:2px 6px 2px 0;padding:3px 10px;border-radius:12px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:12px;line-height:18px;text-decoration:none!important}
+}
+/* 第 16 轮修正：接入资料的卡片改成和右侧面板同款玻璃（之前被早期的白卡规则盖住），气泡在上面才分得开。 */
+#onboarding .onboarding-card{background:rgba(255,255,255,.5)!important;border:1px solid rgba(255,255,255,.8)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 16px 48px rgba(80,100,170,.14)!important;-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);padding:16px 18px 14px!important}
+html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Web 改版 20 (2026-10-31，产品要求)：气泡旁的语音图标和 emoji 笑脸改为垂直居中对齐气泡；
+   心情平面改用四个色系（左上 黄 / 右上 绿 / 左下 粉 / 右下 蓝，同样的柔和渐变），两条滑杆和坐标标签跟着换色。 */
+@media(min-width:900px){
+  #app .msg [data-voice-clip]{top:50%;transform:translateY(-50%)}
+  #app .msg.assistant .bubble>.emoji-react-btn{top:50%;transform:translateY(-50%)}
+}
+.mood-card .mood-map{
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.88) 0,rgba(255,255,255,0) 56%),
+    radial-gradient(circle at 0 0,#F3DE8E 0,rgba(243,222,142,0) 64%),radial-gradient(circle at 100% 0,#C5E0C8 0,rgba(197,224,200,0) 64%),
+    radial-gradient(circle at 0 100%,#F2BFC6 0,rgba(242,191,198,0) 64%),radial-gradient(circle at 100% 100%,#BFC8EA 0,rgba(191,200,234,0) 64%),
+    linear-gradient(135deg,#F7EBC2,#D9E3F0 55%,#D7DCEF)}
+.mood-card .mood-axis.top{color:#1B2433}.mood-card .mood-axis.bottom{color:#56627A}
+.mood-card .mood-axis.left{color:#B35A67}.mood-card .mood-axis.right{color:#4E8A5F}
+.mood-card .mood-sliders input[type=range]{--track-a:#EFB7BE;--track-b:#B9D7BF;--track-dim-a:rgba(239,183,190,.4);--track-dim-b:rgba(185,215,191,.4);--thumb:#4E8A5F}
+.mood-card .mood-sliders input[data-mood-y]{--track-a:#C3CBEA;--track-b:#F1DB8C;--track-dim-a:rgba(195,203,234,.4);--track-dim-b:rgba(241,219,140,.45);--thumb:#1B2433}
+/* Web 改版 21 (2026-10-31，产品要求)：「记忆」页的概览（memory-overview.js，团队 PR #11）并入右侧面板的统一规则：
+   概览卡 = 同款玻璃卡；标题 15/600、说明 12、正文 13；分类卡是卡片不是胶囊，图标底色用心情平面同一套四色（蓝 / 绿 / 黄 / 粉）+ 中性灰；
+   「查看全部 / 返回」是普通白色胶囊；分类下拉与其他输入同款。 */
+@media(min-width:900px){
+  #app .context .memory-summary{padding:18px;border:1px solid rgba(255,255,255,.75);border-radius:24px;background:rgba(255,255,255,.34);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)}
+  #app .context .memory-summary-kicker{font-size:12px;line-height:1.6;font-weight:400;letter-spacing:0;color:var(--ink-mute)}
+  #app .context .memory-summary-title{margin:4px 0 6px;font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;color:var(--ink)}
+  #app .context .memory-summary-intro,#app .context .memory-summary-pending,#app .context .memory-summary-disclosure,#app .context .memory-summary-status,#app .context .memory-summary-evidence,#app .context .memory-summary-selection-count,#app .context .memory-summary-selection-status,#app .context .memory-overview-footnote,#app .context .memory-category-hint,#app .context .memory-category-control{font-size:12px;line-height:1.6;color:var(--ink-mute)}
+  #app .context .memory-summary-excerpts{margin:12px 0 10px;padding-top:12px;border-top:1px solid rgba(27,36,51,.08)}
+  #app .context .memory-summary-excerpts li{font-size:13px;line-height:1.6;color:var(--ink)}
+  #app .context .memory-summary-excerpts li::before{background:var(--ink-mute);opacity:.6}
+  #app .context .memory-summary-evidence summary,#app .context .memory-summary-choice-text{color:var(--ink);font-size:13px}
+  #app .context .memory-summary-checkbox{accent-color:var(--ink)}
+  #app .context .memory-overview-all,#app .context .memory-overview-back{margin-top:10px}
+  #app .context .memory-overview-section{margin:16px 0 10px;align-items:center}
+  #app .context .memory-overview-section h4,#app .context .memory-overview-toolbar h4,#app .context .memory-overview-list-title{margin:0;font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;color:var(--ink)}
+  #app .context .memory-overview-section span{font-size:12px;line-height:1.6;color:var(--ink-mute)}
+  #app .context .memory-overview-toolbar{margin:0 0 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+  #app .context .memory-category-grid{gap:10px}
+  #app .context button.memory-category-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;min-height:112px;padding:14px!important;text-align:left;
+    border:1px solid rgba(255,255,255,.75)!important;border-radius:20px;background:rgba(255,255,255,.34)!important;color:var(--ink)!important;font-size:13px!important;line-height:1.4;
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08);transition:transform .15s ease,background .15s ease}
+  #app .context button.memory-category-card:hover{background:rgba(255,255,255,.55)!important;border-color:rgba(255,255,255,.9)!important;transform:translateY(-1px)}
+  #app .context .memory-category-card strong{font-size:14px;line-height:1.4;font-weight:600;color:var(--ink)}
+  #app .context .memory-category-count{font-size:12px;line-height:1.5;font-weight:400;color:var(--ink-mute)}
+  #app .context .memory-category-icon{width:34px;height:34px;border-radius:12px;font-size:17px;font-weight:400;color:var(--ink-mute);background:rgba(27,36,51,.06)}
+  #app .context .is-peach .memory-category-icon{color:#4A5FA8;background:#E3EBFA}
+  #app .context .is-blue .memory-category-icon{color:#4E8A5F;background:#DDEDE0}
+  #app .context .is-lilac .memory-category-icon{color:#8A7430;background:#F7EDC4}
+  #app .context .is-coral .memory-category-icon{color:#B35A67;background:#F8DEE1}
+  #app .context .is-sand .memory-category-icon{color:var(--ink-mute);background:rgba(27,36,51,.06)}
+  #app .context .memory-category-control{margin-top:12px;padding-top:10px;border-top:1px solid rgba(27,36,51,.08)}
+  #app .context .memory-category-select{font-size:13px;line-height:1.5;padding:7px 12px;border-radius:14px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.85);color:var(--ink)}
+  #app .context .memory-summary-generate:focus-visible,#app .context .memory-category-card:focus-visible,#app .context .memory-overview-all:focus-visible,#app .context .memory-overview-back:focus-visible,#app .context .memory-category-select:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+  #app .context .mem-text{font-size:13px;line-height:1.6;color:var(--ink)}
+  #app .context .mem-meta,#app .context .mem-version,#app .context .memory-origin,#app .context .mem-kind{font-size:12px;line-height:1.5;color:var(--ink-mute)}
+  #app .context .memory-origin{background:rgba(27,36,51,.06);color:var(--ink-mute);border-radius:12px;padding:3px 10px}
+  #app .context .mem-group-label{font-size:12px;line-height:1.6;letter-spacing:0;text-transform:none;color:var(--ink-mute);margin:0 0 8px}
+}
+/* Web 改版 22 (2026-10-31，产品要求)：
+   连接页：去掉「可选择」状态行，卡片按内容收紧、间距缩小；
+   记忆页：标题字号与其他页一致（memory-overview.css 在后面加载，这里用更高的特异性），分类卡内容居中、四边等距，去掉页脚那句话；
+   设置页：「伙伴角色」里列出 念响 / 小鲸鱼（settings-polish.js），「自动记录记忆」说明压短、勾选框与文字对齐。 */
+@media(min-width:900px){
+  #app #tab-apps .app-card .status{display:none}
+  #app #tab-apps .apps-grid{gap:8px;padding:0}
+  #app #tab-apps .app-card{padding:12px 14px;margin:0;gap:10px;align-items:center;flex-wrap:nowrap}
+  #app #tab-apps .app-card+.app-card{margin-top:0}
+  #app #tab-apps .app-card b{font-size:14px;line-height:1.4}
+  #app #tab-apps .app-card small{font-size:12px;line-height:1.5;margin-top:2px;color:var(--ink-mute)}
+  #app #tab-apps .app-card .ico{width:32px;height:32px;border-radius:10px;background:rgba(27,36,51,.06);color:var(--ink-mute);font-size:13px;font-weight:600}
+  #app #design-context .memory-summary-kicker{font-size:12px;line-height:1.6;font-weight:400;color:var(--ink-mute)}
+  #app #design-context .memory-summary-title{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;margin:4px 0 6px}
+  #app #design-context .memory-overview-section h4,#app #design-context .memory-overview-toolbar h4,#app #design-context .memory-overview-list-title{font-size:15px;line-height:1.4;font-weight:600;letter-spacing:0;margin:0}
+  #app #design-context .memory-overview-section span{font-size:12px;line-height:1.6}
+  #app #design-context button.memory-category-card{align-items:center;justify-content:center;text-align:center;min-height:0;padding:16px 12px!important;gap:6px}
+  #app #design-context .memory-category-card strong,#app #design-context .memory-category-count{text-align:center}
+  #app #design-context .memory-overview-footnote{display:none}
+  #app .settings-persona-options{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+  #app .settings-persona-options [aria-checked=true]{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important}
+  #app #settings-choose-persona{display:none!important}
+  #app #auto-memory-settings label{display:flex;align-items:center;gap:8px;margin:8px 0 4px;font-size:13px;line-height:1.5;font-weight:500;color:var(--ink)}
+  #app #auto-memory-settings input[type=checkbox]{flex:none;width:16px;height:16px;margin:0;accent-color:var(--ink)}
+  #app #auto-memory-settings [data-auto-memory-status]{margin:0;font-size:12px;line-height:1.6;color:var(--ink-mute)}
+}
+/* Web 改版 23 (2026-10-31，产品要求)：
+   设置页：「自动记录记忆」勾选在上、说明一句更浅更小；「声音与音乐」卡改成同款玻璃；「数据与记录」整块不再显示；
+   连接页：来源图标按蓝 / 绿 / 黄 / 粉 轮换着色（和心情平面、记忆分类同一套）；
+   弹窗统一：搜索、标记此刻、我打算这样做、记下一件事 等所有弹窗都用磨砂玻璃卡，标题 17/600、正文 13、说明 12，按钮和右侧面板同款胶囊，
+   打开时淡入 + 轻微放大。 */
+@media(min-width:900px){
+  #app #auto-memory-settings label{margin:6px 0 8px}
+  #app #auto-memory-settings p.note{margin:0 0 4px;font-size:11px;line-height:1.6;color:rgba(86,98,122,.72)}
+  #app #auto-memory-settings [data-auto-memory-status]{font-size:11px;color:rgba(86,98,122,.72)}
+  #app .context .soundscape-settings{margin:12px 0;padding:18px;border:1px solid rgba(255,255,255,.75);border-radius:24px;background:rgba(255,255,255,.34);color:var(--ink);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 20px rgba(80,100,170,.08)}
+  #app .context .soundscape-heading h3{font-size:15px;line-height:1.4;font-weight:600}
+  #app .context .soundscape-heading>span{font-size:18px;color:var(--ink-mute)}
+  #app .context .soundscape-heading p,#app .context .soundscape-note,#app .context .soundscape-status,#app .context .soundscape-toggle small,#app .context .soundscape-breath small,#app .context .soundscape-breath p{color:var(--ink-mute);font-size:12px;line-height:1.6}
+  #app .context .soundscape-toggle b,#app .context .soundscape-select span,#app .context .soundscape-volume span,#app .context .soundscape-breath b{font-size:13px;color:var(--ink)}
+  #app .context .soundscape-toggle,#app .context .soundscape-breath{border-color:rgba(27,36,51,.08)}
+  #app .context .soundscape-settings input[type=checkbox],#app .context .soundscape-volume input{accent-color:var(--ink)}
+  #app .context .soundscape-select select{padding:8px 12px;border:1px solid rgba(27,36,51,.10);border-radius:14px;background:rgba(255,255,255,.85);color:var(--ink);font-size:13px}
+  #app .context .soundscape-settings :focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+  #app #tab-design div.settings-section:has(> .panel-title-row){display:none}
+  #app #tab-apps .app-card:nth-child(4n+1) .ico{color:#4A5FA8;background:#E3EBFA}
+  #app #tab-apps .app-card:nth-child(4n+2) .ico{color:#4E8A5F;background:#DDEDE0}
+  #app #tab-apps .app-card:nth-child(4n+3) .ico{color:#8A7430;background:#F7EDC4}
+  #app #tab-apps .app-card:nth-child(4n+4) .ico{color:#B35A67;background:#F8DEE1}
+}
+@keyframes dialog-pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes dialog-fade{from{opacity:0}to{opacity:1}}
+body:has(#app) .modal:not(.is-hidden),body:has(#app) .design-search:not(.is-hidden){animation:dialog-fade .18s ease-out}
+body:has(#app) .modal:not(.is-hidden) .modal-card,body:has(#app) .design-search:not(.is-hidden) .design-search-card,body:has(#app) .echo-user-dialog[open],body:has(#app) #onboarding:not(.is-hidden) .onboarding-card{animation:dialog-pop .24s cubic-bezier(.2,.8,.2,1)}
+body:has(#app) .echo-user-dialog[open]::backdrop{animation:dialog-fade .18s ease-out}
+body:has(#app) .modal{background:rgba(27,36,51,.26);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body:has(#app) .echo-user-dialog::backdrop{background:rgba(27,36,51,.26);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body:has(#app) .modal-card,body:has(#app) .echo-user-dialog,body:has(#app) .design-search-card{
+  background:rgba(255,255,255,.62)!important;border:1px solid rgba(255,255,255,.85)!important;border-radius:26px!important;color:var(--ink);font-family:var(--sans);
+  -webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 20px 60px rgba(27,36,51,.18)!important}
+body:has(#app) .modal-card{padding:22px 22px 20px}
+body:has(#app) .echo-user-dialog{padding:22px}
+body:has(#app) .modal-card .eyebrow{font-family:var(--sans);font-size:12px;line-height:1.5;letter-spacing:0;text-transform:none;color:var(--ink-mute)}
+body:has(#app) .modal-card h3,body:has(#app) .modal-card h2,body:has(#app) .echo-user-dialog h2{font-size:17px;line-height:1.35;font-weight:600;letter-spacing:0;margin:4px 0 10px;color:var(--ink)}
+body:has(#app) .modal-card p,body:has(#app) .modal-card .note,body:has(#app) .modal-card li,body:has(#app) .echo-user-dialog p{font-size:13px;line-height:1.6;color:var(--ink-mute);margin:0 0 10px}
+body:has(#app) .modal-card .plan-steps{margin:0 0 10px;padding-left:18px}
+body:has(#app) .modal-card .plan-steps li{margin:0 0 4px}
+body:has(#app) .modal-card label,body:has(#app) .modal-card .field>span,body:has(#app) .modal-card .check-row>span,body:has(#app) .echo-dialog-field>span{font-size:13px;line-height:1.5;font-weight:500;color:var(--ink)}
+body:has(#app) .modal-card label.check-row:has(input[type=checkbox]){display:flex;align-items:center;gap:8px}
+body:has(#app) .modal-card input:not([type=checkbox]):not([type=radio]),body:has(#app) .modal-card textarea,body:has(#app) .modal-card select,body:has(#app) .echo-user-dialog textarea{
+  width:100%;box-sizing:border-box;margin:6px 0 10px;padding:10px 14px;border:1px solid rgba(27,36,51,.10)!important;border-radius:16px!important;background:rgba(255,255,255,.85)!important;color:var(--ink);font-size:14px;line-height:1.5;outline:none!important;box-shadow:none!important}
+body:has(#app) .modal-card input:focus,body:has(#app) .modal-card textarea:focus,body:has(#app) .modal-card select:focus,body:has(#app) .echo-user-dialog textarea:focus{border-color:rgba(27,36,51,.24)!important;background:#fff!important;box-shadow:0 0 0 3px rgba(27,36,51,.06)!important}
+body:has(#app) .modal-card input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--ink)}
+body:has(#app) .modal-card button,body:has(#app) .echo-dialog-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;min-width:0;padding:6px 14px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:13px;line-height:20px;font-weight:500;letter-spacing:0;box-shadow:none;transform:none;cursor:pointer}
+body:has(#app) .modal-card button:hover,body:has(#app) .echo-dialog-actions button:hover{background:#fff;border-color:rgba(27,36,51,.18);color:var(--ink)}
+body:has(#app) .modal-card .btn.primary,body:has(#app) .modal-card button.primary,body:has(#app) .echo-dialog-actions [data-confirm]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+body:has(#app) .modal-card .btn.primary:hover,body:has(#app) .echo-dialog-actions [data-confirm]:hover{background:#2E3849;border-color:#2E3849;color:#fff}
+body:has(#app) .echo-dialog-actions [data-confirm].danger,body:has(#app) .modal-card .btn.danger,body:has(#app) .modal-card button.danger{background:var(--danger,#B3261E);border-color:var(--danger,#B3261E);color:#fff}
+body:has(#app) .modal-actions,body:has(#app) .echo-dialog-actions{gap:8px;margin-top:16px}
+body:has(#app) .modal-card :focus-visible,body:has(#app) .echo-user-dialog :focus-visible{outline:none!important;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+body:has(#app) .design-search-card{padding:14px}
+body:has(#app) .design-search-head input{height:44px;min-height:44px;font-size:14px;border-radius:22px;background:rgba(255,255,255,.85)!important;border:1px solid rgba(27,36,51,.10)!important}
+body:has(#app) .design-search-head .icon-btn{width:36px;height:36px;min-height:36px;border-radius:18px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink-mute);font-size:18px}
+body:has(#app) .design-search-card>.note{margin:10px 8px 2px;font-size:12px;line-height:1.6;color:var(--ink-mute)}
+body:has(#app) .design-search-results button{margin:8px 0 0;padding:10px 14px;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:13px;line-height:1.5;text-align:left}
+body:has(#app) .design-search-results button span{font-size:12px;color:var(--ink-mute)}
+body:has(#app) .design-search-results p{font-size:13px;line-height:1.6;color:var(--ink-mute);margin:8px 8px 2px}
+html[data-reduce-transparency=true] body:has(#app) .modal-card,html[data-reduce-transparency=true] body:has(#app) .echo-user-dialog,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-reduce-motion=true] body:has(#app) .modal,html[data-reduce-motion=true] body:has(#app) .modal-card,html[data-reduce-motion=true] body:has(#app) .design-search,html[data-reduce-motion=true] body:has(#app) .design-search-card,html[data-reduce-motion=true] body:has(#app) .echo-user-dialog,html[data-reduce-motion=true] body:has(#app) .onboarding-card{animation:none}
+@media(prefers-reduced-motion:reduce){body:has(#app) .modal,body:has(#app) .modal-card,body:has(#app) .design-search,body:has(#app) .design-search-card,body:has(#app) .echo-user-dialog,body:has(#app) .onboarding-card{animation:none}}
+/* Web 改版 24 (2026-10-31，产品要求)：「回响」页里的「留一条跟进」卡整块不再显示（followups.js 仍挂载，只是不画）。 */
+#app #today-followups,#app .context .followup-card{display:none!important}
+/* Web 改版 25 (2026-10-31，产品要求)：设置页保留「数据与模型设置」入口——「数据与记录」卡只留这一行，样式同「伙伴角色」「设备」，
+   点了进入原有的「数据与隐私」页（含模型配置）；理解卡 / 审计记录 / 指标 / 插件状态仍不显示。 */
+@media(min-width:900px){
+  #app #tab-design div.settings-section:has(> .panel-title-row){display:block;padding:0!important;border-radius:20px}
+  #app #tab-design div.settings-section:has(> .panel-title-row)>.panel-title-row,
+  #app #tab-design div.settings-section:has(> .panel-title-row) #persona-mount,
+  #app #tab-design div.settings-section:has(> .panel-title-row) #plugin-status,
+  #app #tab-design div.settings-section:has(> .panel-title-row) [data-more-tab]:not([data-more-tab=data]){display:none}
+  #app #tab-design div.settings-section:has(> .panel-title-row) .action-row{margin:0}
+  /* 面板通用按钮规则特异性更高，这里用 !important 让这一行和「伙伴角色」卡的标题行一致 */
+  #app #tab-design [data-more-tab=data]{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:68px;margin:0;padding:18px 20px!important;
+    border:0!important;border-radius:20px!important;background:transparent!important;box-shadow:none!important;color:var(--ink)!important;font-size:13px!important;font-weight:650!important;line-height:1.5;text-align:left;cursor:pointer}
+  #app #tab-design [data-more-tab=data]::after{content:"›";font-size:18px;line-height:1;color:var(--ink-mute)}
+  #app #tab-design [data-more-tab=data]:hover{background:rgba(255,255,255,.35)!important}
+  #app #tab-design [data-more-tab=data]:focus-visible{outline:2px solid #667caa;outline-offset:-2px}
+}

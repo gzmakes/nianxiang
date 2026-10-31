@@ -40,8 +40,8 @@ def test_mixed_turn_saves_only_fact_and_answers_followup(client, monkeypatch, jo
     text = f'记住：我喜欢红茶{joiner}想一个喝茶的建议'
     result = client.post('/api/chat', json={'session_id': sid, 'text': text}).json()
     assert [m['text'] for m in result['memories']] == ['我喜欢红茶']
-    assert result['memories'][0]['status'] == 'candidate'
-    assert '待确认' in result['reply'] and '泡淡' in result['reply']
+    assert result['memories'][0]['status'] == 'auto'
+    assert '查看、修改或删除' in result['reply'] and '泡淡' in result['reply']
     assert '想一个喝茶的建议' in captured[-1]
     assert result['messages'][-2]['text'] == text
 
@@ -54,7 +54,7 @@ def test_repeated_command_keeps_one_card_but_does_not_claim_turn_idempotency(cli
     second = client.post('/api/chat', json={'session_id': sid, 'text': text}).json()
     assert len(first['memories']) == len(second['memories']) == 1
     assert first['memories'][0]['id'] == second['memories'][0]['id']
-    assert '已在待确认' in second['reply']
+    assert '查看、修改或删除' in second['reply']
     assert len([m for m in second['messages'] if m['role'] == 'user']) == 2
 
 
@@ -66,7 +66,7 @@ def test_existing_confirmed_and_deleted_memory(client, monkeypatch):
     mid = one['memories'][0]['id']
     core.update_memory(mid, status='confirmed')
     two = client.post('/api/chat', json=body).json()
-    assert len(two['memories']) == 1 and '确认过' in two['reply']
+    assert len(two['memories']) == 1 and two['memories'][0]['status'] == 'confirmed'
     core.delete_memory(mid)
     three = client.post('/api/chat', json=body).json()
     assert len(three['memories']) == 1 and three['memories'][0]['id'] != mid

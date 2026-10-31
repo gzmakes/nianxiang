@@ -3,9 +3,9 @@ const test=require('node:test'),assert=require('node:assert/strict'),vm=require(
 const connection=require('../service-connection');
 const profile=(extra={})=>({version:1,mode:'shared',origin:'http://127.0.0.1:18821',service_instance_id:'instance-A',conversation_id:'conversation-A',contract_version:'1.7.0',...extra});
 const wait=()=>new Promise(r=>setImmediate(r));
-async function fixture(t,{saved=null,probe=async origin=>profile({origin}),startError=null,startWait=null}={}){
+async function fixture(t,{saved=null,probe=async origin=>profile({origin}),startError=null,startWait=null,pointer=null,environment={},runtimeError=null}={}){
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'echo-main-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));if(saved)connection.selectionStore(directory).save(saved);
- const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
+ const handlers=new Map(),windows=[],partitions=new Map(),calls={starts:0,stops:0,requests:[],external:[],runtimeInputs:[],backendInputs:[],notifierCreates:0,notifierInvalidations:0,dialogs:0,reads:0},app=new EventEmitter();let quit=false;
  Object.assign(app,{setName(){},setPath(){},getPath:()=>directory,getVersion:()=> 'test',requestSingleInstanceLock:()=>true,whenReady:()=>Promise.resolve(),quit(){quit=true;app.emit('before-quit')}});
  class Window extends EventEmitter{
   constructor(options){super();this.options=options;this.visible=false;this.destroyed=false;this.webContents=new EventEmitter();this.webContents.mainFrame={url:''};this.webContents.setWindowOpenHandler=f=>this.popup=f;this.webContents.send=(...v)=>{this.sent??=[];this.sent.push(v)};windows.push(this)}
@@ -16,23 +16,38 @@ async function fixture(t,{saved=null,probe=async origin=>profile({origin}),start
  }
  class Tray extends EventEmitter{setImage(){}setToolTip(){}getBounds(){return {x:0,y:0,width:10,height:10}}popUpContextMenu(){}destroy(){}}
  const partition=key=>{if(!partitions.has(key)){const value={handlers:{},webRequest:{onBeforeRequest(_filter,f){value.handlers.before=f},onHeadersReceived(_filter,f){value.handlers.headers=f}},setPermissionRequestHandler(f){value.handlers.permission=f},setPermissionCheckHandler(f){value.handlers.check=f},on(){}};partitions.set(key,value)}return partitions.get(key)};
- const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,f)=>handlers.set(name,f)},dialog:{showErrorBox(){},showOpenDialog:async()=>{calls.dialogs++;return{canceled:true,filePaths:[]}}},Tray,Menu:{buildFromTemplate:x=>x,setApplicationMenu(x){calls.menu=x}},nativeImage:{createFromPath:()=>({setTemplateImage(){}})},globalShortcut:{register:()=>true,unregister(){}},screen:{getDisplayMatching:()=>({workArea:{x:0,y:0,width:1000,height:900}})},shell:{openExternal(){}},Notification:{isSupported:()=>true},session:{fromPartition:partition}};
+ const electron={app,BrowserWindow:Window,ipcMain:{handle:(name,f)=>handlers.set(name,f)},dialog:{showErrorBox(){},showOpenDialog:async()=>{calls.dialogs++;return{canceled:true,filePaths:[]}}},Tray,Menu:{buildFromTemplate:x=>x,setApplicationMenu(x){calls.menu=x}},nativeImage:{createFromPath:()=>({setTemplateImage(){}})},globalShortcut:{register:()=>true,unregister(){}},screen:{getDisplayMatching:()=>({workArea:{x:0,y:0,width:1000,height:900}})},shell:{openExternal(url){calls.external.push(url);return Promise.resolve()}},Notification:{isSupported:()=>true},session:{fromPartition:partition}};
  const realRequire=require('node:module').createRequire(path.join(__dirname,'../main.js'));
  const context={__dirname:path.resolve(__dirname,'..'),require:name=>{
   if(name==='electron')return electron;
   if(name==='./service-connection')return{...connection,probeService:probe,createSelectionFlow:opts=>connection.createSelectionFlow({...opts,probe})};
-  if(name==='./backend-lifecycle')return{createBackendLifecycle:()=>({async start(){calls.starts++;if(startWait)await startWait;if(startError)throw Error(startError);return{port:18819,borrowed:false}},stop(){calls.stops++}})};
-  if(name==='./runtime-paths')return{backendPaths:()=>({python:'/synthetic/python'})};
+  if(name==='./project-root.json'){if(pointer)return pointer;throw Error('no synthetic local pointer');}
+  if(name==='./backend-lifecycle')return{createBackendLifecycle:options=>{calls.backendInputs.push(options);return{async start(){calls.starts++;if(startWait)await startWait;if(startError)throw Error(startError);return{port:18819,borrowed:false}},stop(){calls.stops++}}}};
+  if(name==='./runtime-paths')return{backendPaths:options=>{calls.runtimeInputs.push(options);if(runtimeError)throw Error(runtimeError);return{python:options.pythonOverride || '/synthetic/python',...(options.backendDataDir?{runner:path.join(options.root,'scripts/run_paired_service.py'),dataDir:options.backendDataDir}:{})}}};
   if(name==='./bridge')return{readTextFile:()=>{calls.reads++;return{ok:true}}};
   if(name==='./notification-policy')return{legacyNotificationResult:()=>({ok:false}),createFollowupNotifier:()=>{calls.notifierCreates++;return {async tick(){},invalidate(){calls.notifierInvalidations++}}}};
   return realRequire(name);
- },process:{platform:'darwin',env:{XINJI_DESKTOP_DATA_DIR:directory,XINJI_PROJECT_ROOT:'/synthetic/project',XINJI_PORT:'18819'},stdout:{write(){}},stderr:{write(){}}},console,URL,AbortSignal,setTimeout,clearTimeout,setInterval:f=>({unref(){},callback:f}),clearInterval(){},fetch:async(...args)=>{calls.requests.push(args);return {json:async()=>({session:{id:'canonical'},actions:[]})}}};
+ },process:{platform:'darwin',env:{XINJI_DESKTOP_DATA_DIR:directory,XINJI_PROJECT_ROOT:'/synthetic/project',XINJI_PORT:'18819',...environment},stdout:{write(){}},stderr:{write(){}}},console,URL,AbortSignal,setTimeout,clearTimeout,setInterval:f=>({unref(){},callback:f}),clearInterval(){},fetch:async(...args)=>{calls.requests.push(args);return {json:async()=>({session:{id:'canonical'},actions:[]})}}};
  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../main.js'),'utf8')+'\n;globalThis.subject={get mode(){return mode},get win(){return win},get selector(){return selector},get selected(){return selected},openSelector,activateSpace,verifyCurrentShared,emit,summary,quarantineShared,leaseFor,togglePanel,get panel(){return panel}};',context);
  for(let n=0;n<10;n++)await wait();
  const event=window=>({sender:window.webContents,senderFrame:window.webContents.mainFrame});const invoke=(name,window,...args)=>handlers.get(name)(event(window),...args);
  t.after(()=>app.emit('before-quit'));
  return {subject:context.subject,handlers,windows,calls,app,partitions,event,invoke,electron,directory,get quit(){return quit}};
 }
+test('local pointer passes selected venv and backend profile through shipped main into lifecycle',async t=>{
+ const e=await fixture(t,{pointer:{root:'/selected/source',port:18827,python:'/existing/.venv/bin/python',backendDataDir:'/private/original-profile'},environment:{XINJI_PROJECT_ROOT:undefined,XINJI_PORT:undefined}});
+ assert.equal(e.calls.runtimeInputs[0].root,'/selected/source');assert.equal(e.calls.runtimeInputs[0].pythonOverride,'/existing/.venv/bin/python');assert.equal(e.calls.runtimeInputs[0].backendDataDir,'/private/original-profile');
+ const backend=e.calls.backendInputs[0];assert.equal(backend.python,'/existing/.venv/bin/python');assert.equal(backend.runner,'/selected/source/scripts/run_paired_service.py');assert.equal(backend.dataDir,'/private/original-profile');assert.equal(backend.port,18827);
+});
+test('explicit development environment can override pointer Python and data profile as a pair',async t=>{
+ const e=await fixture(t,{pointer:{python:'/old/python',backendDataDir:'/old/data'},environment:{XINJI_PYTHON:'/new/.venv/bin/python',XINJI_BACKEND_DATA_DIR:'/new/private'}});
+ assert.equal(e.calls.backendInputs[0].python,'/new/.venv/bin/python');assert.equal(e.calls.backendInputs[0].dataDir,'/new/private');
+});
+test('an unavailable selected data directory opens the recoverable selector instead of crashing or starting another profile',async t=>{
+ const e=await fixture(t,{runtimeError:'所选私有数据目录暂不可用'});
+ assert.equal(e.calls.starts,0);assert.equal(e.calls.backendInputs.length,0);assert.equal(e.subject.win,null);assert.ok(e.subject.selector);
+ assert.match((await e.invoke('connection:status',e.subject.selector)).message,/所选私有数据目录暂不可用/);
+});
 test('saved shared identity restores only restricted partition without starting owned backend',async t=>{const e=await fixture(t,{saved:profile()});assert.equal(e.subject.mode,'shared');assert.equal(e.calls.starts,0);assert.equal(e.calls.notifierCreates,0);const w=e.subject.win;assert.equal(path.basename(w.options.webPreferences.preload),'shared-preload.js');assert.equal(w.options.webPreferences.partition,connection.partitionFor(profile()));assert.equal(w.options.webPreferences.sandbox,true);assert.equal(w.options.webPreferences.nodeIntegration,false);assert.equal(await e.invoke('desktop:set-state',w,{state:'thinking'}),false);assert.equal((await e.invoke('desktop:pick-text',w)).reason,'unavailable');assert.throws(()=>e.invoke('desktop:info',w),/sender/);assert.equal((await e.invoke('desktop:shared-info',w)).native,false);assert.equal(e.calls.dialogs,0);assert.equal(e.calls.reads,0);e.app.emit('before-quit');assert.equal(e.calls.stops,0)});
 test('saved offline or changed shared identity opens selector and never silently opens empty own space',async t=>{const e=await fixture(t,{saved:profile(),probe:async()=>{throw Error('offline')}});assert.equal(e.subject.win,null);assert.ok(e.subject.selector);assert.equal(e.calls.starts,0);assert.equal(e.calls.notifierCreates,0);assert.equal(e.windows.length,1);assert.equal(path.basename(e.windows[0].options.webPreferences.preload),'selector-preload.js')});
 test('main only accepts selector IPC from trusted file; shared settings entry opens selector but cannot connect',async t=>{const e=await fixture(t,{saved:profile()}),w=e.subject.win;await assert.rejects(async()=>e.invoke('connection:verify',w,'http://127.0.0.1:1'),/sender/);assert.equal(await e.invoke('desktop:open-connections',w,{origin:'http://127.0.0.1:1'}),true);const s=e.subject.selector;assert.ok(s);const status=await e.invoke('connection:status',s);assert.equal(status.selection.origin,profile().origin);s.webContents.mainFrame.url+='?untrusted=1';await assert.rejects(async()=>e.invoke('connection:own',s,{confirmed:true}),/sender/);assert.equal(e.calls.starts,0)});
@@ -55,3 +70,55 @@ test('quarantine cannot be bypassed by tray or Alt+Space quick panel entry',asyn
 test('quitting during owned startup stops pending candidate and late finish cannot create a window',async t=>{let finish;const pending=new Promise(r=>finish=r);const e=await fixture(t,{startWait:pending});assert.equal(e.calls.starts,1);assert.equal(e.subject.win,null);e.app.emit('before-quit');assert.equal(e.calls.stops,1);finish();for(let n=0;n<10;n++)await wait();assert.equal(e.subject.win,null);assert.equal(e.subject.selector,null);assert.equal(e.calls.starts,1);assert.equal(e.calls.notifierCreates,0);assert.equal(await e.subject.activateSpace({version:1,mode:'own'}),false);assert.equal(e.calls.starts,1)});
 
 test('cached windows keep their original navigation origin after switching spaces',async t=>{const e=await fixture(t),owner=e.subject.win,ownerOrigin=new URL(owner.url).origin;const navigation=(w,url)=>{let prevented=false;w.webContents.emit('will-navigate',{preventDefault:()=>prevented=true},url);return prevented};await e.subject.activateSpace(profile());const shared=e.subject.win;assert.equal(navigation(owner,profile().origin+'/'),true);assert.equal(navigation(owner,ownerOrigin+'/'),false);await e.subject.activateSpace({version:1,mode:'own'});assert.equal(navigation(shared,ownerOrigin+'/'),true);assert.equal(navigation(shared,profile().origin+'/'),false)});
+
+const syntheticAuthURL='https://accounts.feishu.cn/oauth/v1/device/verify/?flow_id=synthetic&user_code=NOT-A-REAL-CODE';
+test('owner auth bridge opens only validated official HTTPS hosts and keeps the exact URL',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const urls=[syntheticAuthURL,'https://accounts.larksuite.com:443/oauth/v1/device/verify/?flow_id=synthetic','https://accounts.feishu.cn/oauth/v1/device/verify/?label=%E4%B8%AD'];
+ for(const url of urls)assert.equal(await e.invoke('desktop:open-lark-auth',owner,url),true);
+ assert.deepEqual(e.calls.external,urls);
+});
+test('owner auth bridge rejects nonofficial, malformed, credential-bearing and control-character URLs',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const urls=[undefined,null,{},[],123,'',' '.repeat(2),' '+syntheticAuthURL,syntheticAuthURL+' ',
+  'https://accounts.feishu.cn/'+ 'x'.repeat(4096),'http://accounts.feishu.cn/oauth/v1/device/verify/',
+  'file:///accounts.feishu.cn','javascript:alert(1)','https://evil.invalid/','https://accounts.feishu.cn.evil.invalid/',
+  'https://sub.accounts.feishu.cn/','https://accounts.feishu.cn./','https://%61ccounts.feishu.cn/',
+  'https://name:secret@accounts.feishu.cn/','https://@accounts.feishu.cn/','https://accounts.feishu.cn:444/',
+  'https://accounts.feishu.cn:0443/','https://accounts.feishu.cn:443.evil.invalid/',
+  'https://accounts.feishu.cn\\@evil.invalid/',syntheticAuthURL+'\n',syntheticAuthURL+'\t',syntheticAuthURL+'\u0000',
+  syntheticAuthURL+'&x=%0d',syntheticAuthURL+'&x=%00',syntheticAuthURL+'&x=%7f',syntheticAuthURL+'&x=%C2%85'];
+ for(const url of urls)assert.equal(await e.invoke('desktop:open-lark-auth',owner,url),false,typeof url==='string'?JSON.stringify(url):typeof url);
+ assert.deepEqual(e.calls.external,[]);
+});
+test('owner auth bridge refuses shared, panel, selector, subframe, hidden and stale owner senders',async t=>{
+ const e=await fixture(t),owner=e.subject.win,call=w=>e.invoke('desktop:open-lark-auth',w,syntheticAuthURL);
+ e.subject.togglePanel();await wait();assert.equal(await call(e.subject.panel),false);
+ e.subject.openSelector();assert.equal(await call(e.subject.selector),false);
+ assert.equal(await e.handlers.get('desktop:open-lark-auth')({...e.event(owner),senderFrame:{url:owner.url}},syntheticAuthURL),false);
+ assert.equal(await e.handlers.get('desktop:open-lark-auth')({...e.event(owner),sender:{}},syntheticAuthURL),false);
+ owner.hide();assert.equal(await call(owner),false);owner.show();
+ await e.subject.activateSpace(profile());assert.equal(await call(owner),false);assert.equal(await call(e.subject.win),false);
+ assert.deepEqual(e.calls.external,[]);
+});
+test('queued auth request cannot open a browser after a space switch or document change',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ const navigation=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);owner.webContents.mainFrame.url+='#new-document';
+ assert.equal(await navigation,false);assert.equal(e.calls.external.length,0);
+ const switched=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await e.subject.activateSpace(profile());
+ assert.equal(await switched,false);assert.equal(e.calls.external.length,0);
+});
+test('late auth opening receipt cannot confirm a different space, even after returning to the cached owner',async t=>{
+ const e=await fixture(t),owner=e.subject.win;let finish;
+ e.electron.shell.openExternal=url=>{e.calls.external.push(url);return new Promise(r=>finish=r)};
+ const pending=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await wait();assert.equal(e.calls.external.length,1);
+ await e.subject.activateSpace(profile());await e.subject.activateSpace({version:1,mode:'own'});assert.equal(e.subject.win,owner);
+ finish();assert.equal(await pending,false);
+});
+test('auth bridge returns false for synchronous shell errors, rejected requests and quit during open',async t=>{
+ const e=await fixture(t),owner=e.subject.win;
+ e.electron.shell.openExternal=()=>{throw Error('synthetic OS rejection')};assert.equal(await e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL),false);
+ e.electron.shell.openExternal=async()=>{throw Error('synthetic async rejection')};assert.equal(await e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL),false);
+ let finish;e.electron.shell.openExternal=()=>new Promise(r=>finish=r);
+ const pending=e.invoke('desktop:open-lark-auth',owner,syntheticAuthURL);await wait();e.app.emit('before-quit');finish();assert.equal(await pending,false);
+});

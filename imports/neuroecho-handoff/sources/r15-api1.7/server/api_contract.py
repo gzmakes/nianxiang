@@ -56,7 +56,7 @@ class MemoryResponse(OpenResponse):
     session_id: str | None = None
     kind: str = Field(description="Known kinds: fact, inference, question; retain future values.")
     text: str
-    status: str = Field(description="Known states: candidate, confirmed; unknown values are not confirmation.")
+    status: str = Field(description="Known states: candidate, auto, confirmed; auto is not user confirmation.")
     version: int
     source: str | None = None
     created_at: str | None = None
@@ -154,12 +154,25 @@ class ConversationChangesResponse(OpenResponse):
     reset_reason: Literal['initial','identity_changed','too_old','ahead'] | None
 
 
+class ConnectionIntroResponse(OpenResponse):
+    id: str | None = None
+    session_id: str
+    source_id: str
+    status: Literal["running", "completed", "failed", "superseded", "interrupted"]
+    message_id: str | None = None
+    error: str | None = None
+    scope: dict[str, Any] | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
 class ConversationResponse(OpenResponse):
     session: SessionResponse
     messages: list[MessageResponse]
     memories: list[MemoryResponse]
     bookmark: BookmarkResponse | None = None
     context: ContextResponse | None = None
+    intro: ConnectionIntroResponse | None = None
 
 
 class PersonaResponse(OpenResponse):
@@ -210,6 +223,21 @@ class SourceRevokeResponse(OpenResponse):
     review_required: int | None = None
     remaining_sources: int | None = None
     revoked_source_ids: list[str] | None = None
+
+
+class FeishuAccountResponse(OpenResponse):
+    enabled: bool
+    version: int
+    ready: bool
+    ok: bool | None = None
+    connected_at: str | None = None
+    mode: Literal["account_readonly"] | None = None
+    scope: str | None = None
+    error: str | None = None
+    error_code: str | None = None
+    hint: str | None = None
+    permission_issue: str | None = None
+    intro: ConnectionIntroResponse | None = None
 
 
 class ChatResponse(OpenResponse):
@@ -358,6 +386,8 @@ def capabilities(*, chat_budget: int, budget_window_minutes: int) -> dict:
             "memory_expected_version_patch": True,
             "memory_expected_version_delete": True,
             "source_preview_confirmation": True,
+            "source_connection_intro": True,
+            "source_recent7_read": True,
             "source_individual_revoke": True,
             "action_preview_confirmation": True,
             "in_app_one_time_followups": True,

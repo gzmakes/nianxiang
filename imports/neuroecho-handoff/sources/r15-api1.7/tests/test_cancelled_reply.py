@@ -51,11 +51,11 @@ def test_superseded_remote_reply_is_not_stored_and_next_turn_sees_prior_user_inp
     assert sum(m['role'] == 'user' and m['text'] == '今天开会很烦' for m in current['messages']) == 1
 
 
-def test_cancelled_explicit_memory_request_retains_user_requested_candidate(sid):
+def test_cancelled_explicit_memory_request_keeps_user_text_without_saving_memory(sid):
     result = core.generate_reply(sid, '记住：我喜欢散步', should_cancel=lambda: True,
                                  reply_lock=threading.RLock())
     assert result['cancelled'] is True
-    assert any(m['text'] == '我喜欢散步' and m['status'] == 'candidate' for m in result['memories'])
+    assert not any(m['text'] == '我喜欢散步' for m in result['memories'])
     assert any(m['text'] == '记住：我喜欢散步' and m['role'] == 'user' for m in result['messages'])
 
 

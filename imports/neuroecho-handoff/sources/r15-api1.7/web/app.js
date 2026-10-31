@@ -35,8 +35,6 @@
     realSource: null,
     bmSource: {},
     memes: [],
-    deviceOn: false,
-    deviceTimer: null,
     tab: "understanding",
   };
 
@@ -57,18 +55,14 @@
     orb: $("#orb"),
     sourceLabel: $("#source-label"),
     sessionMeta: $("#session-meta"),
-    deviceToggle: $("#device-toggle"),
-    deviceToggleLabel: $("#device-toggle-label"),
-    deviceStatus: $("#device-status"),
-    qualityBar: $("#quality-bar"),
-    qualityValue: $("#quality-value"),
-    deviceNote: $("#device-note"),
     modal: $("#modal"),
     bmNote: $("#bm-note"),
     bmChoice: $("#bm-choice"),
     bmNext: $("#bm-next"),
     toast: $("#toast"),
   };
+
+  const memoryOverview = window.XinjiMemoryOverview?.mount({ list: els.memoryList });
 
   const stateCopy = {
     listening: ["安静陪着", "同一条对话，接着说就好"],
@@ -288,7 +282,39 @@
   }
 
   // ---------------- onboarding wizard ----------------
-  const wizard = { catalog: null, scenario: null, connector: null, read: null };
+  const wizard = { connector: null, read: null };
+
+  const connectionIntro = window.XinjiConnectionIntro.create({api, host: $("#connection-intro"),
+    getSessionId: () => state.session?.id,
+    canApply: () => !activeTurn && !state.delivery?.pending() && !queuedTurns.length && !turnQueue.length && !contentMutationCount && !state.attachingSource && !state.revokingSource && !state.confirmingSource,
+    revision: () => `${state.session?.id}:${contentMutationEpoch}:${sourceUiEpoch}:${state.messages.length}`,
+    apply: data => {
+      state.session = data.session; state.messages = expandTurns(data.messages); state.memories = data.memories;
+      state.context = data.context || null; state.bookmark = data.bookmark || null;
+      renderMessages(); renderConnectedSources(); window.XinjiConnectionIntro.syncBadges(document, state.context);
+    }});
+  function finishConnection(data) {
+    closeSourceDialog(); window.XinjiConnectionIntro.syncBadges(document, state.context);
+    if (window.innerWidth < 1200 && !window.xinjiDesktop) setDesignPanel(false);
+    connectionIntro.start(data?.intro); els.input?.focus();
+    globalThis.NianxiangSound?.play('success');
+  }
+  async function beginConnectionIntro(sourceId) {
+    const sid = state.session?.id;
+    if (!sid) return;
+    const data = await api('/api/connections/intro', {method:'POST', body:JSON.stringify({session_id:sid,source_id:sourceId})});
+    if (state.session?.id !== sid) return;
+    closeSourceDialog(); connectionIntro.start(data.intro || data); els.input?.focus();
+  }
+  function showConnectedSource(id, meta) {
+    $("#wz-read").classList.add('is-hidden');
+    $("#read-items").innerHTML = ''; $("#read-scope").innerHTML = '';
+    $("#read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '✓')}</span><h3>${esc(meta?.name || '已连接')}</h3></div><p class="connection-value">✓ 已连接，可以接着聊了。</p><p class="connection-scope">需要时会参考已接入的内容。你可以在资料管理里移除。</p><button type="button" class="btn primary" id="connection-return">回到聊天</button><button type="button" class="text-btn" id="connection-manage">管理资料</button></div>`;
+    $("#connection-return").onclick = closeSourceDialog;
+    $("#connection-manage").onclick = () => { closeSourceDialog(); switchTab('data'); };
+    showWz(3);
+  }
+
 
   // A closed or replaced credential form must never accept a late response.
   const credentialPendingKey = "xinji_source_creation_pending";
@@ -337,6 +363,7 @@
   }
 
   function showWz(n) {
+    els.onboarding.classList.toggle("connection-compact", n === 3);
     if (n !== 3) clearCredentialForms();
     [1, 2, 3, 4].forEach((i) => $(`#wz-${i}`)?.classList.toggle("is-hidden", i !== n));
     $$(".steps span").forEach((s) => s.classList.toggle("on", Number(s.dataset.step) === n));
@@ -344,43 +371,20 @@
 
   async function loadCatalog() { return loadRealSources(); }
 
-  function renderScenarios() {
-    const grid = $("#scenario-grid");
-    if (!grid || !wizard.catalog) return;
-    grid.innerHTML = wizard.catalog.scenarios.map((s) =>
-      `<button class="scenario-card" data-scenario="${s.id}">
-        <b>${esc(s.title)}</b><small>${esc(s.desc)}</small>
-      </button>`).join("");
-    grid.querySelectorAll("[data-scenario]").forEach((b) => {
-      b.onclick = () => chooseScenario(b.dataset.scenario);
-    });
-  }
-
-  function connectorCard(c, reason) {
-    const modeTag = (c.mode === "local" || c.mode === "local-real") ? "真实只读"
-      : c.mode === "real-readonly" ? "真实只读/演示" : "演示";
-    return `<div class="connector-card">
-      <div class="connector-icon">${esc(c.icon)}</div>
-      <div class="connector-body">
-        <b>${esc(c.name)}</b> <span class="muted">· ${esc(c.category)}</span>
-        <span class="tag ${c.mode === "demo" ? "" : "synthetic"}" style="margin-left:6px">${modeTag}</span>
-        <p>${esc(reason || c.blurb)}</p>
-      </div>
-      <button class="btn ghost small" data-connect="${c.id}">读取</button>
-    </div>`;
-  }
-
-  async function chooseScenario(id) {
-    state.scenario = id;
-    showWz(2);
-    await loadRealSources();
+  async function readFeishuAccountState() {
+    const sid = state.session?.id;
+    if (!sid) return;
+    try {
+      const data = await api(`/api/lark/account?session_id=${encodeURIComponent(sid)}`);
+      if (state.session?.id === sid) state.feishuAccount = data;
+    } catch (_) { if (state.session?.id === sid) state.feishuAccount = null; }
   }
 
   async function loadRealSources(force = false) {
     const list = $("#reco-list");
     list.innerHTML = `<p class="muted">正在看看有哪些可用的来源…</p>`;
     try {
-      const d = await api(`/api/onboarding/sources${force ? "?force=1" : ""}`);
+      const [d] = await Promise.all([api(`/api/onboarding/sources${force ? "?force=1" : ""}`), readFeishuAccountState()]);
       renderRealSources(d.sources || []);
     } catch (e) {
       list.innerHTML = `<p class="note">读取失败：${esc(e.message)}</p>`;
@@ -396,10 +400,10 @@
       <div class="connector-icon">${esc(s.icon)}</div>
       <div class="connector-body">
         <b>${esc(s.name)}</b> <span class="muted">· ${esc(s.kind)}</span>
-        <span class="tag synthetic" style="margin-left:6px">${esc(STATUS_LABEL[s.status] || s.status)}</span>
-        <p>${esc(s.blurb)} · ${esc(s.hint || "")}</p>
+        <span class="tag synthetic" style="margin-left:6px" ${s.id === "feishu" ? "data-feishu-account-status" : `data-connection-source="${esc(s.id)}" data-connection-idle="${esc(STATUS_LABEL[s.status] || s.status)}"`}>${esc(s.id === "feishu" ? window.XinjiFeishuAccountPicker.statusLabel(state.feishuAccount) : window.XinjiConnectionIntro.connected(state.context,s.id) ? "✓ 已连接" : STATUS_LABEL[s.status] || s.status)}</span>
+        <p>${esc(s.id === "apple_calendar" ? "过去 7 天的日程" : s.id === "apple_reminders" ? "最近 7 天有更新的提醒" : s.blurb)} · ${esc(s.id === "feishu" ? "连接后按问题自动查找有权访问的文档" : s.hint || "")}</p>
       </div>
-      <button class="btn ghost small" data-real="${s.id}" ${s.status === "empty" && s.id !== "git" ? "disabled" : ""}>${s.id === "git" ? "选择目录" : s.status === "needs_auth" ? "去授权" : s.status === "needs_config" ? "配置" : s.status === "needs_install" || s.status === "unavailable" ? "查看" : "连接"}</button>
+      <button class="btn ghost small" data-real="${s.id}" ${s.id === "feishu" ? "data-feishu-account-control" : `data-connection-control="${esc(s.id)}" data-connection-idle="连接"`} >${s.id === "feishu" ? state.feishuAccount?.enabled ? "管理连接" : "连接" : s.id === "git" ? "选择目录" : s.status === "needs_auth" ? "去授权" : s.status === "needs_config" ? "配置" : s.status === "needs_install" || s.status === "unavailable" ? "查看" : "连接"}</button>
     </div>`).join("");
     list.querySelectorAll("[data-real]").forEach((b) => {
       b.onclick = () => openRealSource(b.dataset.real, sources.find((x) => x.id === b.dataset.real));
@@ -419,20 +423,11 @@
       <div class="connector-body"><b>${esc(meta?.name || id)}</b><span class="muted"> · 真实只读</span>
       <p>${esc(meta?.hint || "")}</p></div></div>`;
 
+    if (id !== "feishu" && window.XinjiConnectionIntro.connected(state.context, id)) { showConnectedSource(id, meta); return; }
     if (id === "local_files") { openLocalFiles(); return; }
+    if (id === "waytoagi" || id === "jike") { openPublicSource(id); return; }
     if (id === "git") { renderGitPicker(); return; }
-    if (id === "feishu" && meta?.status === "needs_auth") {
-      $("#wz-read").classList.add("is-hidden");
-      showWz(3);
-      startLarkAuth();
-      return;
-    }
-    if (id === "feishu") {
-      $("#wz-read").classList.add("is-hidden");
-      renderFeishuPicker();
-      showWz(3);
-      return;
-    }
+    if (id === "feishu") { renderFeishuAccount(); return; }
     if (id === "notion") { $("#wz-read").classList.add("is-hidden"); renderNotionReal(); showWz(3); return; }
     if (id === "gmail") { $("#wz-read").classList.add("is-hidden"); renderGmailReal(); showWz(3); return; }
     if (id === "github" && ["needs_auth", "needs_install"].includes(meta?.status)) {
@@ -456,8 +451,12 @@
     }
 
     wizard.pendingSource = id;
-    $("#read-items").innerHTML = `<p class="note">${esc((meta?.reads || []).join('、') || meta?.blurb || '')}。确认后才开始读取。先展示条目信息；接入后，聊天时可能向当前模型服务发送必要的标题、摘要和提取内容。</p>`;
-    $("#wz-read").textContent = "同意并读取";
+    const scope = id === 'apple_calendar' ? '只读过去 7 天的日程，相关片段会发送给当前模型。'
+      : id === 'apple_reminders' ? '只读最近 7 天相关提醒；可用时间范围以实际读取结果为准，相关片段会发送给当前模型。'
+      : '只读当前来源支持的内容，相关片段会发送给当前模型。';
+    $("#read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '▦')}</span><h3>连接${esc(meta?.name || id)}</h3></div><p class="connection-value">陪你看看最近发生的事，找到此刻值得聊的一件。</p><p class="connection-scope">${esc(scope)}</p></div>`;
+    $("#read-items").innerHTML = '';
+    $("#wz-read").textContent = "授权";
     $("#wz-read").disabled = false;
     showWz(3);
   }
@@ -470,11 +469,11 @@
     $("#wz-read").classList.add("is-hidden");
     $("#read-items").innerHTML = "";
     $("#read-scope").innerHTML = "";
-    $("#read-head").innerHTML = `<div class="real-lark"><b>选择本机代码库</b>
-      <p class="note">填写运行念响的这台电脑上的代码库完整目录。只读取该库最近最多 8 条提交的标题、仓库名、提交 ID 和相对时间，不读取代码文件，也不会修改仓库。读取后先展示快照供你核对。</p>
-      <p class="note">本次先展示提交元信息，不从标题猜测你的习惯。确认接入后，聊天时可能将必要条目发送给当前模型服务。</p>
+    $("#read-head").innerHTML = `<div class="real-lark connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">git</span><h3>连接代码库</h3></div>
+      <p class="note">填写运行念响的电脑上的代码库完整目录。只读所选代码库最近最多 8 条提交；相关内容会发送给当前模型。</p>
+      <p class="note">授权后直接回到聊天。</p>
       <label>代码库目录<input id="wz-git-path" type="text" autocomplete="off" spellcheck="false" placeholder="例如 C:\\Users\\你的用户名\\Projects\\my-project 或 ~/Projects/my-project" /></label>
-      <button class="btn ghost small" id="wz-git-preview">同意并读取提交</button><p class="note" id="wz-git-hint" role="status">也支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
+      <button class="btn primary small" id="wz-git-preview">授权</button><p class="note" id="wz-git-hint" role="status">也支持 ~/Projects/my-project；填写目录路径即可，不要输入终端命令。</p></div>`;
     const input = $("#wz-git-path"), button = $("#wz-git-preview"), hint = $("#wz-git-hint");
     input.oninput = () => { clearCredentialForms(); $("#read-items").innerHTML = ""; hint.textContent = "目录已更改，请重新读取。"; button.disabled = false; };
     button.onclick = async () => {
@@ -486,11 +485,12 @@
       $("#read-items").innerHTML = "";
       hint.textContent = "正在读取所选代码库…";
       try {
-        const result = await api("/api/onboarding/real/read", {method: "POST", signal: request.controller.signal, body: JSON.stringify({source_id: "git", path})});
+        const result = await api("/api/onboarding/real/read", {method: "POST", signal: request.controller.signal, body: JSON.stringify({source_id: "git", path, start_intro:true})});
         if (!credentialRequestCurrent(request) || input.value.trim() !== path || (state.session?.id || null) !== initialSession) return;
         if (!result.ok || !result.preview_id || !Array.isArray(result.items)) {
           hint.textContent = [result.error || "读取失败", result.hint].filter(Boolean).join(" · "); return;
         }
+        $("#read-items").classList.add("connection-auto-snapshot");
         $("#read-items").innerHTML = `<p class="note">实际代码库：${esc(result.selected_path || path)} · ${result.items.length} 条提交</p>` + result.items.map(item =>
           `<div class="read-item"><b>${esc(item.title)}</b><span>${esc(item.meta)} · ${esc(item.summary)}</span></div>`).join("") +
           `<button class="btn primary small" id="wz-git-use">核对这些提交并继续</button>`;
@@ -500,11 +500,32 @@
           state.realSource = {id: "git", read: result, sessionId: initialSession};
           wizard.read = result;
           wizard.connector = result.connector;
-          renderInsights();
+          return startRealSource();
         };
+        await $("#wz-git-use").onclick();
       } catch (error) { if (credentialRequestCurrent(request)) hint.textContent = `读取失败：${error.message}；可修改目录后重试。`; }
       finally { if (credentialRequestCurrent(request)) button.disabled = false; }
     };
+    showWz(3);
+  }
+
+  function openPublicSource(id) {
+    $("#wz-read").classList.add("is-hidden");
+    const sid = state.session?.id || null;
+    const request = beginCredentialRequest();
+    window.XinjiPublicLinkPicker.mount($("#read-head"), {
+      sourceId: id, api, autoAttach: true,
+      isCurrent: () => credentialRequestCurrent(request) && (state.session?.id || null) === sid,
+      onConfirm: async (read) => {
+        if (!credentialRequestCurrent(request) || (state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || activeTurn || queuedTurns.length || turnQueue.length) throw Error("对话正在更新，请稍后重新读取。");
+        state.attachingSource = true;
+        try {
+          const data = await api('/api/onboarding/real/start', {method:'POST',body:JSON.stringify({source_id:id, preview_id:read.preview_id, session_id:sid, start_intro:true})});
+          if (!data?.session || (sid && data.session.id !== sid)) throw Error('接入结果未确认');
+          if (credentialRequestCurrent(request) && (state.session?.id || null) === sid) { enterSession(data, {skipIntro:true}); globalThis.NianxiangSound?.play('success'); toast('公开正文已接入当前对话'); }
+        } finally { state.attachingSource = false; }
+      }
+    });
     showWz(3);
   }
 
@@ -515,16 +536,17 @@
     $("#read-scope").innerHTML = "";
     const head = $("#read-head");
     const initialSession = state.session?.id || null;
-    window.XinjiFilePicker.mount(head, {sessionId: initialSession, onConfirm: async (files, sid) => {
-      if ((state.session?.id || null) !== sid || activeTurn || queuedTurns.length || turnQueue.length) {
+    const request = beginCredentialRequest();
+    window.XinjiFilePicker.mount(head, {sessionId: initialSession, autoAttach: true, isCurrent: () => credentialRequestCurrent(request), onConfirm: async (files, sid) => {
+      if (!credentialRequestCurrent(request) || (state.session?.id || null) !== sid || activeTurn || queuedTurns.length || turnQueue.length) {
         const e = new Error("对话状态已变化或消息仍在发送，请稍后重新核对所选资料。"); e.status = 409; throw e;
       }
       state.attachingSource = true;
       try {
-        const d = await api("/api/local-files/confirm", {method: "POST", body: JSON.stringify({session_id: sid, files})});
+        const d = await api("/api/local-files/confirm", {method: "POST", body: JSON.stringify({session_id: sid, files, start_intro:true})});
         if (!d?.session || (sid && d.session.id !== sid)) throw Error("接入结果未确认");
-        if ((state.session?.id || null) !== (sid || null)) { toast("资料已接入原对话，请在历史中查看。"); return; }
-        enterSession(d, {skipIntro: true}); toast("已接入当前对话");
+        if (!credentialRequestCurrent(request) || (state.session?.id || null) !== (sid || null)) { connectionIntro.start(d.intro); return; }
+        enterSession(d, {skipIntro: true}); globalThis.NianxiangSound?.play('success'); toast("已接入当前对话");
       } finally { state.attachingSource = false; }
     }});
     showWz(3);
@@ -532,42 +554,51 @@
 
   async function readConfirmedSource() {
     const id = wizard.pendingSource;
-    if (!id) return renderInsights();
+    const button = $("#wz-read");
+    if (!id || button.disabled) return;
     const sessionId = state.session?.id || null;
     const request = beginCredentialRequest();
-    const button = $("#wz-read");
-    button.disabled = true;
-    button.textContent = "读取中…";
+    let uncertain = false, pendingKey = null;
+    button.disabled = true; button.textContent = "连接中…";
+    $("#read-scope").textContent = "正在读取，若出现系统权限窗口，请完成后稍等。";
     try {
-      const r = await api("/api/onboarding/real/read", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ source_id: id }) });
+      const read = await api('/api/onboarding/real/read', {method:'POST', signal:request.controller.signal, body:JSON.stringify({source_id:id,read_window:'recent7',start_intro:true})});
       if (!credentialRequestCurrent(request)) return;
-      if (!r.ok) throw new Error([r.error || "读取失败", r.hint].filter(Boolean).join(" · "));
-      if ((state.session?.id || null) !== sessionId) throw Error("对话状态已变化，请重新核对来源。");
-      state.realSource = { id, read: r, sessionId };
-      wizard.read = r;
-      wizard.connector = r.connector;
+      if (!read.ok || !read.preview_id) { globalThis.NianxiangSound?.play('gentleError'); throw Error([read.error || '读取失败', read.hint].filter(Boolean).join(' · ')); }
+      if ((state.session?.id || null) !== sessionId || state.attachingSource || state.revokingSource || state.confirmingSource || activeTurn || queuedTurns.length || turnQueue.length) throw Error('对话正在更新，请稍后重新授权。');
+      state.attachingSource = true;
+      pendingKey = markCredentialStart();
+      uncertain = true;
+      const data = await api('/api/onboarding/real/start', {method:'POST',body:JSON.stringify({source_id:id,preview_id:read.preview_id,session_id:sessionId,start_intro:true})});
+      if (!data?.session || (sessionId && data.session.id !== sessionId)) throw Error('接入结果尚未确认');
+      uncertain = false; finishCredentialStart(pendingKey);
+      if (!credentialRequestCurrent(request) || (state.session?.id || null) !== sessionId) return;
       wizard.pendingSource = null;
-      renderInsights();
-    } catch (e) {
-      if (!credentialRequestCurrent(request)) return;
-      $("#read-head").insertAdjacentHTML("beforeend", `<p class="note">${esc(e.message)}</p>`);
+      enterSession(data, {skipIntro:true});
+      globalThis.NianxiangSound?.play('success');
+    } catch (error) {
+      if (error.status >= 400 && error.status < 500) { uncertain = false; if (pendingKey) finishCredentialStart(pendingKey); }
+      if (credentialRequestCurrent(request)) $("#read-scope").textContent = uncertain ? '连接结果尚未确认，请返回聊天后核对连接状态。' : error.message;
     } finally {
-      if (credentialRequestCurrent(request)) { button.disabled = false; button.textContent = "同意并读取"; }
+      state.attachingSource = false;
+      if (credentialRequestCurrent(request)) { button.disabled = uncertain; button.textContent = uncertain ? '请先核对连接状态' : '授权'; }
     }
   }
 
   async function startRealSource(editFirst = false) {
     if (!state.realSource) { toast("请先选择并核对一份真实来源。"); return; }
-    const id = state.realSource.id;
-    const sid = state.realSource.sessionId;
-    if ((state.session?.id || null) !== sid || activeTurn || queuedTurns.length || turnQueue.length) { toast("对话状态已变化或消息仍在发送，请稍后重新核对。"); return; }
+    const selected = state.realSource;
+    const id = selected.id;
+    const sid = selected.sessionId;
+    if ((state.session?.id || null) !== sid || state.attachingSource || state.revokingSource || state.confirmingSource || activeTurn || queuedTurns.length || turnQueue.length) { toast("对话状态已变化或消息仍在发送，请稍后重新核对。"); return; }
     state.attachingSource = true;
     try {
-      const d = await api("/api/onboarding/real/start", { method: "POST", body: JSON.stringify({ source_id: id, preview_id: state.realSource.read.preview_id, ...(sid ? {session_id:sid} : {}) }) });
+      const d = await api("/api/onboarding/real/start", { method: "POST", body: JSON.stringify({ source_id: id, start_intro:true, preview_id: state.realSource.read.preview_id, ...(sid ? {session_id:sid} : {}) }) });
       if (!d || !d.session) { toast(d?.detail || "接入失败"); return; }
       if (sid && d.session.id !== sid) throw Error("接入返回的记录不匹配，请重新核对；当前对话没有切换。");
-      if ((state.session?.id || null) !== (sid || null)) { toast("资料已接入原对话，请在历史中查看。"); return; }
+      if (state.realSource !== selected || (state.session?.id || null) !== (sid || null)) { connectionIntro.start(d.intro); return; }
       enterSession(d, { skipIntro: true });
+      globalThis.NianxiangSound?.play('success');
       if (editFirst) setTimeout(() => switchTab("understanding"), 500);
     } catch (e) { toast(e.message); }
     finally { state.attachingSource = false; }
@@ -593,11 +624,12 @@
     const sid = state.session?.id;
     try {
       const endpoint = sid ? "/api/lark/attach" : "/api/lark/start";
-      const body = sid ? {session_id: sid, url, preview_id: previewId} : {url, preview_id: previewId};
+      const body = sid ? {session_id: sid, url, preview_id: previewId, start_intro:true} : {url, preview_id: previewId, start_intro:true};
       const data = await api(endpoint, {method: "POST", body: JSON.stringify(body)});
       if (!data?.session || (sid && data.session.id !== sid)) throw new Error("响应无效");
       if ((state.session?.id || null) !== (sid || null)) { toast("资料已接入原对话，请在历史中查看。"); return; }
       enterSession(data, {skipIntro: true});
+      globalThis.NianxiangSound?.play('success');
       toast("已接入当前对话");
     } catch (e) {
       if (e.status === 409) {
@@ -638,7 +670,7 @@
       try {
         const d = await api("/api/lark/preview", { method: "POST", body: JSON.stringify({ url }) });
         if (version !== previewVersion || $("#wz-lark-url") !== input || input.value.trim() !== url) return;
-        if (!d.ok) { hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
+        if (!d.ok) { globalThis.NianxiangSound?.play('gentleError'); hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
         const box = $("#wz-lark-result");
         const markup = feishuPreviewMarkup(d);
         box.classList.remove("is-hidden");
@@ -658,18 +690,16 @@
     clearCredentialForms();
     const initialSession = state.session?.id || null;
     const head = $("#read-head");
-    head.querySelector(".real-gmail")?.remove();
-    head.insertAdjacentHTML("beforeend", `
-      <div class="real-gmail real-lark">
-        <div class="mem-group-label" style="margin-top:12px"><span>Gmail 未读邮件（只读）</span><span class="muted">Google / IMAP</span></div>
-        <label>连接方式<select id="wz-gmail-method"><option value="cli">Google 官方登录</option><option value="imap">应用专用密码（备用）</option></select></label><input id="wz-gmail-address" placeholder="Gmail 地址" />
-        <input id="wz-gmail-password" type="password" placeholder="应用专用密码（仅本次请求使用，不保存）" />
-        <div class="lark-actions">
-          <button class="btn ghost small" id="wz-gmail-preview">读取未读邮件</button>
-          <span class="note" id="wz-gmail-hint">只读最近 5 封未读的邮件头，不下载正文。</span>
-        </div>
-        <div id="wz-gmail-result" class="lark-preview is-hidden"></div>
-      </div>`);
+    head.innerHTML = `<div class="real-gmail real-lark connection-card">
+      <div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">M</span><h3>连接 Gmail</h3></div>
+      <p class="connection-value">看看最近的未读消息，一起理清在意的事。</p>
+      <p class="connection-scope">只读最近 5 封未读邮件的主题、发件人和日期，必要内容会发送给当前模型。应用专用密码仅本次使用。</p>
+      <label>连接方式<select id="wz-gmail-method"><option value="cli">Google 官方登录</option><option value="imap">应用专用密码（备用）</option></select></label>
+      <input id="wz-gmail-address" placeholder="Gmail 地址" autocomplete="off" />
+      <input id="wz-gmail-password" type="password" autocomplete="off" placeholder="应用专用密码" />
+      <button class="btn primary small" id="wz-gmail-preview">授权</button>
+      <p class="connection-status" id="wz-gmail-hint" role="status"></p>
+      <div id="wz-gmail-result" class="lark-preview is-hidden" hidden></div></div>`;
     globalThis.XinjiConnectorAuth?.mount(head.querySelector(".real-gmail"), "gmail");
     $("#wz-gmail-method").onchange = () => {
       const cli = $("#wz-gmail-method").value === "cli";
@@ -678,15 +708,18 @@
       $("#wz-gmail-password").value = "";
       $("#wz-gmail-result").classList.add("is-hidden");
       $("#wz-gmail-result").innerHTML = "";
-      $("#wz-gmail-hint").textContent = cli ? "先连接 Google 账号，再读取最近最多 5 封未读邮件头；不读取正文。" : "填写地址和应用专用密码；仅本次请求使用。";
+      $("#wz-gmail-hint").textContent = cli ? "先连接 Google 账号，再读取最近最多 5 封未读邮件头。" : "填写地址和应用专用密码；仅本次请求使用。";
     };
     $("#wz-gmail-method").onchange();
     $("#wz-gmail-preview").onclick = async () => {
+      const authorizeButton = $("#wz-gmail-preview");
+      if (authorizeButton.disabled) return;
       const method = $("#wz-gmail-method").value;
       const address = $("#wz-gmail-address").value.trim();
       const password = $("#wz-gmail-password").value.trim();
       const hint = $("#wz-gmail-hint");
       if (method !== "cli" && (!address || !password)) { hint.textContent = "地址和应用专用密码都要填"; return; }
+      authorizeButton.disabled = true;
       $("#wz-gmail-result").classList.add("is-hidden");
       $("#wz-gmail-result").innerHTML = "";
       hint.textContent = "读取中…";
@@ -695,7 +728,7 @@
       try {
         const d = await api("/api/gmail/preview", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ address, password, method }) });
         if (!credentialRequestCurrent(request)) return;
-        if (!d.ok) { hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
+        if (!d.ok) { globalThis.NianxiangSound?.play('gentleError'); hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
         const box = $("#wz-gmail-result");
         box.classList.remove("is-hidden");
         box.innerHTML = `<h4>${d.items.length} 封未读邮件头</h4>` + d.items.map((item, i) =>
@@ -710,11 +743,12 @@
           button.disabled = true;
           const startId = markCredentialStart();
           try {
-            const s = await api("/api/gmail/start", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ preview_id: d.preview_id, ...(initialSession ? {session_id:initialSession} : {}) }) });
+            const s = await api("/api/gmail/start", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ preview_id: d.preview_id, start_intro:true, ...(initialSession ? {session_id:initialSession} : {}) }) });
             if (!credentialRequestCurrent(request)) return;
             if (!s || !s.session) throw new Error("创建结果未确认");
             finishCredentialStart(startId);
             enterSession(s, { skipIntro: true });
+            globalThis.NianxiangSound?.play('success');
           } catch (e) {
             if (!credentialRequestCurrent(request)) return;
             if ([400,404,409].includes(e.status)) {
@@ -726,9 +760,47 @@
             }
           } finally { state.attachingSource = false; }
         };
-        hint.textContent = "确认后保存刚才读取的快照；聊天时可能向模型发送必要的邮件头和提取内容。密码不保存。";
+        await $("#wz-gmail-start").onclick();
       } catch (e) { if (credentialRequestCurrent(request)) hint.textContent = e.message; }
+      finally { if (credentialRequestCurrent(request)) authorizeButton.disabled = false; }
     };
+  }
+
+  function renderFeishuAccount() {
+    clearCredentialForms();
+    const epoch = credentialGeneration;
+    let sessionId = state.session?.id || null;
+    const current = () => epoch === credentialGeneration && !els.onboarding.classList.contains("is-hidden") &&
+      (!sessionId || state.session?.id === sessionId);
+    showWz(3);
+    $("#wz-read").classList.add("is-hidden");
+    $("#wz-3 > .section-label").textContent = "飞书 · 按问题查阅";
+    $("#read-items").innerHTML = ""; $("#read-scope").innerHTML = "";
+    const head = $("#read-head");
+    window.XinjiFeishuAccountPicker.mount(head, {api, getSessionId: () => state.session?.id, isCurrent: current,
+      ensureSession: async () => {
+        const data = await api("/api/conversation");
+        if (!current()) return null;
+        if (!data?.session?.id) throw Error("暂时无法读取当前对话");
+        if (state.session && state.session.id !== data.session.id) throw Error("对话状态已变化，请重新打开连接");
+        if (!state.session) {
+          state.session = data.session; state.messages = expandTurns(data.messages || []); state.memories = data.memories || [];
+          state.context = data.context || null; state.bookmark = data.bookmark || null;
+          localStorage.setItem("xinji_session", data.session.id);
+        }
+        sessionId = state.session.id;
+        return sessionId;
+      },
+      onAuthorize: () => startLarkAuth("account"),
+      onConnected: data => finishConnection(data),
+      onReturn: () => { closeSourceDialog(); els.input?.focus(); },
+      onSingleDocument: () => {
+        clearCredentialForms(); head.innerHTML = ""; $("#wz-3 > .section-label").textContent = "单篇文档快照";
+        renderFeishuPicker();
+      },
+      onManageSources: () => { closeSourceDialog(); switchTab("data"); },
+      onStateChange: data => { state.feishuAccount = data; window.XinjiFeishuAccountPicker.syncBadges(document, data); if (typeof syncAppsAccountControl === "function") syncAppsAccountControl(); },
+    });
   }
 
   function renderFeishuPicker() {
@@ -737,7 +809,8 @@
     head.querySelector(".real-feishu")?.remove();
     head.insertAdjacentHTML("beforeend", `
       <div class="real-feishu real-lark">
-        <div class="mem-group-label" style="margin-top:12px"><span>选择一篇飞书文档</span><span class="muted">已授权</span></div>
+        <div class="mem-group-label" style="margin-top:12px"><span>选择一篇飞书文档</span><span class="muted">只接入单篇快照；读取时会核对飞书权限</span></div>
+        <button type="button" class="btn ghost small" id="wz-feishu-reconnect">重新连接飞书</button>
         <div class="feishu-search-row">
           <input id="wz-feishu-q" placeholder="搜索飞书文档，例如：项目 / 周会 / PRD" />
           <button class="btn ghost small" id="wz-feishu-search">搜索</button>
@@ -748,6 +821,7 @@
         <p class="note" id="wz-feishu-hint">选中文档后预览；开始对话时，如已配置模型服务，会发送文档摘要及提取内容生成理解。</p>
       </div>`);
     const pickerInput = $("#wz-feishu-q");
+    $("#wz-feishu-reconnect").onclick = () => startLarkAuth("document", {force: true});
     const previewSelected = async (url) => {
       const version = ++previewVersion;
       const hint = $("#wz-feishu-hint");
@@ -801,27 +875,28 @@
     clearCredentialForms();
     const initialSession = state.session?.id || null;
     const head = $("#read-head");
-    head.querySelector(".real-notion")?.remove();
-    head.insertAdjacentHTML("beforeend", `
-      <div class="real-notion real-lark">
-        <div class="mem-group-label" style="margin-top:12px"><span>或者：真实 Notion 页面 / 数据库（只读）</span><span class="muted">integration token</span></div>
-        <label>连接方式<select id="wz-notion-method"><option value="cli">连接 Notion 账号</option><option value="token">集成 Token（备用）</option></select></label><p class="note">账号连接方式无需填写 Token，仅支持单页；请点击下方连接账号，在官方页面完成登录。<a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">官方连接说明</a></p><input id="wz-notion-token" type="password" placeholder="Notion integration token（仅本次请求使用，不保存）" />
-        <input id="wz-notion-url" placeholder="粘贴 Notion 页面/数据库链接（https://www.notion.so/…）" />
-        <div class="lark-actions">
-          <button class="btn ghost small" id="wz-notion-preview">读取真实页面</button>
-          <span class="note" id="wz-notion-hint">需在 Notion 里把页面「连接」给你的集成。</span>
-        </div>
-        <div id="wz-notion-result" class="lark-preview is-hidden"></div>
-      </div>`);
+    head.innerHTML = `<div class="real-notion real-lark connection-card">
+      <div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">N</span><h3>连接 Notion</h3></div>
+      <p class="connection-value">带上一页想法，从你正在做的事聊起。</p>
+      <p class="connection-scope">只读所选页面前 50 个文本块或数据库前 20 条，相关内容会发送给当前模型。Token 仅本次使用。</p>
+      <label>连接方式<select id="wz-notion-method"><option value="token">集成 Token</option><option value="cli">本机已登录的 Notion CLI</option></select></label>
+      <input id="wz-notion-token" type="password" autocomplete="off" placeholder="Notion integration token" />
+      <input id="wz-notion-url" placeholder="Notion 页面或数据库链接" />
+      <button class="btn primary small" id="wz-notion-preview">授权</button><p class="connection-status" id="wz-notion-hint" role="status">请先在 Notion 中将页面连接给集成。</p>
+      <details><summary>连接帮助</summary><a href="https://developers.notion.com/cli/get-started/authentication" target="_blank" rel="noopener noreferrer">Notion 官方 CLI 连接说明</a></details>
+      <div id="wz-notion-result" class="lark-preview is-hidden" hidden></div></div>`;
     $("#wz-notion-method").onchange = () => { clearCredentialForms(); $("#wz-notion-hint").textContent = $("#wz-notion-method").value === "cli" ? "使用本机 ntn 已有登录；填写一个页面链接即可，只读前 50 个顶层文本块。" : "需在 Notion 中把目标页面连接给集成，填写 Token 和页面或数据库链接。"; $("#wz-notion-token").value = ""; $("#wz-notion-token").disabled = $("#wz-notion-method").value === "cli"; $("#wz-notion-result").innerHTML = ""; };
     globalThis.XinjiConnectorAuth?.mount(head.querySelector(".real-notion") || head, "notion");
     $("#wz-notion-method").onchange();
     $("#wz-notion-preview").onclick = async () => {
+      const authorizeButton = $("#wz-notion-preview");
+      if (authorizeButton.disabled) return;
       const method = $("#wz-notion-method").value || "token";
       const token = $("#wz-notion-token").value.trim();
       const url = $("#wz-notion-url").value.trim();
       const hint = $("#wz-notion-hint");
       if ((method !== "cli" && !token) || !url) { hint.textContent = method === "cli" ? "请填写一个 Notion 页面链接。" : "token 和页面/数据库链接都要填"; return; }
+      authorizeButton.disabled = true;
       $("#wz-notion-result").classList.add("is-hidden");
       $("#wz-notion-result").innerHTML = "";
       hint.textContent = "读取中…";
@@ -830,7 +905,7 @@
       try {
         const d = await api("/api/notion/preview", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ token, url, method }) });
         if (!credentialRequestCurrent(request)) return;
-        if (!d.ok) { hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
+        if (!d.ok) { globalThis.NianxiangSound?.play('gentleError'); hint.textContent = `${d.error || "读取失败"}${d.hint ? " · " + d.hint : ""}`; return; }
         const box = $("#wz-notion-result");
         box.classList.remove("is-hidden");
         box.innerHTML = `<h4>${esc(d.title)}</h4><div class="meta"><span>${d.items.length} 条 · Notion</span><span>只读快照</span></div>` + d.items.map((item, i) =>
@@ -845,11 +920,12 @@
           button.disabled = true;
           const startId = markCredentialStart();
           try {
-            const s = await api("/api/notion/start", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ preview_id: d.preview_id, ...(initialSession ? {session_id:initialSession} : {}) }) });
+            const s = await api("/api/notion/start", { method: "POST", signal: request.controller.signal, body: JSON.stringify({ preview_id: d.preview_id, start_intro:true, ...(initialSession ? {session_id:initialSession} : {}) }) });
             if (!credentialRequestCurrent(request)) return;
             if (!s || !s.session) throw new Error("创建结果未确认");
             finishCredentialStart(startId);
             enterSession(s, { skipIntro: true });
+            globalThis.NianxiangSound?.play('success');
           } catch (e) {
             if (!credentialRequestCurrent(request)) return;
             if ([400,404,409].includes(e.status)) {
@@ -861,24 +937,23 @@
             }
           } finally { state.attachingSource = false; }
         };
-        hint.textContent = "确认后使用刚才读取的快照；如已配置模型服务，页面摘要及提取内容会发送给模型生成理解。token 不保存。";
+        await $("#wz-notion-start").onclick();
       } catch (e) { if (credentialRequestCurrent(request)) hint.textContent = e.message; }
+      finally { if (credentialRequestCurrent(request)) authorizeButton.disabled = false; }
     };
   }
 
   function renderInsights() {
     const r = wizard.read;
     $("#wz-start").textContent = state.session ? "接入当前对话" : "开始对话";
-    $("#insight-list").innerHTML = r.insights.map((i) =>
+    $("#insight-list").innerHTML = (['apple_calendar', 'apple_reminders'].includes(r.connector?.id) && !r.items?.length ? `<div class="insight-card"><b>读取成功，当前没有条目</b><p>${esc(r.connector?.id === "apple_reminders" ? "没有未完成的提醒事项。可以保存这次读取结果，之后再重新读取。" : "所选范围内没有日程。可以保存这次读取结果，之后再重新读取。")}</p></div>` : '') + r.insights.map((i) =>
       `<div class="insight-card"><div class="t">${esc(i.type.toUpperCase())}</div>
         <b>${esc(i.title)}</b><p>${esc(i.text)}</p></div>`).join("");
     const u = r.understanding;
     const row = (k, list) => list.map((x) => `<div class="intro-row"><b>${k}</b>${esc(x)}</div>`).join("");
     $("#wz-understanding").innerHTML = `
       <div class="wz-under">${row("事实", u.facts)}${row("推测", u.inferences)}${row("问题", u.questions)}</div>`;
-    $("#wz-note-text").textContent = r.synthetic
-      ? "这些是演示推断，不是结论；进入对话后可随时纠正或撤回。"
-      : "这些是初步理解，请核对；若启用了模型，所选内容的摘要会发送给模型服务。";
+    $("#wz-note-text").textContent = "这些是基于你所选来源的初步理解，请核对；若启用了模型，所选内容的摘要会发送给模型服务。";
     showWz(4);
   }
 
@@ -898,7 +973,7 @@
     if (typeof updatePersonaLabels === "function") updatePersonaLabels();
     state.followupReminder?.refresh(); state.companionBoundary?.refresh();
     $("#chat-error")?.classList.add("is-hidden");
-    state.messages = retainedMessages || data.messages;
+    state.messages = retainedMessages || expandTurns(data.messages);
     state.memories = data.memories;
     state.bookmark = data.bookmark || null;
     state.context = data.context || null;
@@ -923,6 +998,8 @@
     renderInsightPanel();
     loadCarryover();
     bindIntro();
+    window.XinjiConnectionIntro.syncBadges(document, state.context);
+    connectionIntro.start(data.intro);
     if (new URLSearchParams(location.search).get("intro") === "1") showIntro();
   }
 
@@ -1001,7 +1078,9 @@
   }
 
   function sourceListMarkup(sources) {
-    if (!sources.length) return '<p class="note">还没有接入资料。先聊聊，需要背景时再连接。</p>';
+    if (!sources.length) return state.feishuAccount?.enabled === true && state.feishuAccount.ready !== false
+      ? '<p class="note">✓ 飞书已连接，聊天时会按需查阅。</p>'
+      : '<p class="note">还没有接入资料。先聊聊，需要背景时再连接。</p>';
     return sources.map((source, index) => `<div class="connected-source">
       <div><b>${esc(sourceDisplayName(source))}</b><small>${source.stale ? "理解待核对 · 暂停用于回复" : "只读快照"} · ${(source.items || []).length} 条</small></div>
       <button class="text-btn source-remove" type="button" data-source-remove="${index}" ${!source.id && sources.length > 1 ? "disabled" : ""}>${!source.id && sources.length > 1 ? "刷新后移除" : "移除"}</button>
@@ -1022,6 +1101,7 @@
   }
 
   function renderConnectedSources() {
+    if (typeof syncAppsSourceControls === "function") syncAppsSourceControls();
     const sources = connectedSources(), sid = state.session?.id;
     const box = $("#connected-sources");
     if (box) { box.innerHTML = sourceListMarkup(sources); bindSourceRemoval(box, sources, sid); }
@@ -1132,7 +1212,7 @@
   async function checkActionStatus(action) {
     const sid = state.session?.id;
     if (!sid || (action.session_id && action.session_id !== sid)) return;
-    switchTab("bookmark");
+    openMyTasks();
     await loadTaskActions();
     if (state.session?.id === sid) toast("已重新读取本机动作记录；没有再次写入系统。结果仍待确认时，请自行核对系统。");
   }
@@ -1382,7 +1462,7 @@
     const bmBtn = $("#resume-bookmark");
     if (bmBtn) {
       bmBtn.classList.toggle("is-hidden", !bm);
-      bmBtn.onclick = () => { switchTab("bookmark"); banner.classList.add("is-hidden"); };
+      bmBtn.onclick = () => { openMyTasks(); banner.classList.add("is-hidden"); };
     }
     banner.classList.remove("is-hidden");
     $("#messages").scrollTop = $("#messages").scrollHeight;
@@ -1428,6 +1508,14 @@
     if (state.session) localStorage.setItem("xinji_last_seen_" + state.session.id, new Date().toISOString());
   }
 
+  function safeImageDataUrl(value) {
+    return typeof value === "string" && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
+  }
+
+  function imageMessageText(text, imageUrl) {
+    return imageUrl && typeof text === "string" ? text.replace(/^\[图片\](?:[ \t]*\r?\n|[ \t]+|$)/, "") : text;
+  }
+
   function renderMessageText(text) {
     return window.XinjiMeme.render(text, state.memes, esc);
   }
@@ -1447,7 +1535,6 @@
 
   window.XinjiCompanionChoices.bind(document, els.input);
 
-  const memoryProposal = window.createMemoryProposal({box: $("#memory-proposal"), toggle: $("#memory-proposal-enabled"), state, api, toast, refresh: renderAll});
   const chatScroll = window.createChatScroll($("#messages"), $("#chat-new-messages"));
   let renderedChatSession = null;
   let renderedMessageIds = new Set();
@@ -1466,32 +1553,33 @@
       message._bubblesSource = message.text;
       return message;
     }
-    memoryProposal.sync();
     const empty = state.messages.filter((m) => m.role === "user").length === 0;
-    $("#chat-empty")?.classList.toggle("is-hidden", !(empty && state.session?.mode === "empty"));
     const lastAssistant = [...state.messages].reverse().find((m) => m.role === "assistant");
-    const visibleMessages = empty && state.session?.mode === "empty" ? [] : state.messages;
+    const showEmpty = empty && state.session?.mode === "empty" && !state.messages.some(message => message.connection_intro);
+    $("#chat-empty")?.classList.toggle("is-hidden", !showEmpty);
+    const visibleMessages = showEmpty ? [] : state.messages;
     visibleMessages.forEach(decorateAssistantMessage);
     const sessionChanged = renderedChatSession !== state.session?.id;
+    if (selectedImage && selectedImage.sessionId !== state.session?.id) { ++imageReadToken; imageReading = false; setSelectedImage(null); }
     const newMessage = !sessionChanged && visibleMessages.some(message => !String(message.id).startsWith("local-") && !renderedMessageIds.has(message.id));
     chatScroll.render(() => { els.messages.innerHTML = visibleMessages
       .map((m, index) => {
         const role = m.role === "user" ? "user" : "assistant";
         const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "";
-        const cites = (m.citations || []).map((c) =>
-          `<button class="cite" data-mem="${c.id}" title="${esc(c.text)}">依据 · v${c.version} · ${esc((c.text || "").slice(0, 10))}…</button>`
-        ).join("");
+        const cites = window.XinjiFeishuAccountPicker?.renderCitations(m) || "";
         const sugg = (lastAssistant && m.id === lastAssistant.id && (m.suggestions || []).length)
           ? `<div class="suggests">${m.suggestions.map((s) => `<button class="suggest" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>`
           : "";
         const draft = window.XinjiActionCards.chatDraft(visibleMessages, index);
         const draftButton = draft ? `<div class="suggests"><button class="suggest" data-chat-draft="${index}">查看并保存为消息草稿</button></div>` : "";
         const parts = role === "assistant" && Array.isArray(m.bubbles) && m.bubbles.length ? m.bubbles : [m.text];
+        const imageUrl = safeImageDataUrl(m.image_data_url) ? m.image_data_url : "";
         const voiceButton = role === "assistant" && !m.delivery_pending ? `<button type="button" class="message-topic" data-voice-message="${index}" aria-label="朗读这条回复" title="${esc(window.EchoShared?.copy?.['voice.disclosure'] || '由设备语音朗读，不会自动播放或创建语音文件。')}" aria-pressed="false">${esc(window.EchoShared?.copy?.['voice.read'] || '朗读')}</button><button type="button" class="message-topic" hidden data-voice-clip="${index}">生成语音</button><span data-voice-clip-slot="${index}"></span>` : "";
         const proposalButton = m.action_proposal && !m.delivery_pending ? `<div class="suggests"><button class="suggest" data-action-proposal="${index}">查看提醒预览</button></div>` : "";
-        return `<div class="msg ${role}" data-message-id="${esc(m.id)}">
+        return `<div class="msg ${role}" data-message-id="${esc(m.id)}" data-persona-id="${esc(m.persona_id || '')}" data-interaction-mode="${esc(m.interaction_mode || '')}">
           <div class="meta"><span>${role === "user" ? "你" : "回响"}</span><span>${esc(time)}</span></div>
-          ${parts.map(part => `<div class="bubble">${renderMessageText(part)}</div>`).join("")}
+          ${imageUrl ? `<div class="bubble image-message"><img src="${esc(imageUrl)}" alt="已发送的图片"></div>` : ""}
+          ${parts.map(part => imageMessageText(part, imageUrl)).filter(Boolean).map(part => `<div class="bubble">${renderMessageText(part)}</div>`).join("")}
           ${cites ? `<div class="cites">${cites}</div>` : ""}
           ${sugg}${draftButton}${proposalButton}${voiceButton}<button type="button" class="message-topic" data-topic-message="${esc(m.id)}" ${String(m.id).startsWith("local-") ? 'disabled title="发送完成后可标记话题"' : ""} aria-label="为这条消息标记话题">标记话题</button>
         </div>`;
@@ -1572,17 +1660,32 @@
     });
   }
 
-  function understandingItem(m) {
-    return `<div class="mem-item" data-id="${m.id}">
-      <div class="memory-origin ${m.kind === "inference" && m.status !== "confirmed" ? "is-inference" : ""}">${m.kind === "inference" && m.status !== "confirmed" ? "推测 · 待你确认" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录"}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">确认后，可作为相关对话的背景。</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>用在：相关对话的背景，${m.kind === "inference" && m.status !== "confirmed" ? "推测需要先由你确认。" : "可随时纠正或忘掉。"}</p></details>
-      <div class="mem-meta">
-        <span class="mem-version">v${m.version} · ${esc(memorySourceLabel(m))}</span>
-        <span class="mem-actions">
-          ${m.status === "candidate" ? `<button class="mini-btn confirm" data-act="confirm" data-id="${m.id}">确认</button>` : `<span class="mini-btn confirm" style="opacity:.6">已确认</span>`}
-          <button class="mini-btn" data-act="edit" data-id="${m.id}">改一改</button>
+  function memoryPresentation(m) {
+    const uncertainSource = /撤回后来源待核对|来源待核对/.test([m.source, m.source_label].filter(Boolean).join(" "));
+    const status = m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你已添加" : "自动记录") : m.status === "confirmed" ? "已确认" : m.status === "candidate" ? "尚未核实" : "状态待核对";
+    const origin = m.kind === "inference" ? "推测" : m.source === "用户手动添加" ? "你手动添加" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录";
+    const use = uncertainSource ? "来源待核对，暂不用于回复。" : m.kind === "inference" ? "这是推测，不作为确定事实。" : m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你主动记下，可作为相关对话的背景。" : "自动记下；关闭自动记录后暂停用于回复，可确认或删除。") : m.status === "confirmed" ? "可作为相关对话的背景。" : "尚未核实，不作为确定事实。";
+    return {status, origin, use};
+  }
+
+  function memoryCardBody(m) {
+    const presentation = memoryPresentation(m);
+    return `<div class="memory-origin ${m.kind === "inference" ? "is-inference" : ""}">${esc(presentation.origin)}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">${esc(presentation.use)}</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>使用：${esc(presentation.use)} 可随时纠正或忘掉。</p></details>`;
+  }
+
+  function memoryActions(m) {
+    return `${m.status === "auto" && m.source === "对话原话 · 自动记录" ? `<button class="mini-btn" data-act="confirm" data-id="${m.id}">确认记住</button>` : ""}<button class="mini-btn" data-act="edit" data-id="${m.id}">改一改</button>
           <button class="mini-btn" data-act="history" data-id="${m.id}">历史</button>
-          <button class="mini-btn" data-act="delete" data-id="${m.id}">忘掉这条</button>
-        </span>
+          <button class="mini-btn" data-act="delete" data-id="${m.id}">忘掉这条</button>`;
+  }
+
+  function understandingItem(m) {
+    const presentation = memoryPresentation(m);
+    return `<div class="mem-item" data-id="${m.id}">
+      ${memoryCardBody(m)}
+      <div class="mem-meta">
+        <span class="mem-version">${esc(presentation.status)} · v${m.version} · ${esc(memorySourceLabel(m))}</span>
+        <span class="mem-actions">${memoryActions(m)}</span>
       </div>
     </div>`;
   }
@@ -1593,23 +1696,20 @@
       ? state.memories.map((m) => memoryItem(m)).join("")
       : `<p class="note">还没有记忆。对话里说「记住……」或手动添加。</p>`;
     for (const id of memoryDrafts.keys()) if (state.memories.some(memory => memory.id === id)) startMemoryEdit(id);
+    memoryOverview?.render(state.memories, state.session?.id);
   }
 
   function memoryItem(m) {
+    const presentation = memoryPresentation(m);
     return `<div class="mem-item" data-id="${m.id}">
       <div class="mem-group-label" style="margin-bottom:6px">
-        <span class="tag ${m.kind}">${{ fact: "事实", inference: "推测", question: "问题" }[m.kind]}</span>
-        <span class="mem-version">v${m.version} · ${m.status === "confirmed" ? "已确认" : "待确认"}</span>
+        <span class="tag ${m.kind}">${{ fact: "事实", inference: "推测", question: "问题" }[m.kind] || "记忆"}</span>
+        <span class="mem-version">v${m.version} · ${esc(presentation.status)}</span>
       </div>
-      <div class="memory-origin ${m.kind === "inference" && m.status !== "confirmed" ? "is-inference" : ""}">${m.kind === "inference" && m.status !== "confirmed" ? "推测 · 待你确认" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录"}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">确认后，可作为相关对话的背景。</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>用在：相关对话的背景，${m.kind === "inference" && m.status !== "confirmed" ? "推测需要先由你确认。" : "可随时纠正或忘掉。"}</p></details>
+      ${memoryCardBody(m)}
       <div class="mem-meta">
         <span class="mem-version">${esc(memorySourceLabel(m))}</span>
-        <span class="mem-actions">
-          ${m.status === "candidate" ? `<button class="mini-btn confirm" data-act="confirm" data-id="${m.id}">确认</button>` : ""}
-          <button class="mini-btn" data-act="edit" data-id="${m.id}">改一改</button>
-          <button class="mini-btn" data-act="history" data-id="${m.id}">历史</button>
-          <button class="mini-btn" data-act="delete" data-id="${m.id}">忘掉这条</button>
-        </span>
+        <span class="mem-actions">${memoryActions(m)}</span>
       </div>
     </div>`;
   }
@@ -1734,6 +1834,40 @@
   const chatTransport = window.XinjiChatTransport.create(api, {ledger:chatLedger});
   const displayedTurns = new Map();
   let localTurnId = 0;
+  let selectedImage = null;
+  let imageReadToken = 0;
+  let imageReading = false;
+
+  function setSelectedImage(image) {
+    selectedImage = image;
+    const preview = $("#image-preview");
+    preview.classList.toggle("is-hidden", !image);
+    if (image) $("#image-preview-thumb").src = image.dataUrl;
+    else $("#image-preview-thumb").removeAttribute("src");
+    els.composer.classList.toggle("has-image", !!image);
+    if (!image) $("#image-input").value = "";
+  }
+
+  function imageTurnOutstanding() {
+    return !!(activeTurn?.parts.some(p => p.image_data_url) ||
+      queuedTurns.some(turn => turn.parts.some(p => p.image_data_url)) ||
+      turnQueue.some(p => p.image_data_url) ||
+      [...uncertainTurns.values()].some(turn => turn.transport?.image_data_url || turn.transport?.has_image));
+  }
+
+  function selectImage(file) {
+    if (imageTurnOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; }
+    const token = ++imageReadToken;
+    imageReading = false;
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { toast("请选择 JPEG、PNG 或 WebP 图片。"); return; }
+    if (!file.size || file.size > 4 * 1024 * 1024) { toast("图片大小须在 4 MB 以内。"); return; }
+    const sid = state.session?.id, reader = new FileReader();
+    imageReading = true;
+    reader.onload = () => { if (token === imageReadToken) { imageReading = false; if (state.session?.id === sid && safeImageDataUrl(reader.result)) setSelectedImage({dataUrl:reader.result, sessionId:sid}); else if (state.session?.id === sid) toast("图片读取失败，请重新选择。"); } };
+    reader.onerror = () => { if (token === imageReadToken) { imageReading = false; toast("读取图片失败，请重新选择。"); } };
+    reader.readAsDataURL(file);
+  }
   let recognition = null;
   let listening = false;
 
@@ -1751,13 +1885,16 @@
       els.input.value = text.trim();
     };
     recognition.onstart = () => {
+      globalThis.NianxiangSound?.setRecording(true);
       listening = true; btn.classList.add("listening"); btn.textContent = "在听…";
     };
     recognition.onend = () => {
+      globalThis.NianxiangSound?.setRecording(false);
       listening = false; btn.classList.remove("listening"); btn.textContent = "语音";
-      if (els.input.value.trim()) sendMessage(els.input.value);
+      if (els.input.value.trim() || selectedImage) sendMessage(els.input.value, true);
     };
     recognition.onerror = (e) => {
+      globalThis.NianxiangSound?.setRecording(false);
       listening = false; btn.classList.remove("listening"); btn.textContent = "语音";
       if (e.error !== "aborted") toast(e.error === "not-allowed" ? "麦克风权限未开启" : "语音识别失败，可改用文字");
     };
@@ -1784,8 +1921,8 @@
       chatBlocked=uncertainTurns.size>0;
       if (saved.pending.length || saved.restored) {
         $('#chat-error').textContent=saved.pending.length
-          ? '上次发送状态待核对；原请求已保存在本机。点击「核对发送状态」只读取结果，不会重新发送。'
-          : '刚才尚未发出的内容已放回输入框，由你决定是否发送。';
+          ? (saved.pending.some(record => record.has_image) ? '上次图片发送状态待核对；请求编号已保留，图片预览未保存。点击「核对发送状态」只读取结果，不会重新发送。' : '上次发送状态待核对；原请求已保存在本机。点击「核对发送状态」只读取结果，不会重新发送。')
+          : saved.imageLost ? '刚才尚未发出的文字已放回输入框；图片未保留，请重新选择。' : '刚才尚未发出的内容已放回输入框，由你决定是否发送。';
         $('#chat-error').classList.remove('is-hidden');
         $('#chat-recover')?.classList.toggle('is-hidden', !saved.pending.length);
       }
@@ -1798,7 +1935,12 @@
   }
 
   function expandTurns(messages) {
-    return messages.flatMap((message) => displayedTurns.get(message.id) || [message]);
+    return messages.flatMap((message) => {
+      const remembered = displayedTurns.get(message.id);
+      if (!remembered) return [message];
+      if (remembered.length === 1 && remembered[0].image_data_url) return [{...message, image_data_url:remembered[0].image_data_url}];
+      return remembered;
+    });
   }
 
   function isStandaloneCommand(text) {
@@ -1807,25 +1949,30 @@
       || ["继续上次", "回到上次", "上次的书签", "回到书签", "别安排", "不用提醒"].some((word) => s.includes(word));
   }
 
-  function sendMessage(text) {
-    const clean = text.trim();
+  function sendMessage(text, includeImage = false) {
+    if (includeImage && imageReading) { toast("图片正在读取，请稍候发送。"); return; }
+    const image = includeImage && selectedImage?.sessionId === state.session?.id ? selectedImage : null;
+    const clean = text.trim() || (image ? "[图片]" : "");
     if (!clean || !state.session) return;
+    if (image && imageTurnOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; }
     if (chatStorageBlocked) { toast('本机发送记录未能保存。请先复制输入内容，检查存储后重新打开页面。'); return; }
     if (state.attachingSource) { toast("正在接入来源，请稍后发送。"); return; }
     if (uncertainTurns.has(state.session.id)) { $("#chat-recover").classList.remove("is-hidden"); toast("这次发送状态待核对，请点击「核对发送状态」。"); return; }
     window.XinjiCompanionBoundary?.invalidate();
     if (state.delivery?.pending()) void state.delivery?.stop();
     const part = { id: `local-${++localTurnId}`, role: "user", text: clean,
-      created_at: new Date().toISOString(), sessionId: state.session.id };
+      created_at: new Date().toISOString(), sessionId: state.session.id, ...(image ? {image_data_url:image.dataUrl} : {}) };
     part.id='local-'+chatTransport.requestId();
     if(window.XinjiContactContract?.supported(state.companionBoundary?.capabilities())) part.time_zone=window.XinjiContactContract.timeZone();
     try { chatLedger.enqueue(part); }
     catch (error) { toast(error.message); return; }
-    if (activeTurn?.sessionId === part.sessionId && activeTurn.transport) {
+    if (activeTurn?.sessionId === part.sessionId && activeTurn.transport && !image && !activeTurn.parts.some(p => p.image_data_url)) {
       chatTransport.cancel(activeTurn.transport);
       $("#thinking .think-note")?.replaceChildren(document.createTextNode("我在听，继续说…"));
     }
     turnQueue.push(part);
+    if (image) { ++imageReadToken; setSelectedImage(null); }
+    globalThis.NianxiangSound?.play('send');
     state.messages.push(part);
     renderMessages(true);
     els.input.value = "";
@@ -1835,7 +1982,7 @@
       // Keep sessions separate if the user changes conversations during the debounce.
       for (const part of turnQueue) {
         const last = queuedTurns[queuedTurns.length - 1];
-        const standalone = isStandaloneCommand(part.text);
+        const standalone = !!part.image_data_url || isStandaloneCommand(part.text);
         if (last && last.sessionId === part.sessionId && !last.started && !last.standalone && !standalone && last.timeZone === part.time_zone) last.parts.push(part);
         else queuedTurns.push({ sessionId: part.sessionId, parts: [part], standalone, timeZone:part.time_zone });
       }
@@ -1860,20 +2007,23 @@
     }
     touchLastSeen();
     try {
-      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), memory_proposals:memoryProposal.shouldRequest(turn.sessionId), ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
+      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), ...(turn.parts[0].image_data_url ? {image_data_url:turn.parts[0].image_data_url} : {}), memory_proposals:false, ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
       const data = await chatTransport.send(turn.transport, message => {
         if (sameSession()) { $("#chat-error").textContent = message; $("#chat-error").classList.remove("is-hidden"); }
       }, turn.parts);
       if (sameSession()) $("#chat-recover")?.classList.add("is-hidden");
       const userMessage = data.messages.find((m) => m.id === data.user_message_id);
       if (userMessage && turn.parts.length > 1) displayedTurns.set(userMessage.id, turn.parts);
+      else if (userMessage && turn.parts[0].image_data_url) displayedTurns.set(userMessage.id, [{...userMessage, image_data_url:turn.parts[0].image_data_url}]);
       if (sameSession()) {
+        const knownIds = new Set(state.messages.map(message => message.id));
+        const completedReply = !data.cancelled && !data.error && [...data.messages].reverse().find(message => message.role === 'assistant' && !message.delivery_pending && !knownIds.has(message.id));
         state.messages = [...expandTurns(data.messages), ...pendingMessages(turn.sessionId)];
         state.memories = data.memories;
         setOrb(data.cancelled ? "listening" : data.state === "quiet" ? "quiet" : data.state === "failed" ? "failed" : "responding");
         if (data.error) toast(`未完成（${data.error}），可重试`);
         renderAll();
-        if (!data.cancelled) memoryProposal.offer(turn.sessionId, data);
+        if (completedReply) globalThis.NianxiangSound?.play('receive', {messageId: completedReply.id});
         loadAudit();
         loadNextStep();
       }
@@ -1884,20 +2034,23 @@
         queuedTurns = queuedTurns.filter((item) => item.sessionId !== turn.sessionId);
         turnQueue = turnQueue.filter((item) => item.sessionId !== turn.sessionId);
         state.messages = state.messages.filter((item) => !ids.has(item.id));
-        els.input.value = [...waiting.map((part) => part.text), els.input.value.trim()].filter(Boolean).join("\n");
+        els.input.value = [...waiting.map((part) => part.image_data_url && part.text === "[图片]" ? "" : part.text), els.input.value.trim()].filter(Boolean).join("\n");
+        const failedImage = waiting.find(part => part.image_data_url);
+        if (failedImage && !selectedImage) setSelectedImage({dataUrl:failedImage.image_data_url, sessionId:turn.sessionId});
         try { chatLedger.returnDraft(turn.sessionId, els.input.value, turn.transport?.request_id); }
         catch (_) { chatStorageBlocked=true; }
         window.XinjiComposerDraft?.save();
         renderMessages();
         setOrb("failed");
-        $("#chat-error").textContent = `${e.message}。本条未发送，内容已放回输入框。请先复制保存，再检查服务或本机存储。`;
+        const reason = failedImage && [400, 413, 422].includes(e.status) ? "图片未通过服务端检查，请确认图片格式和大小后重试" : e.message;
+        $("#chat-error").textContent = `${reason}。本条未发送，内容已放回输入框。请检查后重试。`;
         $("#chat-error").classList.remove("is-hidden");
         toast("本条未发送，内容已放回输入框。");
       } else {
         chatBlocked = true;
         uncertainTurns.set(turn.sessionId, turn);
         if (sameSession()) {
-        $("#chat-error").textContent = "发送结果尚未确认，原请求和待发内容已保存在本机。核对后可继续。";
+        $("#chat-error").textContent = turn.transport?.image_data_url ? "图片发送结果尚未确认，请核对状态；刷新后图片预览不会保留。" : "发送结果尚未确认，原请求和待发内容已保存在本机。核对后可继续。";
         $("#chat-error").classList.remove("is-hidden");
         $("#chat-recover")?.classList.remove("is-hidden");
         $("#thinking")?.remove();
@@ -1932,6 +2085,8 @@
     try {
       const result = await chatTransport.recover(turn.transport);
       if (state.session?.id !== turn.sessionId) return;
+      const recoveredUser = result.messages.find(message => message.id === result.user_message_id);
+      if (recoveredUser && turn.transport.image_data_url) displayedTurns.set(recoveredUser.id, [{...recoveredUser, image_data_url:turn.transport.image_data_url}]);
       state.messages = [...expandTurns(result.messages), ...pendingMessages(turn.sessionId)];
       state.memories = result.memories;
       uncertainTurns.delete(turn.sessionId); chatBlocked = uncertainTurns.size > 0;
@@ -1942,16 +2097,18 @@
       if (error.uncertain && ["process_interrupted", "execution_uncertain"].includes(error.code)) {
         const snapshot = await api('/api/session/' + encodeURIComponent(turn.sessionId));
         if (state.session?.id !== turn.sessionId) return;
-        state.messages = [...snapshot.messages, ...pendingMessages(turn.sessionId)];
+        state.messages = [...expandTurns(snapshot.messages), ...pendingMessages(turn.sessionId)];
         state.memories = snapshot.memories;
-        const restored=[turn.transport.text, ...pendingMessages(turn.sessionId).map(p=>p.text), els.input.value].filter(Boolean).join("\n");
+        const hadImage = !!(turn.transport.image_data_url || turn.transport.has_image);
+        const restored=[hadImage && turn.transport.text === "[图片]" ? "" : turn.transport.text, ...pendingMessages(turn.sessionId).map(p=>p.text), els.input.value].filter(Boolean).join("\n");
+        if (turn.transport.image_data_url && !selectedImage) setSelectedImage({dataUrl:turn.transport.image_data_url, sessionId:turn.sessionId});
         chatLedger.returnDraft(turn.sessionId, restored, turn.transport.request_id);
         queuedTurns=queuedTurns.filter(item=>item.sessionId!==turn.sessionId);
         turnQueue=turnQueue.filter(item=>item.sessionId!==turn.sessionId);
         els.input.value=restored; window.XinjiComposerDraft?.save();
         uncertainTurns.delete(turn.sessionId); chatBlocked = uncertainTurns.size > 0;
         button.classList.add("is-hidden"); setOrb("listening"); renderAll();
-        $("#chat-error").textContent = "上次回复结果未确认，已重新读取记录。原文放回输入框，请核对是否已保存再决定发送；没有自动重发。";
+        $("#chat-error").textContent = hadImage ? "上次图片发送结果未确认，已重新读取记录；请核对是否已保存。图片预览刷新后不会保留，请重新选择；没有自动重发。" : "上次回复结果未确认，已重新读取记录。原文放回输入框，请核对是否已保存再决定发送；没有自动重发。";
         $("#chat-error").classList.remove('is-hidden');
         dispatchTurn();
       } else { toast(error.message); }
@@ -2124,7 +2281,7 @@
   // ---------------- bookmark ----------------
   function openBookmarkModal(fromNext = false) {
     const lastAssistant = [...state.messages].reverse().find((m) => m.role === "assistant");
-    const cite = lastAssistant?.citations?.[0];
+    const cite = lastAssistant?.citations?.find(cite => window.XinjiFeishuAccountPicker?.isMemoryCitation(cite));
     state.bmSessionId = state.session?.id;
     state.bmSource = cite
       ? { source_memory_id: cite.id, source_version: cite.version, source_label: state.session?.source_label || "依据", source_quote: cite.text || "" }
@@ -2160,7 +2317,7 @@
       state.bookmark = b;
       els.modal.classList.add("is-hidden");
       renderBookmark();
-      switchTab("bookmark");
+      openMyTasks();
       toast("已存为草稿，确认后才是真书签");
       loadAudit();
     } catch (e) { toast(e.message); }
@@ -2178,98 +2335,15 @@
     } catch (e) { toast(e.message); }
   }
 
-  function renderAck(cmd) {
-    const el = $("#display-ack");
-    if (!el || !cmd) return;
-    el.classList.remove("is-hidden");
-    el.innerHTML = `<b>模拟显示（无真实设备）</b> ${esc(cmd.text)}<br/>模拟回执 ${esc(cmd.ack?.status)} · ${cmd.ack?.latency_ms}ms`;
-  }
-
-  async function pressPhysicalButton() {
-    if (!state.session) return;
-    try {
-      const evt = await api("/api/device/button", {
-        method: "POST",
-        body: JSON.stringify({ session_id: state.session.id }),
-      });
-      toast(`模拟按钮事件 · 模拟回执 ${evt.ack?.status}`);
-      loadAudit();
-      openBookmarkModal(true);
-    } catch (e) { toast(e.message); }
-  }
-
-  // ---------------- device ----------------
-  async function toggleDevice() {
-    try {
-      const action = state.deviceOn ? "stop" : "start";
-      const st = await api(`/api/device/${action}`, { method: "POST" });
-      state.deviceOn = st.status === "on";
-      els.deviceToggle.setAttribute("aria-pressed", String(state.deviceOn));
-      els.deviceToggleLabel.textContent = state.deviceOn ? "停止采集" : "开启采集";
-      els.deviceStatus.textContent = state.deviceOn ? "采集中" : "未开启";
-      els.deviceNote.textContent = state.deviceOn
-        ? "合成流运行中：来源 synthetic，质量不合格时本轮弃权。"
-        : "合成流仅用于验证契约：来源、时间戳、序列、质量、算法版本。";
-      if (state.deviceOn) startPolling();
-      else stopPolling();
-      toast(state.deviceOn ? "已开启单次采集（synthetic）" : "已停止采集");
-      loadAudit();
-    } catch (e) { toast(e.message); }
-  }
-
-  function startPolling() {
-    stopPolling();
-    state.deviceTimer = setInterval(pollFrame, 2200);
-    pollFrame();
-  }
-
-  function stopPolling() {
-    if (state.deviceTimer) clearInterval(state.deviceTimer);
-    state.deviceTimer = null;
-    els.qualityBar.style.width = "0%";
-    els.qualityBar.classList.remove("low");
-    els.qualityValue.textContent = "—";
-  }
-
-  async function pollFrame() {
-    if (!state.deviceOn) return;
-    try {
-      const f = await api("/api/device/frame");
-      if (f.status === "off") {
-        state.deviceOn = false;
-        els.deviceToggle.setAttribute("aria-pressed", "false");
-        els.deviceToggleLabel.textContent = "开启采集";
-        els.deviceStatus.textContent = "未开启";
-        els.deviceNote.textContent = "合成流已停止。";
-        stopPolling();
-        return;
-      }
-      if (f.status === "stalled") {
-        els.qualityBar.style.width = "100%";
-        els.qualityBar.classList.add("low");
-        els.qualityValue.textContent = "stalled";
-        els.deviceNote.textContent = `断流：${f.reason}；状态未知，不伪造完成。`;
-        return;
-      }
-      els.deviceStatus.textContent = "采集中（模拟）";
-      const pct = Math.round((f.quality || 0) * 100);
-      els.qualityBar.style.width = `${pct}%`;
-      els.qualityBar.classList.toggle("low", !!f.abstain);
-      els.qualityValue.textContent = `${pct}% · seq ${f.seq}`;
-      els.deviceNote.textContent = f.abstain
-        ? `弃权：${f.reason}（质量 ${pct}% < 阈值 55%），本轮不更新状态。`
-        : `合成帧 #${f.seq} · 质量 ${pct}% · algo ${f.algo_version}`;
-    } catch (_) {
-      els.deviceStatus.textContent = "状态未知";
-      els.qualityBar.style.width = "0%";
-      els.qualityValue.textContent = "—";
-      els.deviceNote.textContent = "无法读取合成流状态，请检查连接。";
-    }
-  }
-
   // ---------------- misc ----------------
   let pairedDevicesPanel = null;
+  function openMyTasks() {
+    switchTab("bookmark");
+    document.querySelector('#task-panel-enhancements [data-task-view="mine"]')?.click();
+  }
   function switchTab(name) {
+    const legacyPersona = name === "persona";
+    if (legacyPersona) name = "design";
     pairedDevicesPanel?.suspend();
     state.tab = name;
     if (typeof setDesignPanel === "function") setDesignPanel(true);
@@ -2277,8 +2351,13 @@
     $$(".tab-panel").forEach((p) => p.classList.add("is-hidden"));
     $(`#tab-${name}`)?.classList.remove("is-hidden");
     if (name === "design") {
+      window.XinjiAutoMemorySettings?.mount($("#auto-memory-settings"), {api, getSessionId: () => state.session?.id});
       pairedDevicesPanel?.dispose();
       pairedDevicesPanel = window.XinjiPairedDevices?.mount($("#paired-devices"), {api, getSessionId:() => state.session?.id, visible:() => state.tab === "design"});
+      if (legacyPersona) {
+        $("#settings-persona").open = true;
+        $("#settings-persona").scrollIntoView({block: "start"});
+      }
     }
     if (name === "today") loadToday();
     if (name === "bookmark") loadTaskActions();
@@ -2333,139 +2412,245 @@
       $("#today-memory")?.addEventListener("click", () => { if (state.session?.id === sid) switchTab("memory"); });
       $("#today-understand")?.addEventListener("click", () => { if (state.session?.id === sid) switchTab("understanding"); });
       $("#today-bookmark")?.addEventListener("click", () => bookmarkTodayStep(step, sid));
-      $("#today-bookmark-tab")?.addEventListener("click", () => { if (state.session?.id === sid) switchTab("bookmark"); });
-      $("#today-tasks")?.addEventListener("click", () => { if (state.session?.id === sid) switchTab("bookmark"); });
+      $("#today-bookmark-tab")?.addEventListener("click", () => { if (state.session?.id === sid) openMyTasks(); });
+      $("#today-tasks")?.addEventListener("click", () => { if (state.session?.id === sid) openMyTasks(); });
       $("#today-new-draft")?.addEventListener("click", () => { if (state.session?.id === sid) openAction("message", -1, {title: "", text: "", manual: true}); });
       $("#today-new-reminder")?.addEventListener("click", () => { if (state.session?.id === sid) openAction("reminder", -1, {title: "", text: "", manual: true}); });
       for (const selector of ["#today-connect", "#today-connect-source"]) $(selector)?.addEventListener("click", () => { if (state.session?.id === sid) openApps(); });
       body.querySelectorAll("[data-today-task]").forEach(button => button.onclick = () => {
         if (state.session?.id !== sid) return;
         const action = actions[Number(button.dataset.todayTask)];
-        switchTab("bookmark"); if (action?.status === "previewed") openSavedAction(action);
+        openMyTasks(); if (action?.status === "previewed") openSavedAction(action);
       });
       $("#today-apps-list").querySelectorAll("[data-today-source]").forEach(button => button.onclick = () => { if (state.session?.id === sid) openApps(); });
     } catch (error) { if (state.session?.id === sid && epoch === sourceUiEpoch) body.innerHTML = `<p class="note">读取失败：${esc(error.message)}</p><button type="button" class="btn ghost small" id="today-retry">重新读取</button>`; $("#today-retry")?.addEventListener("click", loadToday); }
   }
 
   let authPollTimer = null;
-  let authGeneration = 0;
-  let authActive = false;
+  let authGeneration = 0, authActive = false;
+  let authPollGeneration = null, authPopup = null, authPurpose = "document", authForce = false;
+  let authSession = null, larkConnectedThisPage = false;
   let authReturnToSource = false;
-  function returnFromLarkAuth() {
+  function larkCanChooseDocuments() {
+    const context = state.context;
+    const sources = Array.isArray(context?.sources) ? context.sources : context ? [context] : [];
+    return larkConnectedThisPage || sources.some(source => source?.connector_id === "feishu" && !source.stale && !state.session?.source_revoked);
+  }
+  function reserveLarkAuthWindow() {
+    const slot = {window: null, navigated: false};
+    if (typeof window.xinjiDesktop?.openLarkAuth === "function") {
+      slot.native = window.xinjiDesktop.openLarkAuth.bind(window.xinjiDesktop);
+      slot.nativeRequested = false; slot.nativePending = false;
+      return slot;
+    }
+    try { slot.window = window.open?.("about:blank", "_blank") || null; if (slot.window) slot.window.opener = null; }
+    catch (_) { try { slot.window?.close(); } catch (_) {} slot.window = null; }
+    return slot;
+  }
+  function discardLarkAuthWindow(slot) {
+    if (!slot?.navigated) { try { slot?.window?.close(); } catch (_) {} }
+  }
+  function officialLarkAuthURL(value) {
+    if (typeof value !== "string" || value.length > 8192 || value.trim() !== value) return null;
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password && (!url.port || url.port === "443") &&
+        ["accounts.feishu.cn", "accounts.larksuite.com"].includes(url.hostname) ? value : null;
+    } catch (_) { return null; }
+  }
+  function returnFromLarkAuth({documentReady = false} = {}) {
     if (!authReturnToSource) return;
     authReturnToSource = false;
     prepareSourceDialog();
-    renderFeishuPicker();
     showWz(3);
+    if (authPurpose === "account") { renderFeishuAccount(); return; }
+    if (documentReady) { renderFeishuPicker(); return; }
+    $("#read-head").innerHTML = '<h2 class="wz-title">本次飞书连接尚未完成</h2><p class="note">还没有读取文档。关闭授权窗不会撤销已发起的授权，可以重新连接或先回到聊天。</p><button type="button" class="btn primary small" id="feishu-connect-again">重新连接飞书</button>';
+    $("#read-items").innerHTML = "";
+    $("#feishu-connect-again").onclick = () => startLarkAuth("document", {force: true});
   }
-  function authCurrent(generation) { return authActive && generation === authGeneration; }
+  function authCurrent(generation) { return authActive && generation === authGeneration && (state.session?.id || null) === authSession; }
+  function clearAuthLinks() {
+    $("#auth-url").classList.add("is-hidden"); $("#auth-url").removeAttribute("href"); $("#auth-url").textContent = "在飞书中打开授权";
+    $("#auth-qr").classList.add("is-hidden"); $("#auth-qr").removeAttribute("src");
+  }
   function closeLarkAuth() {
-    ++authGeneration; authActive = false;
+    ++authGeneration; authActive = false; authPollGeneration = null;
     clearInterval(authPollTimer); authPollTimer = null;
+    discardLarkAuthWindow(authPopup); authPopup = null;
+    clearAuthLinks();
     $("#auth-modal").classList.add("is-hidden");
     returnFromLarkAuth();
   }
-
-  async function startLarkAuth(purpose = "document") {
-    if (globalThis.XinjiSourceDialog?.isOpen()) {
-      authReturnToSource = true;
-      closeSourceDialog();
-    }
-    const generation = ++authGeneration;
-    const currentPurpose = purpose === "search" ? "search" : "document";
-    authActive = true;
-    $("#apps-modal")?.classList.add("is-hidden");
-    $("#auth-modal").classList.remove("is-hidden");
-    $("#auth-close")?.focus();
-    $("#auth-hint").textContent = "正在唤起飞书授权…";
-    $("#auth-qr").classList.add("is-hidden");
-    $("#auth-url").classList.add("is-hidden");
-    $("#auth-status").textContent = "等待你在飞书中确认…";
-    $("#auth-fix").classList.add("is-hidden");
-    clearInterval(authPollTimer); authPollTimer = null;
-    try {
-      const d = await api(currentPurpose === "search" ? "/api/auth/lark/search/start" : "/api/auth/lark/start", { method: "POST" });
-      if (!authCurrent(generation)) return;
-      if (d.status === "success") { authDone(generation, currentPurpose); return; }
-      if (d.status !== "starting" && d.status !== "pending") {
-        authActive = false;
-        $("#auth-hint").textContent = d.error || "无法启动授权";
-        $("#auth-status").textContent = "请重新点击连接飞书；若持续失败，请联系管理员。";
-        return;
-      }
-      if (d.status === "starting") $("#auth-hint").textContent = "授权正在准备，请稍候…";
-      else showLarkPending(d, currentPurpose);
-      authPollTimer = setInterval(() => pollLarkAuth(generation, currentPurpose), 2000);
-    } catch (e) {
-      if (!authCurrent(generation)) return;
-      authActive = false;
-      $("#auth-hint").textContent = e.message;
+  function failAuth(generation, message, response = {}) {
+    if (!authCurrent(generation)) return;
+    authActive = false; clearInterval(authPollTimer); authPollTimer = null;
+    clearAuthLinks(); discardLarkAuthWindow(authPopup); authPopup = null;
+    $("#auth-status").textContent = message || "连接尚未完成，请重新发起授权。";
+    $("#auth-hint").textContent = "旧授权链接已停止显示。不会自动重试或创建新的 CLI 应用。";
+    $("#auth-retry").classList.remove("is-hidden"); $("#auth-retry").disabled = false;
+    if (response.error_code === "needs_app_setup" && response.setup_url === "https://open.feishu.cn/document/no_class/mcp-archive/feishu-cli-installation-guide.md") {
+      $("#auth-url").href = response.setup_url;
+      $("#auth-url").textContent = "首次配置飞书 CLI 应用";
+      $("#auth-url").classList.remove("is-hidden");
+      $("#auth-hint").textContent = "先按官方指南完成首次应用配置，再回来重新发起授权。这里不会自动创建应用。";
     }
   }
 
-  function showLarkPending(d, purpose) {
-    $("#auth-status").textContent = d.phase === "setup" ? "第 1 步（共 2 步）：在飞书确认应用连接。完成后此处会换成文档授权链接。" : (d.phase === "authorize" ? "第 2 步（共 2 步）：应用已连接。请打开下方新的授权链接，允许读取文档。" : "等待你在飞书中确认…");
-    $("#auth-hint").textContent = (purpose === "search" ? "将申请搜索云空间权限。" : "") +
-      (d.qr ? "请用飞书扫描二维码，或在飞书中打开授权链接。" : "请打开飞书授权链接继续。");
-    if (d.qr) { $("#auth-qr").src = d.qr; $("#auth-qr").classList.remove("is-hidden"); }
-    if (d.url) { $("#auth-url").href = d.url; $("#auth-url").textContent = d.phase === "setup" ? "第 1 步：在飞书连接应用" : "第 2 步：在飞书允许读取文档"; $("#auth-url").classList.remove("is-hidden"); }
+  async function startLarkAuth(purpose = "document", {force = false} = {}) {
+    // Reserve while still inside the user's click. No credentials or authorization URL are stored.
+    const popup = reserveLarkAuthWindow();
+    if (globalThis.XinjiSourceDialog?.isOpen()) { authReturnToSource = true; closeSourceDialog(); }
+    $("#apps-modal")?.classList.add("is-hidden");
+    discardLarkAuthWindow(authPopup); authPopup = popup;
+    const generation = ++authGeneration;
+    const currentPurpose = ["search", "account"].includes(purpose) ? purpose : "document";
+    authPurpose = currentPurpose; authForce = force === true; authSession = state.session?.id || null;
+    if (currentPurpose === "document") larkConnectedThisPage = false;
+    authActive = true; authPollGeneration = null;
+    $("#auth-modal").classList.remove("is-hidden");
+    $("#auth-cancel")?.focus();
+    clearAuthLinks();
+    $("#auth-hint").textContent = "正在唤起飞书官方授权…";
+    $("#auth-status").textContent = "等待你在飞书中确认…";
+    $("#auth-retry").classList.add("is-hidden"); $("#auth-retry").disabled = true;
+    $("#auth-retry").onclick = () => startLarkAuth(authPurpose, {force: authForce});
+    clearInterval(authPollTimer); authPollTimer = null;
+    try {
+      const options = {method: "POST"};
+      if (authForce) options.body = JSON.stringify({force: true});
+      const value = await api(currentPurpose === "account" ? "/api/auth/lark/account/start" : currentPurpose === "search" ? "/api/auth/lark/search/start" : "/api/auth/lark/start", options);
+      if (!authCurrent(generation)) { discardLarkAuthWindow(popup); return; }
+      if (value.status === "success") { authDone(generation, currentPurpose); return; }
+      if (value.status !== "starting" && value.status !== "pending") { failAuth(generation, value.error || "无法启动飞书连接，请重试。", value); return; }
+      if (value.status === "pending") { if (!showLarkPending(value, currentPurpose, generation)) return; }
+      else $("#auth-hint").textContent = "授权正在准备，请稍候…";
+      authPollTimer = setInterval(() => pollLarkAuth(generation, currentPurpose), 2000);
+    } catch (error) { failAuth(generation, error.message || "暂时无法连接授权服务，请重试。"); }
+  }
+
+  function showLarkPending(value, purpose, generation) {
+    if (!authCurrent(generation)) return false;
+    const url = officialLarkAuthURL(value.url);
+    if (!url) { failAuth(generation, "授权地址不是有效的飞书官方 HTTPS 地址，请重新连接。"); return false; }
+    $("#auth-url").href = url; $("#auth-url").classList.remove("is-hidden");
+    if (typeof value.qr === "string" && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value.qr)) { $("#auth-qr").src = value.qr; $("#auth-qr").classList.remove("is-hidden"); }
+    const slot = authPopup;
+    const updateHint = () => {
+      if (!authCurrent(generation) || authPopup !== slot) return;
+      $("#auth-hint").textContent = (purpose === "account" ? "请在飞书核对搜索和文档只读权限；授权后会自动完成连接并回到聊天。" : purpose === "search" ? "将单独申请搜索云空间权限。" : "只连接现有飞书 CLI，不会新建应用。") +
+        (slot?.nativePending ? "正在请求系统浏览器打开飞书官方页面，也可点击下方链接。" : slot?.navigated ?
+          slot.native ? "已请求系统浏览器打开飞书官方页面；若未打开，可点击下方链接。" : "请在已打开的飞书官方页面确认；也可使用下方链接。" :
+          "未能自动打开页面，请点击下方链接继续授权。");
+    };
+    if (slot?.native && !slot.nativeRequested) {
+      slot.nativeRequested = true; slot.nativePending = true;
+      const settled = opened => {
+        if (!authCurrent(generation) || authPopup !== slot) return;
+        slot.nativePending = false; slot.navigated = opened === true; updateHint();
+      };
+      try { Promise.resolve(slot.native(url)).then(settled, () => settled(false)); } catch (_) { settled(false); }
+    } else if (!slot?.navigated && slot?.window) {
+      try { if (!slot.window.closed) { slot.window.location.replace(url); slot.navigated = true; } } catch (_) {}
+    }
+    updateHint();
+    return true;
   }
 
   async function pollLarkAuth(generation, purpose) {
-    if (!authCurrent(generation)) return;
+    if (!authCurrent(generation) || authPollGeneration === generation) return;
+    authPollGeneration = generation;
     try {
-      const d = await api(purpose === "search" ? "/api/auth/lark/search/status" : "/api/auth/lark/status");
+      const value = await api(purpose === "account" ? "/api/auth/lark/account/status" : purpose === "search" ? "/api/auth/lark/search/status" : "/api/auth/lark/status");
       if (!authCurrent(generation)) return;
-      if (d.status === "success") { authDone(generation, purpose); return; }
-      if (d.status === "starting") { $("#auth-hint").textContent = "正在准备下一步授权…"; $("#auth-url").classList.add("is-hidden"); $("#auth-qr").classList.add("is-hidden"); }
-      if (d.status === "pending" && d.url) showLarkPending(d, purpose);
-      if (d.status === "error") {
-        authActive = false; clearInterval(authPollTimer); authPollTimer = null;
-        $("#auth-status").textContent = d.error || "授权失败，请重试";
-        if ((d.error || "").includes("凭据存储") || (d.error || "").includes("钥匙串") || (d.error || "").includes("keychain")) $("#auth-fix").classList.remove("is-hidden");
-      }
-    } catch (_) {}
+      if (value.status === "success") { await authDone(generation, purpose); return; }
+      if (value.status === "pending") { showLarkPending(value, purpose, generation); return; }
+      if (value.status !== "starting") failAuth(generation, value.error || "授权已失效或未完成，请重新连接。", value);
+    } catch (error) { failAuth(generation, "暂时无法核对授权结果，请重试。不会自动重新授权。"); }
+    finally { if (authPollGeneration === generation) authPollGeneration = null; }
   }
 
-  function authDone(generation, purpose) {
+  async function authDone(generation, purpose) {
     if (!authCurrent(generation)) return;
     authActive = false; clearInterval(authPollTimer); authPollTimer = null;
-    if (purpose === "search") {
-      $("#auth-status").textContent = "授权流程已完成，请重试搜索；如仍失败可粘贴文档链接。";
-      $("#auth-qr").classList.add("is-hidden");
-      setTimeout(() => { if (generation === authGeneration) { $("#auth-modal").classList.add("is-hidden"); returnFromLarkAuth(); } }, 900);
-      toast("授权流程已完成，请重试搜索");
+    discardLarkAuthWindow(authPopup); authPopup = null; clearAuthLinks();
+    if (purpose === "account") {
+      $("#auth-status").textContent = "授权已完成，正在连接…";
+      $("#auth-hint").textContent = "完成后会自动回到聊天。";
+      try {
+        const data = await api('/api/lark/account/connect', {method:'POST', body:JSON.stringify({session_id:authSession,start_intro:true})});
+        if (generation !== authGeneration || (state.session?.id || null) !== authSession) return;
+        if (data?.ok !== true || data.enabled !== true || data.ready === false) throw Error([data?.error || '连接尚未完成', data?.hint].filter(Boolean).join(' · '));
+        state.feishuAccount = data; window.XinjiFeishuAccountPicker.syncBadges(document, data); if (typeof syncAppsAccountControl === "function") syncAppsAccountControl();
+        authReturnToSource = false; $("#auth-modal").classList.add("is-hidden");
+        finishConnection(data); toast('飞书已连接');
+      } catch (error) {
+        if (generation !== authGeneration || (state.session?.id || null) !== authSession) return;
+        $("#auth-status").textContent = error.message + ' 请关闭后重新核对连接状态。';
+        $("#auth-hint").textContent = '还没有确认连接成功。';
+      }
       return;
     }
-    $("#auth-status").textContent = "飞书授权完成，请选择文档";
-    $("#auth-hint").textContent = "授权完成，可以连接飞书文档了。";
-    $("#auth-qr").classList.add("is-hidden");
+    const documentReady = purpose === "document";
+    if (documentReady) larkConnectedThisPage = true;
+    $("#auth-status").textContent = documentReady ? "已连接当前飞书 CLI，请选择文档。" : "搜索授权流程已完成，请重试搜索；如仍失败可粘贴文档链接。";
+    $("#auth-hint").textContent = "还没有读取文档；选择后仍需预览和确认。";
     setTimeout(() => {
-      if (generation !== authGeneration) return;
+      if (generation !== authGeneration || (state.session?.id || null) !== authSession) return;
       $("#auth-modal").classList.add("is-hidden");
-      const returningToSource = authReturnToSource;
-      returnFromLarkAuth();
-      if (!returningToSource && !els.onboarding.classList.contains("is-hidden")) { showWz(2); loadRealSources(true); }
+      const returning = authReturnToSource;
+      returnFromLarkAuth({documentReady: documentReady || larkCanChooseDocuments()});
+      if (!returning && !els.onboarding.classList.contains("is-hidden")) { showWz(2); loadRealSources(true); }
       loadToday();
-    }, 900);
-    toast("飞书授权完成，请选择文档");
+    }, 800);
+    toast(documentReady ? "已连接飞书，请选择文档" : "搜索授权流程已完成，请重试搜索");
   }
 
   let appsCatalogRequest = 0;
   async function openApps() { return switchTab("apps"); }
 
+  // A saved snapshot is a different kind of success from a verified account.
+  function syncAppsSourceControls() {
+    const grid = $("#apps-grid");
+    if (!grid) return;
+    const sources = connectedSources();
+    grid.querySelectorAll("[data-app-source]").forEach(control => {
+      const id = control.dataset.appSource;
+      const status = control.closest(".app-card")?.querySelector(".status");
+      if (!status) return;
+      const snapshot = sources.some(item => item.connector_id === id && !item.stale);
+      const account = id === "feishu" ? state.feishuAccount : null;
+      const enabled = account?.enabled === true && account.ready === true;
+      const checked = snapshot || enabled;
+      control.textContent = checked ? "✓" : id === "feishu" && account?.enabled === true ? "管理" : control.dataset.appIdleAction;
+      const name = control.dataset.appName;
+      const description = enabled ? `${name}已启用，管理连接` : snapshot ? `${name}已保存资料快照，打开来源` : `${control.dataset.appIdleAction}${name}`;
+      control.setAttribute("aria-label", description);
+      control.title = description;
+      status.textContent = enabled ? "已启用 · 搜索曾通过验证" : snapshot
+        ? account?.enabled === true ? "已保存资料快照 · 账号需核对" : "已保存资料快照"
+        : id === "feishu" ? account?.enabled === true ? "连接需核对" : account ? "待连接" : "状态未确认" : control.dataset.appIdleStatus;
+    });
+  }
+  function syncAppsAccountControl() { syncAppsSourceControls(); }
+
   async function loadAppsCatalog() {
     const grid = $("#apps-grid"), sid = state.session?.id, request = ++appsCatalogRequest;
     if (!grid) return;
     grid.innerHTML = `<p class="muted">正在检查本机可用来源…</p>`;
-    const connected = $("#apps-connected"), sources = connectedSources();
-    if (connected) { connected.innerHTML = sourceListMarkup(sources); bindSourceRemoval(connected, sources, sid); }
+    const manageSources = $("#apps-manage-sources");
+    if (manageSources) manageSources.onclick = () => { if (state.session?.id === sid) switchTab("data"); };
     try {
-      const data = await api("/api/onboarding/sources");
+      const [data] = await Promise.all([api("/api/onboarding/sources"), readFeishuAccountState()]);
       if (state.session?.id !== sid || state.tab !== "apps" || request !== appsCatalogRequest) return;
       const list = data.sources || [];
       const labels = {ready:"可选择", needs_click:"需系统权限", needs_config:"需配置", needs_auth:"需授权", needs_install:"需安装", unavailable:"暂不可用", empty:"没有可读内容"};
-      grid.innerHTML = list.map(source => `<div class="app-card"><div class="ico">${esc(source.icon)}</div><div class="app-source-content"><b>${esc(source.name)}</b><small>${esc(source.blurb || "")}</small><span class="status">${esc(labels[source.status] || source.status)}</span></div><button type="button" class="btn ghost small" data-app-source="${esc(source.id)}">${source.status === "ready" || source.status === "needs_click" ? "选择" : "查看"}</button></div>`).join("") + `<div class="app-card"><div class="ico">⌁</div><div class="app-source-content"><b>Rokid 眼镜</b><small>设备与官方接口待联调</small><span class="status">尚未可用</span></div><button type="button" class="btn ghost small" id="apps-rokid">能力说明</button></div>`;
+      grid.innerHTML = list.map(source => {
+        const label = source.id === "feishu" ? "状态未确认" : labels[source.status] || source.status;
+        const action = source.id === "feishu" ? "连接" : source.status === "ready" || source.status === "needs_click" ? "连接" : "查看";
+        return `<div class="app-card"><div class="ico">${esc(source.icon)}</div><div class="app-source-content"><b>${esc(source.name)}</b><small>${esc(source.id === "apple_calendar" ? "过去 7 天的日程" : source.id === "apple_reminders" ? "最近 7 天有更新的提醒" : source.blurb || "")}</small><span class="status" ${source.id === "feishu" ? "data-app-account-status" : ""}>${esc(label)}</span></div><button type="button" class="btn ghost small" data-app-source="${esc(source.id)}" data-app-name="${esc(source.name)}" data-app-idle-action="${esc(action)}" data-app-idle-status="${esc(label)}">${action}</button></div>`;
+      }).join("") + `<div class="app-card"><div class="ico">⌁</div><div class="app-source-content"><b>Rokid 眼镜</b><small>设备与官方接口待联调</small><span class="status">尚未可用</span></div><button type="button" class="btn ghost small" id="apps-rokid">能力说明</button></div>`;
+      syncAppsAccountControl();
       grid.querySelectorAll("[data-app-source]").forEach(button => button.onclick = async () => {
         if (state.session?.id !== sid || state.tab !== "apps") return;
         const id = button.dataset.appSource;
@@ -2543,31 +2728,12 @@
 
   let metricsAll = false;
 
-  async function refreshFaultNote() {
-    try {
-      const f = await api("/api/debug/faults");
-      const on = Object.entries(f).filter(([, v]) => v).map(([k]) => k);
-      const note = $("#fault-note");
-      if (note) note.textContent = on.length ? `当前故障：${on.join("、")}（再次点击可注入）` : "未注入故障。注入后：发消息 / 开设备 / 读飞书文档，观察 failed/unknown 与降级。";
-    } catch (_) {}
-  }
-
-  async function setFault(kind) {
-    try {
-      if (kind === "clear") await api("/api/debug/faults/clear", { method: "POST" });
-      else await api("/api/debug/faults", { method: "POST", body: JSON.stringify({ kind, enabled: true }) });
-      toast(kind === "clear" ? "已清除故障" : `已注入：${kind}`);
-      refreshFaultNote();
-    } catch (e) { toast(e.message); }
-  }
-
   async function loadMetrics() {
     try {
       const q = `?session_id=${encodeURIComponent(state.session.id)}`;
       const m = await api(`/api/metrics${q}`);
       const mem = m.memories || {};
       const bm = m.bookmarks || {};
-      const dev = m.device || {};
       const model = m.model || {};
       const pct = (x) => `${Math.round((x || 0) * 100)}%`;
       $("#metrics-body").innerHTML = `
@@ -2576,12 +2742,10 @@
           <div class="metric-card"><div class="k">确认率</div><div class="v">${pct(m.rates.confirm)}</div><div class="s">${mem.confirmed || 0} 已确认 / ${mem.total || 0} 条理解</div><div class="metric-bar"><span style="width:${(m.rates.confirm||0)*100}%"></span></div></div>
           <div class="metric-card"><div class="k">纠正次数</div><div class="v">${m.corrections}</div><div class="s">${m.revisions} 个版本快照</div></div>
           <div class="metric-card"><div class="k">书签完成率</div><div class="v">${pct(m.rates.bookmark)}</div><div class="s">${bm.committed || 0} 已确认 / ${(bm.committed||0)+(bm.draft||0)} 个</div><div class="metric-bar"><span style="width:${(m.rates.bookmark||0)*100}%"></span></div></div>
-          <div class="metric-card"><div class="k">设备 · 全局</div><div class="v">${dev.starts || 0}</div><div class="s">开启 ${dev.starts||0} · 停止 ${dev.stops||0} · 弃权 ${dev.abstains||0}</div></div>
           <div class="metric-card"><div class="k">模型</div><div class="v">${model.calls || 0}</div><div class="s">调用 · 降级 ${model.fallbacks || 0}</div></div>
-          <div class="metric-card"><div class="k">模拟交互 · 全局</div><div class="v">${dev.buttons || 0}</div><div class="s">按钮 · 显示 ${dev.displays || 0} 次（含 ACK）</div></div>
-          <div class="metric-card"><div class="k">飞书只读</div><div class="v">${(m.lark||{}).reads || 0}</div><div class="s">单篇读取 · 可撤回</div></div>
+          <div class="metric-card"><div class="k">飞书只读</div><div class="v">${(m.lark||{}).reads || 0}</div><div class="s">按权限只读 · 可断开</div></div>
         </div>
-        <p class="note">记录来自当前对话与本机审计，不展示其他历史对话的统计。设备与模拟交互为本机全局诊断。</p>`;
+        <p class="note">记录来自当前对话与本机审计，不展示其他历史对话的统计。</p>`;
       $("#metrics-scope").textContent = "当前对话";
     } catch (e) { toast(e.message); }
   }
@@ -2603,7 +2767,7 @@
   async function revokeSource() { return revokeSelectedSource(); }
 
   async function revokeSelectedSource(sourceId = null) {
-    if (!state.session || state.revokingSource || state.confirmingSource) return;
+    if (!state.session || state.attachingSource || state.revokingSource || state.confirmingSource) return;
     if (typeof sourceId !== "string" || !sourceId) sourceId = null;
     const sources = connectedSources();
     const selected = sourceId ? sources.find(source => source.id === sourceId) : null;
@@ -2614,7 +2778,7 @@
     let approved = false;
     try { approved = await window.XinjiDialogs.confirm({title: "收回资料", message: `将从当前对话移除${label}及其派生记忆。${selected ? "其他已接入来源、手动记忆会保留。" : "手动记忆会保留。"}历史消息、已独立修改的副本和第三方授权需要分别处理。`, confirmLabel: "移除所选资料", danger: true}); }
     finally { state.confirmingSource = false; }
-    if (!approved || state.session?.id !== approvalSid || state.revokingSource) return;
+    if (!approved || state.session?.id !== approvalSid || state.attachingSource || state.revokingSource) return;
     if (sourceId && !connectedSources().some(source => source.id === sourceId)) { toast("资料已变化，请重新核对。"); return; }
     const sid = state.session.id, epoch = ++sourceUiEpoch;
     window.XinjiCompanionBoundary?.invalidate();
@@ -2668,7 +2832,6 @@
       try { localStorage.removeItem(credentialPendingKey); } catch (_) {}
       renderCredentialPendingNotice();
     });
-    $$("[data-mode]").forEach((b) => (b.onclick = () => { if (new URLSearchParams(location.search).has("demo")) startSession("sample"); }));
     if (window.xinjiDesktop) $("#desktop-badge")?.classList.remove("is-hidden");
     $("#local-file-btn").onclick = openLocalFiles;
 
@@ -2692,15 +2855,27 @@
       startSession("paste", text);
     };
 
+    $("#image-btn").addEventListener("click", () => {
+      if (imageTurnOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; }
+      $("#image-input").value = "";
+      $("#image-input").click();
+    });
+    $("#image-input").addEventListener("change", e => selectImage(e.target.files?.[0]));
+    $("#image-remove").addEventListener("click", () => { ++imageReadToken; imageReading = false; setSelectedImage(null); });
+    els.input.addEventListener("paste", e => {
+      const file = [...(e.clipboardData?.files || [])].find(item => item.type.startsWith("image/"));
+      if (file) { e.preventDefault(); selectImage(file); }
+    });
+
     els.composer.addEventListener("submit", (e) => {
       e.preventDefault();
-      sendMessage(els.input.value);
+      sendMessage(els.input.value, true);
     });
 
     els.input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendMessage(els.input.value);
+        sendMessage(els.input.value, true);
       }
     });
 
@@ -2719,7 +2894,8 @@
       const c = ev.target.closest("[data-mem]");
       if (!c) return;
       switchTab("memory");
-      const item = document.querySelector(`.mem-item[data-id="${c.dataset.mem}"]`);
+      memoryOverview?.showAll();
+      const item = els.memoryList.querySelector(`.mem-item[data-id="${c.dataset.mem}"]`);
       if (item) {
         item.scrollIntoView({ block: "center" });
         item.classList.add("flash");
@@ -2730,8 +2906,6 @@
     $("#create-bookmark-btn").onclick = openBookmarkModal;
     $("#modal-cancel").onclick = () => els.modal.classList.add("is-hidden");
     $("#modal-save").onclick = saveBookmark;
-    $("#device-toggle").onclick = toggleDevice;
-    $("#sim-button").onclick = pressPhysicalButton;
     $("#stop-btn").onclick = stopWaiting;
     $("#chat-recover")?.addEventListener("click", () => recoverChat().catch(e=>toast(e.message)));
     setupVoice();
@@ -2746,15 +2920,6 @@
     $$("[data-more-tab]").forEach((b) => b.onclick = () => switchTab(b.dataset.moreTab));
     $("#apps-btn")?.addEventListener("click", openApps);
     $("#auth-cancel")?.addEventListener("click", closeLarkAuth);
-    $("#auth-fix")?.addEventListener("click", async () => {
-      if (!await window.XinjiDialogs.confirm({title: "更改凭据存储", message: "此操作会改变飞书 CLI 的凭据存储方式，将密钥链保护的主密钥改为本地文件存储。", confirmLabel: "了解并继续"})) return;
-      const b = $("#auth-fix");
-      b.disabled = true; b.textContent = "修复中…";
-      const d = await api("/api/auth/lark/setup", { method: "POST" });
-      b.disabled = false; b.textContent = "了解并更改凭据存储";
-      if (d.ok) { toast("已修复，重新发起授权"); startLarkAuth(); }
-      else { $("#auth-status").textContent = d.error || "修复失败，请在 Terminal 运行 lark-cli config keychain-downgrade"; }
-    });
     $("#apps-close")?.addEventListener("click", () => $("#apps-modal").classList.add("is-hidden"));
     $("#today-apps-btn")?.addEventListener("click", openApps);
     $("#today-refresh")?.addEventListener("click", loadToday);
@@ -2805,29 +2970,23 @@
 
     $$(".tab").forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
 
-    if (new URLSearchParams(location.search).has("debug")) {
-      $("#fault-panel")?.classList.remove("is-hidden");
-      $$("[data-fault]").forEach((b) => (b.onclick = () => setFault(b.dataset.fault)));
-      refreshFaultNote();
-    }
-
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") { els.modal.classList.add("is-hidden"); if (!$("#action-modal").classList.contains("is-hidden")) closeAction(); }
     });
   }
 
   async function addMemoryPrompt() {
-    const text = await window.XinjiDialogs.prompt({title: "记下一件事", message: "先保存在待确认记忆里。你可以再改或忘掉。", maxLength: 2000, confirmLabel: "加入待确认"});
+    const text = await window.XinjiDialogs.prompt({title: "记下一件事", message: "记下后，你可以随时修改或忘掉。", maxLength: 2000, confirmLabel: "记下"});
     if (!text || !text.trim()) return;
     try {
       const m = await api("/api/memory", {
         method: "POST",
-        body: JSON.stringify({ session_id: state.session.id, kind: "fact", text: text.trim() }),
+        body: JSON.stringify({ session_id: state.session.id, kind: "fact", text: text.trim(), source: "用户手动添加", user_asserted: true }),
       });
       state.memories.push(m);
       renderAll();
       loadAudit();
-      toast("已加入待确认记忆");
+      toast(m.status === "auto" ? "已记下，你可以随时修改或忘掉。" : "已记下，状态为尚未核实。");
     } catch (e) { toast(e.message); }
   }
 
@@ -2847,7 +3006,7 @@
       state.session = data.session;
       if (typeof updatePersonaLabels === "function") updatePersonaLabels();
     state.followupReminder?.refresh(); state.companionBoundary?.refresh();
-      state.messages = data.messages;
+      state.messages = expandTurns(data.messages);
       state.memories = data.memories;
       state.bookmark = data.bookmark;
       state.context = data.context || null;
@@ -2857,17 +3016,6 @@
       els.sourceLabel.textContent = data.session.source_label || "新对话";
       els.sessionMeta.textContent = "";
       loadEngine();
-      let st = null;
-      try { st = await api("/api/device/frame"); } catch (_) {
-        els.deviceNote.textContent = "设备状态暂不可用，可以继续聊天。";
-      }
-      if (st?.status === "on") {
-        state.deviceOn = true;
-        els.deviceToggle.setAttribute("aria-pressed", "true");
-        els.deviceToggleLabel.textContent = "停止采集";
-        els.deviceStatus.textContent = "采集中";
-        startPolling();
-      }
       setOrb("listening");
       renderAll();
       renderInsightPanel();
@@ -2887,9 +3035,7 @@
   function mountPersonaPanels() {
     const mount = $("#persona-mount");
     if (!mount) return;
-    const dev = document.querySelector(".presence .device-panel");
     const src = document.querySelector(".presence .source-panel");
-    if (dev) mount.appendChild(dev);
     if (src) mount.appendChild(src);
   }
 
@@ -2931,7 +3077,10 @@
     $("#read-scope").innerHTML = "";
     $("#wz-3 > .section-label").textContent = id === "rokid" ? "能力说明" : "将读取（仅这些）";
     showWz(3);
-    if (id === "local") { openLocalFiles(); return; }
+    if (id === "feishu") { renderFeishuAccount(); return; }
+    if (id === "local") {
+      if (window.XinjiConnectionIntro.connected(state.context, "local_files")) showConnectedSource("local_files", {name:"本机资料",icon:"⌂"});
+      else openLocalFiles(); return; }
     if (id === "rokid") {
       $("#read-head").innerHTML = `<h2 class="wz-title">把陪伴，延伸到眼前</h2><p class="lede">Rokid 眼镜 · 待真机联调</p>`;
       $("#read-items").innerHTML = `<div class="read-item"><b>先从轻量的文字提示开始</b><span>计划把你主动选择的一句提醒、对话摘要或陪伴提示展示在眼前；你可以随时关闭。</span></div><div class="read-item"><b>当前还没有连接设备</b><span>型号、手机系统、官方接口和真机连接仍待核对。这一页只是能力框架，不采集影像、声音或其他设备数据。</span></div>`;
@@ -2943,15 +3092,13 @@
     const sid = state.session?.id || null;
     const request = beginCredentialRequest();
     try {
-      const result = await api("/api/onboarding/sources", {signal: request.controller.signal});
+      const result = await api(id === "feishu" ? "/api/onboarding/sources?force=1" : "/api/onboarding/sources", {signal: request.controller.signal});
       if (!credentialRequestCurrent(request) || (state.session?.id || null) !== sid || els.onboarding.classList.contains("is-hidden")) return;
       const sourceId = id === "feishu" ? "feishu" : "apple_calendar";
       const meta = (result.sources || []).find((source) => source.id === sourceId);
       if (!meta) throw new Error(id === "feishu" ? "飞书入口暂不可用，可以稍后再试。" : "这台电脑的日历入口暂不可用。没有读取任何安排。");
       if (id === "feishu" && meta.status === "needs_auth") {
-        $("#read-head").innerHTML = `<h2 class="wz-title">选一篇，聊聊你正在做的事</h2><p class="lede">飞书还需要你确认授权。完成后，可以粘贴单篇文档链接；选好后会再次说明读取范围。</p>`;
-        $("#read-items").innerHTML = `<p class="note">现在没有读取飞书内容。你可以先聊聊，想连接时再继续。</p><button type="button" class="btn primary small" id="welcome-feishu-authorize">查看飞书授权</button>`;
-        $("#welcome-feishu-authorize").onclick = () => startLarkAuth();
+        startLarkAuth("document", {force: true});
         return;
       }
       await openRealSource(sourceId, meta);
@@ -2998,7 +3145,7 @@
     if (/Android/i.test(navigator.userAgent)) document.documentElement.dataset.platform = "android";
     window.XinjiWorkspace = window.XinjiDesign.createWorkspace({getState: () => state, backgrounds: [els.app], fallbackFocus: () => els.input,
       onJump: item => {
-        if (item.type === "memory") switchTab("memory");
+        if (item.type === "memory") { switchTab("memory"); memoryOverview?.showAll(); }
         else { if (window.innerWidth < 900) setDesignPanel(false); }
         const root = item.type === "memory" ? els.memoryList : els.messages;
         const match = [...root.querySelectorAll(item.type === "memory" ? "[data-id]" : "[data-message-id]")].find(element => (element.dataset.id || element.dataset.messageId) === item.id);
@@ -3016,6 +3163,12 @@
     window.XinjiDesign.mountSettings($("#design-settings"));
     $("#design-search-btn").onclick = () => { globalThis.XinjiVoice?.stop?.(); window.XinjiWorkspace.openSearch(); };
     $("#design-settings-btn").onclick = () => switchTab("design");
+    $("#settings-choose-persona").onclick = () => {
+      const heading = document.querySelector(".conversation-persona h2");
+      if (window.innerWidth < 1200 && !window.xinjiDesktop) setDesignPanel(false);
+      heading?.focus();
+      heading?.click();
+    };
     $("#design-panel-toggle").onclick = () => setDesignPanel(document.documentElement.dataset.panelCollapsed === "true" || !$("#design-context").classList.contains("is-open"));
     for (const selector of ["#design-panel-backdrop", "#design-context-close"]) $(selector).onclick = () => { setDesignPanel(false); $("#design-panel-toggle").focus(); };
     document.addEventListener("keydown", event => { if (event.key === "Escape" && window.innerWidth < 1200 && !window.xinjiDesktop) setDesignPanel(false); });
@@ -3024,7 +3177,7 @@
       if (button.dataset.designNav === "chat") { if (window.innerWidth < 1200) setDesignPanel(false); els.input.focus(); }
       else switchTab(button.dataset.designNav);
     });
-    $$("[data-design-route]").forEach(button => button.onclick = () => switchTab(button.dataset.designRoute));
+    $$("[data-design-route]").forEach(button => button.onclick = () => button.dataset.designRoute === "bookmark" ? openMyTasks() : switchTab(button.dataset.designRoute));
     els.input.addEventListener("input", () => { document.documentElement.dataset.presenceState = els.input.value ? "input" : "quiet"; });
     window.xinjiDesktop?.onCommand?.(command => {
       if (command.action === "chat") { setDesignPanel(false); els.input.focus(); }
@@ -3047,8 +3200,9 @@
     await restore();
     if (!state.session) return;
     restoreChatLedger();
+    connectionIntro.resume();
     els.input.addEventListener('input', keepChatDraft);
-    window.addEventListener('pagehide', keepChatDraft);
+    window.addEventListener('pagehide', () => { keepChatDraft(); connectionIntro.stop(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) keepChatDraft(); });
     setDesignPanel(window.xinjiDesktop || document.documentElement.dataset.desktop === "true" || window.innerWidth >= 1200);
     if (new URLSearchParams(location.search).has("onboarding")) openApps();
@@ -3056,7 +3210,7 @@
     const canRefresh = () => !!state.session && !document.hidden && !activeTurn && !state.delivery?.pending() && !turnQueue.length && !queuedTurns.length && !chatBlocked && !contentMutationCount && !state.attachingSource && !state.revokingSource && !state.confirmingSource && !state.memorySaving && !memoryDrafts.size && followups.canRefresh() && mood?.canRefresh() !== false && state.companionBoundary?.canRefresh() !== false && !document.querySelector('dialog[open], [aria-modal="true"]:not(.is-hidden), .mem-edit') && !document.activeElement?.matches('input:not(#input),textarea:not(#input),select,[contenteditable="true"]');
     const legacyRefresh = window.XinjiForegroundSync.create({canRefresh, version:() => `${state.session?.id}:${sourceUiEpoch}:${contentMutationEpoch}`, read: () => api('/api/conversation'), apply: data => {
       if (data.session?.id !== state.session?.id) return;
-      state.messages = data.messages; state.memories = data.memories; state.bookmark = data.bookmark; state.context = data.context || null; state.session = data.session;
+      state.messages = expandTurns(data.messages); state.memories = data.memories; state.bookmark = data.bookmark; state.context = data.context || null; state.session = data.session;
       if (typeof updatePersonaLabels === "function") updatePersonaLabels(); renderMessages(); renderUnderstanding(); renderMemoryList(); renderConnectedSources(); renderStarterBar(); if (typeof loadPersonaPicker === "function") loadPersonaPicker();
       if (state.tab === 'today') loadToday();
     }});
@@ -3071,7 +3225,7 @@
         sourceUiEpoch++;
         state.delivery?.invalidateReads();
         state.nextStep=snapshot.next;
-        state.session=data.session; state.messages=data.messages; state.memories=data.memories; state.bookmark=data.bookmark; state.context=data.context||null;
+        state.session=data.session; state.messages=expandTurns(data.messages); state.memories=data.memories; state.bookmark=data.bookmark; state.context=data.context||null;
         renderMessages(); renderUnderstanding(); renderMemoryList(); renderConnectedSources(); renderStarterBar(); renderBookmark(); renderNextStep();
         if(state.tab==='bookmark')void loadTaskActions(snapshot.actions);
         if(state.tab==='data')renderDataSummary(data,snapshot.actions);

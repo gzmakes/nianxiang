@@ -12,19 +12,21 @@ const {revealWindow} = require('./window-lifecycle');
 const {normalizeState,validCommand,tomorrowAtNine,effectiveState,stateLabel} = require('./desktop-state');
 const {createFollowupNotifier,legacyNotificationResult} = require('./notification-policy');
 app.setName('回响');
-let bundledRoot, bundledPort, bundledProfile;
+let bundledRoot, bundledPort, bundledProfile, bundledPython, bundledBackendDataDir;
 try {
   const pointer=require('./project-root.json');
   bundledRoot=pointer.root || (pointer.relativeRoot && path.resolve(__dirname,pointer.relativeRoot));
   bundledPort=pointer.port;
+  if(typeof pointer.python==='string')bundledPython=pointer.python;
+  if(typeof pointer.backendDataDir==='string')bundledBackendDataDir=pointer.backendDataDir;
   if(typeof pointer.profile==='string' && /^[a-z0-9][a-z0-9.-]{0,63}$/i.test(pointer.profile))bundledProfile=pointer.profile;
 } catch (_) {}
 const ROOT=path.resolve(process.env.XINJI_PROJECT_ROOT || bundledRoot || path.join(__dirname,'..'));
 const PORT=process.env.XINJI_PORT || bundledPort || 18787;
 if(process.env.XINJI_DESKTOP_DATA_DIR)app.setPath('userData',path.resolve(process.env.XINJI_DESKTOP_DATA_DIR));
 else if(bundledProfile)app.setPath('userData',path.join(app.getPath('appData'),bundledProfile));
-const backendRuntime=backendPaths({root:ROOT,platform:process.platform,pythonOverride:process.env.XINJI_PYTHON,dataDir:app.getPath('userData')});
-const PYTHON=backendRuntime.python;
+const backendOptions={root:ROOT,platform:process.platform,pythonOverride:process.env.XINJI_PYTHON || bundledPython,
+  dataDir:app.getPath('userData'),backendDataDir:process.env.XINJI_BACKEND_DATA_DIR || bundledBackendDataDir};
 let win=null,tray=null,panel=null,backend=null,port=PORT,state='quiet',ready=false;
 let mode='own',selected={version:1,mode:'own'},selector=null,selectorMessage='',connectionStore=null,selectionFlow=null,connectionEpoch=0,quitting=false,sharedTimer=null;
 const spaceWindows=new Map(),sharedLeases=new Map();
@@ -49,6 +51,19 @@ function closeFollowupNotices(){
   activeNotifications.clear();
 }
 function isMain(event){return win?.connectionMode==='own'&&ownerIPC(event,win,mode,ownOrigin());}
+function larkAuthURL(value){
+  // Validate before WHATWG URL parsing, which otherwise strips tabs/newlines and
+  // normalizes escaped hosts. This bridge is only for the official OAuth hosts.
+  if(typeof value!=='string'||!value.length||value.length>4096||value.trim()!==value
+    ||/[\u0000-\u0020\u007f-\u009f\\]/.test(value)||/%(?:0[0-9a-f]|1[0-9a-f]|7f)|%c2%(?:8[0-9a-f]|9[0-9a-f])/i.test(value)
+    ||!/^https:\/\/(?:accounts\.feishu\.cn|accounts\.larksuite\.com)(?::443)?(?:[/?#]|$)/i.test(value))return null;
+  try{
+    const url=new URL(value);
+    if(url.protocol!=='https:'||!['accounts.feishu.cn','accounts.larksuite.com'].includes(url.hostname)
+      ||url.username||url.password||(url.port&&url.port!=='443'))return null;
+    return value;
+  }catch(_){return null;}
+}
 function isPanelURL(url){try{return fileURLToPath(new URL(url))===path.join(__dirname,'panel.html');}catch(_){return false;}}
 function isPanel(event){return mode==='own' && !!panel && event.sender===panel.webContents && event.senderFrame===panel.webContents.mainFrame && isPanelURL(event.senderFrame.url);}
 function external(url){try { const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)shell.openExternal(u.href); }catch(_) {}}
@@ -197,7 +212,8 @@ async function ensureOwnBackend(){
   if(quitting)return;
   if(backend?.started)return;
   if(ownStart)return ownStart;
-  ownStart=(async()=>{const candidate=createBackendLifecycle({root:ROOT,...backendRuntime,python:PYTHON,port:PORT,onStdout:d=>process.stdout.write(d),onStderr:d=>process.stderr.write(d)});
+  ownStart=(async()=>{const runtime=backendPaths(backendOptions);
+    const candidate=createBackendLifecycle({root:ROOT,...runtime,port:PORT,onStdout:d=>process.stdout.write(d),onStderr:d=>process.stderr.write(d)});
     pendingOwnBackend=candidate;
     try{const result=await candidate.start();if(quitting){candidate.stop();return;}candidate.started=true;backend=candidate;port=result.port;}
     finally{if(pendingOwnBackend===candidate)pendingOwnBackend=null;}
@@ -225,6 +241,22 @@ ipcMain.handle('connection:connect',(event,value)=>{if(!isSelector(event))throw 
 ipcMain.handle('connection:own',(event,value)=>{if(!isSelector(event))throw Error('Unavailable sender');return selectionFlow.own(value?.confirmed);});
 ipcMain.handle('connection:close',event=>{if(!isSelector(event))return false;if(mode==='shared'&&!leaseFor(selected)?.active)return false;selector.close();if(win&&!win.isDestroyed())revealWindow(win);return true;});
 ipcMain.handle('desktop:open-connections',event=>{if(!isMain(event)&&!(win?.connectionMode==='shared'&&sharedIPC(event,win,mode,selected.origin)))return false;openSelector();return true;});
+ipcMain.handle('desktop:open-lark-auth',async(event,value)=>{
+  const owner=win,ticket=connectionEpoch,frame=event?.senderFrame,frameURL=frame?.url;
+  const current=()=>!quitting&&win===owner&&connectionEpoch===ticket&&isMain(event)
+    &&owner.isVisible()&&event.senderFrame===frame&&frame.url===frameURL;
+  const url=larkAuthURL(value);
+  if(!url||!current())return false;
+  try{
+    // Recheck a queued space switch/navigation before requesting the OS side effect.
+    await Promise.resolve();
+    if(!current())return false;
+    await shell.openExternal(url);
+    // The OS request cannot be rolled back; a late receipt must not confirm a
+    // different space or document that became active while opening the browser.
+    return current();
+  }catch(_){return false;}
+});
 ipcMain.handle('desktop:shared-info',event=>{if(!sharedIPC(event,win,mode,selected.origin))throw Error('Unavailable sender');return {platform:process.platform,version:app.getVersion(),native:false,connectionMode:'shared',notificationSupported:false,shortcutAvailable:false};});
 ipcMain.handle('desktop:info',event=>{if(!isMain(event))throw Error('Unavailable sender');return {platform:process.platform,version:app.getVersion(),native:true,shortcutAvailable,pausedUntil:prefs.pausedUntil,notificationSupported:Notification.isSupported()};});
 ipcMain.handle('desktop:set-state',(event,value)=>{if(!isMain(event))return false;state=normalizeState(value?.state);refreshTray();return true;});

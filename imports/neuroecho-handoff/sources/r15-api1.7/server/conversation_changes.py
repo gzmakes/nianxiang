@@ -29,6 +29,7 @@ TABLES = {
     'memory_revisions':('session_id',('memories',)),
     'session_context':('session_id',('sources',)),
     'source_attachments':('session_id',('sources',)),
+    'feishu_account_connections':('session_id',('sources',)),
     'mood_entries':('session_id',('moods',)),
     'mood_operations':('session_id',('moods',)),
     'followups':('session_id',('followups',)),

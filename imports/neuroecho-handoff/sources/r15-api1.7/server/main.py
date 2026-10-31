@@ -9,6 +9,7 @@ import os
 import ipaddress
 import secrets
 import json
+import hashlib
 import sqlite3
 import math
 import threading
@@ -29,11 +30,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources, system_source
 from .core import BudgetExceeded
 from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents
-from . import notion_cli_source, git_source, gmail_cli_source, connector_auth, prompts
+from . import notion_cli_source, git_source, feishu_account, lark_account_auth, connection_intro, gmail_cli_source, connector_auth, prompts
 from .runtime_lock import DatabaseLease
 from . import visitors
 from . import api_contract as contract
-from . import paired_access, conversation_changes
+from . import paired_access, conversation_changes, memory_summary, vision_images
 
 BASE = Path(__file__).resolve().parent
 WEB = BASE.parent / "web"
@@ -54,10 +55,14 @@ async def lifespan(app: FastAPI):
     # serving existing sessions or bookmarks, including on a fresh install.
     with DatabaseLease(core.DB_PATH):
         core.init_db()
+        connection_intro.recover(core.DB_PATH)
         paired_access.initialize(core.DB_PATH)
         _turn_store()
         core.conversation_id()  # Prepare identity before the read-only update feed is served.
-        yield
+        try:
+            yield
+        finally:
+            connection_intro.shutdown(core.DB_PATH)
 
 
 app = FastAPI(title="念响 · 具身个人伙伴 PC MVP", version="0.1.0", lifespan=lifespan,
@@ -193,6 +198,11 @@ class PersonaIn(BaseModel):
     persona_id: Literal['nianxiang', 'whale']
 
 
+class AutoMemoryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool
+
+
 class InteractionModeIn(BaseModel):
     interaction_mode: str = Field(
         description='Deprecated compatibility input. The value is retained for old clients and does not alter dialogue behavior.'
@@ -202,6 +212,7 @@ class InteractionModeIn(BaseModel):
 class ChatIn(BaseModel):
     session_id: str
     text: str = Field(min_length=1, max_length=4000)
+    image_data_url: str | None = Field(default=None, max_length=5_592_430)
     memory_proposals: StrictBool = False
     time_zone: str | None = Field(default=None,min_length=1,max_length=128)
     request_id: str | None = Field(default=None, min_length=8, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]+$")
@@ -391,11 +402,25 @@ class MemoryProposalIn(BaseModel):
     confirm: StrictBool = False
 
 
+class MemorySummaryRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=128)
+    version: int = Field(ge=1, strict=True)
+
+
+class MemorySummaryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str = Field(min_length=1, max_length=128)
+    confirm: StrictBool = False
+    memories: list[MemorySummaryRef] = Field(min_length=1, max_length=20)
+
+
 class MemoryIn(BaseModel):
     session_id: str
     kind: str = Field(pattern="^(fact|inference|question)$")
     text: str = Field(min_length=1, max_length=2000)
     source: str = "用户手动添加"
+    user_asserted: StrictBool = False
 
 
 class MemoryPatch(BaseModel):
@@ -408,6 +433,12 @@ class MemoryPatch(BaseModel):
 class LarkIn(BaseModel):
     url: str
     preview_id: str = ""
+    start_intro: StrictBool = False
+
+
+class LarkAuthStartIn(BaseModel):
+    # Legacy callers may omit the body. A fresh grant is an explicit user action.
+    force: StrictBool = False
 
 
 class LarkSearchIn(BaseModel):
@@ -415,11 +446,25 @@ class LarkSearchIn(BaseModel):
     q: str = Field(min_length=1, max_length=200)
 
 
+class LarkAccountIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str = Field(min_length=1, max_length=128)
+    start_intro: StrictBool = False
+
+
+class ConnectionIntroIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str = Field(min_length=1, max_length=128)
+    source_id: str = Field(min_length=1, max_length=64)
+    receipt: str | None = Field(default=None, max_length=128)
+
+
 class LarkAttachIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: str = Field(min_length=1)
     url: str = Field(min_length=1)
     preview_id: str = Field(min_length=1, max_length=256)
+    start_intro: StrictBool = False
 
 
 class LocalFileIn(BaseModel):
@@ -432,6 +477,7 @@ class LocalFilesConfirmIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: str | None = None
     files: list[LocalFileIn] = Field(min_length=1, max_length=3)
+    start_intro: StrictBool = False
 
 
 class LocalDocumentPreviewIn(BaseModel):
@@ -502,6 +548,9 @@ class SourceIn(BaseModel):
     preview_id: str = ""
     session_id: str | None = None
     path: str | None = Field(default=None, max_length=4096)
+    url: str | None = Field(default=None, max_length=2048)
+    start_intro: StrictBool = False
+    read_window: Literal["default", "recent7"] = "default"
 
 
 class GmailIn(BaseModel):
@@ -520,6 +569,7 @@ class PreviewStartIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     preview_id: str = Field(min_length=1, max_length=256)
     session_id: str | None = None
+    start_intro: StrictBool = False
 
 
 class SessionRenameIn(BaseModel):
@@ -558,13 +608,20 @@ class BookmarkIn(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "xinji-echo", "mode": "fastapi", "synthetic": True, "version": "0.1.0"}
+    return {"ok": True, "product": "xinji-echo", "mode": "fastapi", "demo_available": False, "version": "0.1.0"}
 
 
 @app.get("/api/config")
 def config():
-    return {"model": model.status(), "synthetic": True, "budget": core.CHAT_BUDGET,
+    return {"model": model.status(), "demo_available": False, "budget": core.CHAT_BUDGET,
             "budget_window_minutes": core.CHAT_BUDGET_WINDOW_MINUTES}
+
+
+def _retired_simulation() -> None:
+    # Deliberately unconditional: a query string or process setting must never
+    # turn fixture data or fabricated hardware acknowledgements into product data.
+    raise contract.ContractError(410, "demo_unavailable",
+                                 "演示功能已停用。请从「连接应用」选择并确认真实资料；脑电设备请使用 MindLink 真实接口。")
 
 
 @app.post("/api/voice/clip", response_class=Response, responses={200: {"content": {"audio/wav": {"schema": {"type": "string", "format": "binary"}}}}})
@@ -756,8 +813,19 @@ def _consume_preview(source: str, preview_id: str) -> dict:
 
 @app.post("/api/onboarding/real/read", response_model=contract.SourceReadResponse, response_model_exclude_unset=True)
 def onboarding_real_read(body: SourceIn):
-    source = git_source.read(path=body.path) if body.source_id == "git" and body.path is not None else real_sources.read(body.source_id)
-    read = _enrich(source)
+    if body.source_id in ("waytoagi", "jike"):
+        from . import public_source
+        source = public_source.read(body.url or "", expected_source=body.source_id)
+        if (source.get("error_code") == "source_url_mismatch" or
+                source.get("ok") and source.get("connector", {}).get("id") != body.source_id):
+            raise contract.ContractError(400, "source_url_mismatch", "链接不属于所选平台，请重新核对。")
+    elif body.source_id == "apple_calendar" and body.read_window == "recent7":
+        source = apple_source.read_calendar_recent()
+    elif body.source_id == "apple_reminders" and body.read_window == "recent7":
+        source = apple_source.read_reminders_recent()
+    else:
+        source = git_source.read(path=body.path) if body.source_id == "git" and body.path is not None else real_sources.read(body.source_id)
+    read = source if body.start_intro or body.source_id in ("waytoagi", "jike") else _enrich(source)
     if read.get("ok"):
         return {**read, "preview_id": _save_preview(body.source_id, read)}
     return {**read, "error_code": read.get("error_code", "source_unavailable")}
@@ -773,30 +841,53 @@ def _check_attachment_target(sid: str | None) -> None:
         raise contract.ContractError(409, "source_limit", "当前对话已有 8 份来源。可先移除不再需要的一份，再接入新资料；原消息会保留。")
 
 
+def _with_connection_intro(data: dict, source_id: str, requested: bool,
+                           receipt: str | list[str] | None = None,
+                           *, session_id: str | None = None) -> dict:
+    if not requested:
+        return data
+    sid = session_id or data["session"]["id"]
+    try:
+        intro = connection_intro.start(sid, source_id, receipt=receipt)
+    except Exception:
+        # The connection has already committed. Never label it as disconnected
+        # or expose arbitrary provider output because its first conversation
+        # could not start; the client can retry the separate intro endpoint.
+        intro = {"id": None, "session_id": sid, "source_id": source_id,
+                 "status": "failed", "message_id": None,
+                 "error": "连接已成功，但这次近期内容暂未查阅。可以回到聊天后再试。"}
+    return {**data, "intro": intro}
+
+
 def _attach_reviewed_read(sid: str, read: dict, *, source_label: str | None = None,
-                          source_text: str | None = None) -> dict:
+                          source_text: str | None = None, start_intro: bool = False) -> dict:
     """Keep the user's conversation and manual memories when connecting a source."""
     c = read["connector"]
     try:
-        core.attach_source_to_empty_session(
+        added_ids = core.attach_source_to_empty_session(
             sid, source_label or f"{c['name']} · 已连接",
-            source_text if source_text is not None else "\n".join(read["understanding"]["facts"]),
+            source_text if source_text is not None else read.get("text") or "\n".join(read["understanding"]["facts"]),
             read["understanding"], read.get("items") or [], read.get("insights") or [],
-            read.get("starters") or [], connector_id=c["id"])
+            read.get("starters") or [], connector_id=c["id"], read_scope=read.get("scope") or {})
     except LookupError:
         raise HTTPException(404, "session not found")
     except core.SourceConflict as e:
         raise contract.ContractError(409, "source_conflict", str(e))
-    return {"session": core.get_session(sid), "messages": core.get_messages(sid),
+    result = {"session": core.get_session(sid), "messages": core.get_messages(sid),
             "memories": core.list_memories(sid), "context": core.get_session_context(sid),
             "bookmark": core.latest_bookmark(sid), "insights": read.get("insights") or [], "connector": c}
+    return _with_connection_intro(result, c["id"], start_intro, added_ids)
 
 
 def _start_reviewed_read(read: dict, *, greeting: str | None = None,
-                         source_label: str | None = None, source_text: str | None = None) -> dict:
+                         source_label: str | None = None, source_text: str | None = None,
+                         start_intro: bool = False) -> dict:
     """New and existing conversations share the same source ownership contract."""
     first_item = (read.get("items") or [{}])[0]
     title = str(read.get("title") or first_item.get("title") or read["connector"]["name"])[:90]
+    if start_intro:
+        return _attach_reviewed_read(core.conversation_id(), read, source_label=source_label,
+                                     source_text=source_text, start_intro=True)
     data = core.create_session("empty", greeting=greeting or read.get("greeting")
                                or f"我看到了你选择的「{title}」。你想先聊哪一部分？")
     sid = data["session"]["id"]
@@ -818,8 +909,8 @@ def onboarding_real_start(body: SourceIn):
         raise contract.ContractError(400, "source_preview_expired", "读取预览已失效，请重新选择并确认来源")
     read = preview[2]
     if body.session_id:
-        return _attach_reviewed_read(body.session_id, read)
-    data = _start_reviewed_read(read)
+        return _attach_reviewed_read(body.session_id, read, start_intro=body.start_intro)
+    data = _start_reviewed_read(read, start_intro=body.start_intro)
     c = read["connector"]
     core.audit(data["session"]["id"], "real.read", f"{len(read['items'])} 条 · {c['id']}", "用户确认读取真实来源")
     return data
@@ -834,10 +925,12 @@ def gmail_preview(body: GmailIn):
 @app.post("/api/gmail/start", response_model=contract.ConversationResponse, response_model_exclude_unset=True)
 def gmail_start(body: PreviewStartIn):
     _check_attachment_target(body.session_id)
-    out = _enrich(_consume_preview("gmail", body.preview_id))
+    out = _consume_preview("gmail", body.preview_id)
+    if not body.start_intro:
+        out = _enrich(out)
     if body.session_id:
-        return _attach_reviewed_read(body.session_id, out)
-    data = _start_reviewed_read(out)
+        return _attach_reviewed_read(body.session_id, out, start_intro=body.start_intro)
+    data = _start_reviewed_read(out, start_intro=body.start_intro)
     core.audit(data["session"]["id"], "gmail.read", f"{len(out['items'])} 封未读", "用户确认读取 Gmail 未读头")
     return data
 
@@ -848,17 +941,20 @@ def lark_docs(body: LarkSearchIn):
 
 
 @app.post("/api/auth/lark/start")
-def auth_lark_start():
-    return lark_auth.start()
+def auth_lark_start(response: Response, body: Optional[LarkAuthStartIn] = None):
+    response.headers["Cache-Control"] = "no-store"
+    return lark_auth.start(force=body.force if body else False)
 
 
 @app.post("/api/auth/lark/setup")
 def auth_lark_setup():
-    return lark_auth.setup_keychain()
+    raise contract.ContractError(410, "credential_storage_change_disabled",
+                                 "网页更改飞书凭据存储的旧入口已停用。连接授权请使用飞书官方页面；本次没有更改本机凭据。")
 
 
 @app.get("/api/auth/lark/status")
-def auth_lark_status():
+def auth_lark_status(response: Response):
+    response.headers["Cache-Control"] = "no-store"
     return lark_auth.status()
 
 
@@ -872,6 +968,128 @@ def auth_lark_search_status():
     return lark_search_auth.status()
 
 
+def _public_lark_account(saved: dict, auth: dict) -> dict:
+    current_key = auth.get("account_key")
+    problem = feishu_account.grant_readiness(auth)
+    grant_ready = problem is None
+    same_account = not saved.get("enabled") or saved.get("account_key") == current_key
+    ready = bool(grant_ready and same_account)
+    result = {"enabled": bool(saved.get("enabled")), "version": saved.get("version", 0),
+              "connected_at": saved.get("connected_at"), "ready": ready,
+              "mode": "account_readonly", "scope": "按问题搜索并只读当前账号有权访问的飞书文档"}
+    if not same_account:
+        result.update(error="当前飞书账号已变化，请重新核对后启用自动检索。", permission_issue="account_changed")
+    elif not grant_ready:
+        result.update({key: problem[key] for key in ("error", "error_code", "permission_issue") if key in problem})
+    return result
+
+
+@app.get("/api/lark/account", response_model=contract.FeishuAccountResponse, response_model_exclude_unset=True)
+def lark_account_status(response: Response, session_id: str = Query(..., min_length=1, max_length=128)):
+    response.headers["Cache-Control"] = "no-store"
+    conn = core.get_db()
+    try:
+        if conn.execute("SELECT 1 FROM sessions WHERE id=?", (session_id,)).fetchone() is None:
+            raise HTTPException(404, "对话不存在")
+        saved = feishu_account.snapshot(conn, session_id)
+    finally:
+        conn.close()
+    return _public_lark_account(saved, lark.auth_status())
+
+
+@app.post("/api/lark/account/connect", response_model=contract.FeishuAccountResponse, response_model_exclude_unset=True)
+def lark_account_connect(body: LarkAccountIn, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    conn = core.get_db()
+    try:
+        if conn.execute("SELECT 1 FROM sessions WHERE id=?", (body.session_id,)).fetchone() is None:
+            raise HTTPException(404, "对话不存在")
+        before = feishu_account.snapshot(conn, body.session_id)
+    finally:
+        conn.close()
+    checked = feishu_account.verify_access()
+    if not checked.get("ok"):
+        return {"ok": False, "enabled": bool(before.get("enabled")), "version": before.get("version", 0),
+                "ready": False, "error": checked.get("error") or "飞书连接尚未通过验证。",
+                "hint": checked.get("hint", ""), "permission_issue": checked.get("permission_issue", "unavailable")}
+    conn = core.get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.execute("SELECT 1 FROM sessions WHERE id=?", (body.session_id,)).fetchone() is None:
+            raise HTTPException(404, "对话不存在")
+        current = feishu_account.snapshot(conn, body.session_id)
+        if current["version"] != before["version"]:
+            raise contract.ContractError(409, "connection_changed", "连接状态已变化，请重新核对；本次未启用。")
+        saved = feishu_account.set_enabled(conn, body.session_id, True, account_key=checked["account_key"])
+        conn.execute("INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)",
+                     (core.uid("aud"), body.session_id, "feishu.account.connect", "search_verified; read_only",
+                      "用户启用按问题自动检索；不批量导入正文", core.now()))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    result = {"ok": True, "enabled": saved["enabled"], "version": saved["version"], "ready": True,
+              "connected_at": saved.get("connected_at"), "mode": "account_readonly"}
+    return _with_connection_intro(result, "feishu", body.start_intro, session_id=body.session_id)
+
+
+@app.post("/api/lark/account/disconnect", response_model=contract.FeishuAccountResponse, response_model_exclude_unset=True)
+def lark_account_disconnect(body: LarkAccountIn, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    conn = core.get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.execute("SELECT 1 FROM sessions WHERE id=?", (body.session_id,)).fetchone() is None:
+            raise HTTPException(404, "对话不存在")
+        saved = feishu_account.set_enabled(conn, body.session_id, False)
+        core._invalidate_history(conn, {body.session_id})
+        conn.execute("INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)",
+                     (core.uid("aud"), body.session_id, "feishu.account.disconnect", "automatic_reading_disabled",
+                      "停止自动读取；历史消息与显式导入的快照独立保留", core.now()))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "enabled": False, "version": saved["version"], "ready": False, "mode": "account_readonly"}
+
+
+@app.post("/api/auth/lark/account/start")
+def auth_lark_account_start(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return lark_account_auth.start()
+
+
+@app.get("/api/auth/lark/account/status")
+def auth_lark_account_status(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return lark_account_auth.status()
+
+
+@app.post("/api/connections/intro", response_model=contract.ConnectionIntroResponse, response_model_exclude_unset=True)
+def start_connection_intro(body: ConnectionIntroIn, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    if not core.get_session(body.session_id):
+        raise HTTPException(404, "对话不存在")
+    try:
+        return connection_intro.start(body.session_id, body.source_id, receipt=body.receipt)
+    except (LookupError, ValueError):
+        raise contract.ContractError(409, "connection_unavailable", "这个来源尚未接入或已发生变化，请先核对连接。") from None
+
+
+@app.get("/api/connections/intro/{job_id}", response_model=contract.ConnectionIntroResponse, response_model_exclude_unset=True)
+def connection_intro_status(job_id: str, response: Response,
+                            session_id: str = Query(..., min_length=1, max_length=128)):
+    response.headers["Cache-Control"] = "no-store"
+    job = connection_intro.get(job_id, session_id)
+    if job is None:
+        raise HTTPException(404, "未找到这次连接对话", headers={"Cache-Control": "no-store"})
+    return job
+
+
 @app.post("/api/notion/preview", response_model=contract.SourceReadResponse, response_model_exclude_unset=True)
 def notion_preview(body: NotionIn):
     out = notion_cli_source.read(body.url) if body.method == "cli" else notion_source.read(body.token, body.url)
@@ -881,10 +1099,12 @@ def notion_preview(body: NotionIn):
 @app.post("/api/notion/start", response_model=contract.ConversationResponse, response_model_exclude_unset=True)
 def notion_start(body: PreviewStartIn):
     _check_attachment_target(body.session_id)
-    out = _enrich(_consume_preview("notion", body.preview_id))
+    out = _consume_preview("notion", body.preview_id)
+    if not body.start_intro:
+        out = _enrich(out)
     if body.session_id:
-        return _attach_reviewed_read(body.session_id, out)
-    data = _start_reviewed_read(out)
+        return _attach_reviewed_read(body.session_id, out, start_intro=body.start_intro)
+    data = _start_reviewed_read(out, start_intro=body.start_intro)
     core.audit(data["session"]["id"], "notion.read", f"{len(out['items'])} 条", "用户确认读取 Notion 页面")
     return data
 
@@ -915,31 +1135,27 @@ def clear_model_settings():
 
 @app.get("/api/debug/faults")
 def get_faults():
-    return faults.get_faults()
+    _retired_simulation()
 
 
 @app.post("/api/debug/faults")
-def set_faults(body: FaultIn):
-    try:
-        return faults.set_faults(body.kind, body.enabled)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
+def set_faults():
+    _retired_simulation()
 
 
 @app.post("/api/debug/faults/clear")
 def clear_faults():
-    return faults.clear()
+    _retired_simulation()
 
 
 @app.get("/api/onboarding/catalog")
 def onboarding_catalog():
-    return connectors.catalog()
+    _retired_simulation()
 
 
 @app.post("/api/onboarding/recommend")
-def onboarding_recommend(body: ScenarioIn):
-    return {"scenario": body.scenario, "items": connectors.recommend(body.scenario)}
-
+def onboarding_recommend():
+    _retired_simulation()
 
 def _read_connector(connector_id: str) -> dict:
     if connector_id in ("apple_reminders", "apple_calendar"):
@@ -952,23 +1168,13 @@ def _read_connector(connector_id: str) -> dict:
 
 
 @app.post("/api/onboarding/read")
-def onboarding_read(body: ConnectorIn):
-    return _read_connector(body.connector_id)
+def onboarding_read():
+    _retired_simulation()
 
 
 @app.post("/api/onboarding/start")
-def onboarding_start(body: ConnectorIn):
-    read = _read_connector(body.connector_id)
-    if not read.get("ok"):
-        raise HTTPException(400, read.get("error", "读取失败"))
-    c = read["connector"]
-    mode_label = "只读" if not read.get("synthetic") else "演示读取"
-    data = _start_reviewed_read(read, source_label=f"{c['name']} · {mode_label}",
-                                greeting=connectors.greeting(body.connector_id) if read.get("synthetic") else None)
-    sid = data["session"]["id"]
-    core.audit(sid, "connector.read", f"{len(read['items'])} 条 · {c['id']}",
-               "用户确认读取本地文件" if not read.get("synthetic") else "用户确认读取演示数据")
-    return data
+def onboarding_start():
+    _retired_simulation()
 
 
 @app.get("/api/lark/status")
@@ -1009,8 +1215,10 @@ def lark_start(body: LarkIn):
         "synthetic": False,
         "source": "feishu",
     }
-    pseudo = _enrich(pseudo)
-    data = _start_reviewed_read(pseudo, source_label=f"飞书文档 · {out['title']}", source_text=out['text'])
+    if not body.start_intro:
+        pseudo = _enrich(pseudo)
+    data = _start_reviewed_read(pseudo, source_label=f"飞书文档 · {out['title']}", source_text=out['text'],
+                                start_intro=body.start_intro)
     core.audit(data["session"]["id"], "lark.read", f"identity={out['identity']} len={out['length']}", "用户选择的单篇文档")
     return data
 
@@ -1045,12 +1253,12 @@ def local_files_confirm(body: LocalFilesConfirmIn):
                 'insights': [], 'starters': []} for f in body.files]
     # The legacy no-session API remains supported. It creates a session first;
     # if the atomic batch fails, remove that otherwise-orphaned session.
-    sid = body.session_id
+    sid = body.session_id or (core.conversation_id() if body.start_intro else None)
     created = not sid
     if created:
         sid = core.create_session('empty', greeting=f'我看到了你选择的「{body.files[0].name}」。你想先聊哪一部分？')['session']['id']
     try:
-        core.attach_sources_to_session(sid, sources)
+        added_ids = core.attach_sources_to_session(sid, sources)
     except Exception as error:
         if created:
             core.delete_session(sid)
@@ -1064,7 +1272,7 @@ def local_files_confirm(body: LocalFilesConfirmIn):
               'bookmark': core.latest_bookmark(sid), 'insights': []}
     if created:
         result['understanding'] = core.build_understanding('\n\n'.join(f.text for f in body.files), 'paste')
-    return result
+    return _with_connection_intro(result, "local_files", body.start_intro, added_ids)
 
 
 @app.post("/api/lark/attach", response_model=contract.ConversationResponse, response_model_exclude_unset=True)
@@ -1074,15 +1282,17 @@ def lark_attach(body: LarkAttachIn):
         raise HTTPException(404, 'session not found')
     _check_attachment_target(body.session_id)
     out = _consume_preview('lark:' + body.url, body.preview_id)
-    pseudo = _enrich({
+    pseudo = {
         'ok': True,
         'connector': {'id': 'feishu', 'name': '飞书文档', 'category': '工作协作', 'icon': '飞'},
         'items': [{'title': out['title'], 'meta': '飞书文档', 'summary': out['text'][:240]}],
         'understanding': core.build_understanding(out['text'], 'paste'),
         'insights': [], 'synthetic': False, 'source': 'feishu',
-    })
+    }
+    if not body.start_intro:
+        pseudo = _enrich(pseudo)
     try:
-        core.attach_source_to_empty_session(
+        added_ids = core.attach_source_to_empty_session(
             body.session_id, f"飞书文档 · {out['title']}", out['text'], pseudo['understanding'],
             pseudo.get('items') or [], pseudo.get('insights') or [], pseudo.get('starters') or [])
     except LookupError:
@@ -1090,13 +1300,18 @@ def lark_attach(body: LarkAttachIn):
     except core.SourceConflict as e:
         raise contract.ContractError(409, "source_conflict", str(e))
     core.audit(body.session_id, 'lark.read', f"identity={out['identity']} len={out['length']}", '用户确认预览的单篇文档')
-    return {'session': core.get_session(body.session_id), 'messages': core.get_messages(body.session_id),
+    result = {'session': core.get_session(body.session_id), 'messages': core.get_messages(body.session_id),
             'memories': core.list_memories(body.session_id), 'context': core.get_session_context(body.session_id),
             'bookmark': core.latest_bookmark(body.session_id), 'insights': pseudo.get('insights') or []}
+    return _with_connection_intro(result, "feishu", body.start_intro, added_ids)
 
 
 @app.post("/api/session", response_model=contract.ConversationResponse, response_model_exclude_unset=True)
 def create_session(body: SessionIn):
+    if body.mode == "sample":
+        _retired_simulation()
+    if body.mode == "paste" and not body.text.strip():
+        raise contract.ContractError(422, "source_content_required", "请提供要接入的资料，或直接开始空白对话。")
     return core.create_session(mode=body.mode, text=body.text, persona_id=body.persona_id,
                                interaction_mode=body.interaction_mode)
 
@@ -1357,6 +1572,22 @@ def get_session(sid: str):
     }
 
 
+@app.get('/api/session/{sid}/auto-memory')
+def get_auto_memory(sid: str):
+    session = core.get_session(sid)
+    if not session:
+        raise HTTPException(404, 'session not found')
+    return JSONResponse({'enabled': bool(session['auto_memory_enabled'])}, headers={'Cache-Control': 'no-store'})
+
+
+@app.put('/api/session/{sid}/auto-memory')
+def put_auto_memory(sid: str, body: AutoMemoryIn):
+    result = core.set_auto_memory(sid, body.enabled)
+    if result is None:
+        raise HTTPException(404, 'session not found')
+    return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+
+
 @app.put('/api/session/{sid}/persona', response_model=contract.SessionResponse)
 def set_session_persona(sid: str, body: PersonaIn):
     try:
@@ -1451,12 +1682,25 @@ def chat(body: ChatIn):
     if body.time_zone is not None:
         try: followups._zone(body.time_zone)
         except ValueError as error: raise HTTPException(400,str(error)) from error
+    image_data_url = None
+    if body.image_data_url:
+        try:
+            image_data_url = vision_images.validate_data_url(body.image_data_url)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from error
+    else:
+        marker = plugin_bridge._MARKER.search(body.text)
+        if marker:
+            try:
+                image_data_url = vision_images.sticker_data_url(marker.group(1).strip())
+            except ValueError:
+                image_data_url = None
     store, claim = None, None
     if body.request_id:
         store = _turn_store()
         try:
             claim = store.claim(body.session_id, body.request_id, body.text,
-                                options={"memory_proposals":body.memory_proposals, **({"time_zone":body.time_zone} if body.time_zone is not None else {})})
+                                options={"memory_proposals":body.memory_proposals, **({"time_zone":body.time_zone} if body.time_zone is not None else {}), **({"image_sha256": hashlib.sha256(image_data_url.encode()).hexdigest()} if image_data_url else {})})
         except chat_turns.TurnConflict:
             raise contract.ContractError(409, "request_id_conflict", "请求标识已用于不同内容，请先核对对话。")
         except chat_turns.TurnNotFound:
@@ -1469,6 +1713,7 @@ def chat(body: ChatIn):
     try:
         result = core.generate_reply(
             body.session_id, body.text,
+            **({"image_data_url": image_data_url} if image_data_url else {}),
             **({"time_zone":body.time_zone} if body.time_zone is not None else {}),
             **({"should_cancel": store.cancel_check(body.session_id, body.request_id, claim.token),
                 "reply_lock": store.reply_lock(body.session_id, body.request_id)} if store else {}))
@@ -1524,6 +1769,10 @@ def list_memory(session_id: str = Query(...)):
 
 @app.post("/api/memory", response_model=contract.MemoryResponse, response_model_exclude_unset=True)
 def add_memory(body: MemoryIn):
+    if body.user_asserted:
+        if body.kind != 'fact' or body.source != '用户手动添加':
+            raise HTTPException(400, '手动添加的事实或偏好才能作为本人记录。')
+        return core.add_memory(body.session_id, body.kind, body.text, source='用户手动添加', status='auto')
     return core.add_memory(body.session_id, body.kind, body.text, source=body.source)
 
 
@@ -1533,6 +1782,16 @@ def save_memory_proposal(body: MemoryProposalIn):
         return core.save_proposed_memory(body.session_id, body.message_id, confirm=body.confirm)
     except ValueError as e:
         raise HTTPException(409, str(e))
+
+
+@app.post("/api/memory/summary")
+def summarize_memory(body: MemorySummaryIn):
+    try:
+        result = memory_summary.generate(body.session_id, [r.model_dump() for r in body.memories], body.confirm)
+        return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+    except memory_summary.SummaryError as error:
+        return JSONResponse({'detail': error.detail, 'error_code': error.code}, status_code=error.status,
+                            headers={'Cache-Control': 'no-store'})
 
 
 @app.get("/api/memory/{mid}/history", response_model=contract.MemoryHistoryResponse, response_model_exclude_unset=True)
@@ -1587,7 +1846,7 @@ def bookmark_commit(bid: str):
 
 @app.get("/api/device/presentation")
 def device_presentation():
-    return device_bridge.state()
+    _retired_simulation()
 
 
 # In-memory only: explicit opt-in grants expire and are invalidated on stop.
@@ -1668,32 +1927,23 @@ def mindlink_stop(request: Request, response: Response, body: MindLinkEmptyIn | 
 
 
 @app.post("/api/device/button")
-def device_button(body: ButtonIn | None = None):
-    sid = body.session_id if body else "demo"
-    evt = device_bridge.button_press(sid)
-    core.audit(sid, "device.button", evt["id"], "模拟实体按钮按下")
-    return evt
+def device_button():
+    _retired_simulation()
 
 
 @app.post("/api/device/display")
-def device_display(body: DisplayIn):
-    cmd = device_bridge.display(body.session_id, body.text, body.color)
-    core.audit(body.session_id, "device.display", f'{cmd["id"]} {cmd["text"][:40]}', "显示命令 + ACK")
-    return cmd
+def device_display():
+    _retired_simulation()
 
 
 @app.post("/api/device/{action}")
 def device(action: str):
-    if action == "start":
-        return core.device_start()
-    if action == "stop":
-        return core.device_stop()
-    raise HTTPException(400, "action must be start|stop")
+    _retired_simulation()
 
 
 @app.get("/api/device/frame")
 def device_frame():
-    return core.device_frame()
+    _retired_simulation()
 
 
 @app.delete("/api/session/{sid}")

@@ -31,12 +31,14 @@ class ModelClient:
         self.model = model
         self.timeout = timeout
 
-    def complete(self, system: str, user: str, max_tokens: int = 1200) -> str:
+    def complete(self, system: str, user: str, max_tokens: int = 1200, *, image_data_url: str | None = None) -> str:
         payload = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": user},
+                {"role": "user", "content": ([{"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": image_data_url}}]
+                    if image_data_url else user)},
             ],
             "temperature": 0.6,
             "max_tokens": max_tokens,

@@ -132,9 +132,9 @@ def test_wrong_session_and_assistant_source_cannot_be_confirmed(client):
     assert core.list_memories(sid) == core.list_memories(other) == []
 
 
-def test_explicit_remember_command_and_inferences_remain_candidates(client):
+def test_explicit_remember_command_is_auto_but_inferences_remain_candidates(client):
     sid, _ = source(client)
     result = client.post('/api/chat', json={'session_id': sid, 'text': '记住：我希望你先听我说'}).json()
-    assert result['memories'][0]['status'] == 'candidate'
+    assert result['memories'][0]['status'] == 'auto'
     inferred = core.add_memory(sid, 'inference', '推测喜欢安静')
     assert inferred['status'] == 'candidate'

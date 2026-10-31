@@ -10,7 +10,7 @@ window.XinjiAmbientMusic = (() => {
   ];
   const SPARKLE = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.5];
   const CHORD_SECONDS = 14, MASTER = 0.07;
-  let ctx = null, master = null, voices = [], chordTimer = null, sparkleTimer = null, chordIndex = 0, playing = false;
+  let ctx = null, master = null, voices = [], chordTimer = null, sparkleTimer = null, chordIndex = 0, playing = false, generation = 0;
 
   function ensure() {
     if (ctx) return ctx;
@@ -59,8 +59,11 @@ window.XinjiAmbientMusic = (() => {
 
   async function start() {
     if (playing) return true;
-    if (!ensure()) return false;
+    if (window.NianxiangSound?.isBlocked?.() || !ensure()) return false;
+    const ticket = ++generation;
     try { if (ctx.state === 'suspended') await ctx.resume(); } catch (_) { return false; }
+    if (ticket !== generation || window.NianxiangSound?.isBlocked?.()) return false;
+    window.NianxiangSound?.pauseForOtherMusic?.();
     playing = true;
     master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
     master.gain.linearRampToValueAtTime(MASTER, ctx.currentTime + 2.5);
@@ -72,13 +75,14 @@ window.XinjiAmbientMusic = (() => {
   }
 
   function stop() {
+    ++generation;
     if (!playing) return;
     playing = false;
     clearInterval(chordTimer); clearTimeout(sparkleTimer); chordTimer = sparkleTimer = null;
     const now = ctx.currentTime;
     master.gain.cancelScheduledValues(now); master.gain.setValueAtTime(master.gain.value, now);
-    master.gain.linearRampToValueAtTime(0, now + 1.8);
-    for (const old of voices) old.stop(now + 1.5);
+    master.gain.setValueAtTime(0, now);
+    for (const old of voices) old.stop(now);
     voices = [];
     document.dispatchEvent(new CustomEvent('xinji-ambient-music', { detail: { playing: false } }));
   }

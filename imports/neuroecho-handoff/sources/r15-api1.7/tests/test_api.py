@@ -13,7 +13,8 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
-def new_session(client, mode="sample", text=""):
+def new_session(client, mode="paste", text="测试项目正在整理交互原型。测试团队准备下一轮演示。测试资料记录当前计划。测试选择先确认范围。测试安排稍后核对记录。"):
+    # Explicit fixture input exercises the real paste path, never product samples.
     r = client.post("/api/session", json={"mode": mode, "text": text})
     assert r.status_code == 200, r.text
     return r.json()
@@ -22,7 +23,8 @@ def new_session(client, mode="sample", text=""):
 def test_health(client):
     r = client.get("/api/health")
     assert r.json()["ok"] is True
-    assert r.json()["synthetic"] is True
+    assert r.json()["demo_available"] is False
+    assert "synthetic" not in r.json()
 
 
 def test_session_understanding_split(client):
@@ -31,7 +33,7 @@ def test_session_understanding_split(client):
     assert kinds.count("fact") == 3
     assert kinds.count("inference") == 2
     assert kinds.count("question") == 1
-    assert d["session"]["source_label"] == "示例资料"
+    assert d["session"]["source_label"] == "你提供的片段"
 
 
 def test_chat_memory_and_correction(client):
@@ -60,16 +62,10 @@ def test_bookmark_commit_receipt(client):
     assert r.json()["receipt"].startswith("stored:")
 
 
-def test_device_contract_and_abstain(client):
-    client.post("/api/device/start")
-    f = client.get("/api/device/frame").json()
-    assert f["source"] == "synthetic"
-    assert f["status"] == "on"
-    assert 0 <= f["quality"] <= 1
-    assert f["abstain"] == (f["quality"] < core.THRESHOLDS["quality_min"])
-    assert {"ts", "seq", "algo_version"} <= set(f)
-    client.post("/api/device/stop")
-    assert client.get("/api/device/frame").json()["status"] == "off"
+def test_device_simulation_is_not_a_product_capability(client):
+    assert client.post("/api/device/start").status_code == 410
+    assert client.get("/api/device/frame").status_code == 410
+    assert client.post("/api/device/stop").status_code == 410
 
 
 def test_export_and_audit(client):

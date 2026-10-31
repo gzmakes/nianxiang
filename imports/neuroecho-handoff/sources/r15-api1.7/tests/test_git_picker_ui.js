@@ -1,3 +1,4 @@
+const connectionContext = require("./helpers/connection-context.cjs");
 // Synthetic local Git picker tests; no repository, account, credential or network access.
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
 const files = {desktop: fs.readFileSync('web/app.js', 'utf8'), mobile: fs.readFileSync('web/m.js', 'utf8')};
@@ -7,8 +8,8 @@ function storage(){ const m=new Map(); return {get length(){return m.size},key:i
 function setup(kind, reply) {
   const source=files[kind], nodes=new Map(), $=selector=>{if(!nodes.has(selector))nodes.set(selector,element());return nodes.get(selector)};
   const calls=[], transitions=[], state={session:{id:'current'}}, wizard={}, wz={};
-  const ctx=vm.createContext({$,state,wizard,wz,AbortController,localStorage:storage(),esc:s=>String(s??'').replace(/</g,'&lt;'),
-    api:async(...args)=>{calls.push(args);return reply(...args)},renderInsights:()=>transitions.push('insights')});
+  const ctx=connectionContext({$,state,wizard,wz,AbortController,localStorage:storage(),esc:s=>String(s??'').replace(/</g,'&lt;'),
+    startRealSource:()=>transitions.push('connected'),startMobileReal:()=>transitions.push('connected'),api:async(...args)=>{calls.push(args);return reply(...args)},renderInsights:()=>transitions.push('insights')});
   if (kind==='desktop') {
     vm.runInContext(clip(source,'  const credentialPendingKey = ','  function showWz(n)')+
       'function showWz(){}\n'+clip(source,'  function renderGitPicker()','  function openLocalFiles()')+
@@ -30,12 +31,12 @@ for(const kind of ['desktop','mobile']) {
     assert.equal(env.calls.length,0);assert.match(env.hint.textContent,/完整目录/);
     assert.match(env.$(kind==='desktop'?'#read-head':'#m-read-head').innerHTML,/最多 8 条.*模型|模型.*最多 8 条/s);
   });
-  test(`${kind} Git: previews every commit before allowing existing insight flow`,async()=>{
+  test(`${kind} Git: one authorization reads the chosen repository and continues straight to chat`,async()=>{
     const env=setup(kind,async()=>sample);env.input.value='/synthetic/repo with spaces';await env.button.onclick();
-    assert.deepEqual(JSON.parse(env.calls[0][1].body),{source_id:'git',path:'/synthetic/repo with spaces'});
+    assert.deepEqual(JSON.parse(env.calls[0][1].body),{source_id:'git',path:'/synthetic/repo with spaces',start_intro:true});
     assert.match(env.items.innerHTML,/Synthetic commit 7&lt;/);assert.match(env.items.innerHTML,/repo · hash7/);
-    assert.match(env.items.innerHTML,/\/synthetic\/repository/);assert.deepEqual(env.transitions,[]);
-    env.use().onclick();assert.deepEqual(env.transitions,['insights']);
+    assert.match(env.items.innerHTML,/\/synthetic\/repository/);assert.deepEqual(env.transitions,['connected']);
+
     assert.equal((kind==='desktop'?env.state.realSource:env.wz.realSource).read.preview_id,'synthetic-preview');
   });
   test(`${kind} Git: a failed path remains editable and can be retried`,async()=>{
@@ -46,8 +47,8 @@ for(const kind of ['desktop','mobile']) {
   });
   test(`${kind} Git: editing the path invalidates a previously shown preview`,async()=>{
     const env=setup(kind,async()=>sample);env.input.value='/synthetic/one';await env.button.onclick();
-    const stale=env.use().onclick;env.input.value='/synthetic/two';env.input.oninput();stale();
-    assert.equal(env.items.innerHTML,'');assert.deepEqual(env.transitions,[]);
+    const before=env.transitions.length,stale=env.use().onclick;env.input.value='/synthetic/two';env.input.oninput();stale();
+    assert.equal(env.items.innerHTML,'');assert.equal(env.transitions.length,before);
   });
   for(const action of ['close','switch']) test(`${kind} Git: a late read after ${action} cannot replace current UI`,async()=>{
     let resolve;const pending=new Promise(r=>resolve=r);const env=setup(kind,async()=>pending);env.input.value='/synthetic/repo';
@@ -63,7 +64,8 @@ for(const kind of ['desktop','mobile']) {
   });
 }
 test('Git entry remains selectable when nearby automatic discovery is empty',()=>{
-  assert.match(files.desktop,/s\.status === "empty" && s\.id !== "git"/);
+  const directory=clip(files.desktop,'  function renderRealSources(','  async function openRealSource(');
+  assert.doesNotMatch(directory,/s\.status === "empty"[^\n]*disabled/);
   assert.ok(files.desktop.indexOf('if (id === "git") { renderGitPicker(); return; }')>=0);
   assert.ok(files.mobile.indexOf('if (id === "git") { openMobileGit(); return; }')<files.mobile.indexOf('status === "empty")'));
 });
