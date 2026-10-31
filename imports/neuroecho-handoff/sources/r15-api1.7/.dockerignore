@@ -5,6 +5,7 @@
 *.pyc
 .pytest_cache
 server/data.db*
+server/voice-settings.json
 server/visitors/
 server/model-settings.json
 tests/
