@@ -92,6 +92,13 @@ class DeliveryTests(unittest.TestCase):
     assert builtin['url'] == '/static/stickers/happy.svg'
     assert plugin_bridge.sanitize_meme_markers('你好 [表情: happy] [表情: invented]') == '你好 [表情: builtin/happy.svg] '
 
+ def test_model_catalog_exposes_explicit_pack_ids(self):
+    catalog = plugin_bridge.meme_prompt_catalog()
+    item = next(entry for entry in catalog if entry['id'].startswith('dafeiyu-001/'))
+    assert item['tag']
+    marker = f"[表情: {item['id']}]"
+    assert plugin_bridge.sanitize_meme_markers(marker) == marker
+
 
 class StyleTests(unittest.TestCase):
  def test_direct_style_intent_and_persistence_across_turns(self):
