@@ -675,3 +675,17 @@ html[data-reduce-motion=true] #m-app .m-tabbar .tab-indicator,html[data-reduce-m
 }
 @media(max-width:899px){#app .conversation-tools{display:none}}
 html[data-reduce-transparency=true] #app .conversation-tools{background:rgba(255,255,255,.94);-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Web 改版 16 (2026-10-31，产品要求)：去掉「有新内容…」提示和「检查更新」；气泡上方的「你 / 回响 · 时间」平时不占位不显示，
+   悬停或键盘聚焦到这条消息时才在气泡上方淡出；emoji 笑脸按每个气泡各挂一个（emoji-reactions.js），拆成几条的回复各自独立回应。 */
+#app .content-update-line{display:none!important}
+@media(min-width:900px){
+  #app .msg .meta{position:absolute;top:-18px;left:0;right:auto;margin:0;line-height:16px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease}
+  #app .msg.user .meta{left:auto;right:0}
+  #app .msg:hover .meta,#app .msg:focus-within .meta{opacity:1}
+  #app .msg [data-voice-clip]{top:6px}
+  #app .msg.assistant .bubble>.emoji-react-btn{top:6px;right:-40px}
+  #app .msg.assistant:has([data-voice-clip]:not([hidden])) .bubble>.emoji-react-btn{right:-80px}
+  #app .msg.assistant .bubble:hover>.emoji-react-btn,#app .msg.assistant .bubble>.emoji-react-btn:focus-visible{opacity:1}
+}
+html[data-reduce-motion=true] #app .msg .meta{transition:none}
+@media(prefers-reduced-motion:reduce){#app .msg .meta{transition:none}}
