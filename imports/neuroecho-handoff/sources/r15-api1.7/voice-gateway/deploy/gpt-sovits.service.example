@@ -4,16 +4,18 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/nianxiang/apps/GPT-SoVITS
-Environment=PATH=/opt/nianxiang/apps/GPT-SoVITS/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-ExecStart=/opt/nianxiang/apps/GPT-SoVITS/.venv/bin/python /opt/nianxiang/apps/GPT-SoVITS/api_v2.py -a 127.0.0.1 -p 9880
+WorkingDirectory=/opt/nianxiang/GPT-SoVITS
+Environment=PATH=/opt/nianxiang/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=PYTHONUTF8=1
+Environment=PYTHONIOENCODING=utf-8
+ExecStart=/opt/nianxiang/venv/bin/python /opt/nianxiang/GPT-SoVITS/api_v2.py -a 127.0.0.1 -p 9880
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/nianxiang/apps/GPT-SoVITS /opt/nianxiang/models
+ReadWritePaths=/opt/nianxiang/GPT-SoVITS /opt/nianxiang/models
 
 [Install]
 WantedBy=multi-user.target
