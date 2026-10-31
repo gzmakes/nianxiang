@@ -1,0 +1,23 @@
+{
+  "asr": {
+    "enabled": true,
+    "region": "ap-shanghai",
+    "engine": "16k_zh",
+    "max_record_seconds": 55,
+    "max_upload_bytes": 4194304,
+    "max_converted_wav_bytes": 2100000,
+    "ffmpeg_path": "D:\\Apps\\GPT-SoVITS\\bin\\ffmpeg.exe"
+  },
+  "tts": {
+    "enabled": true,
+    "base_url": "http://127.0.0.1:9880",
+    "persona_id": "whale",
+    "ref_audio_path": "D:\\Apps\\GPT-SoVITS\\refs\\fish_20261027.wav",
+    "prompt_text": "你终于来了，我好饿啊，爸爸给我喂点饭吧，我要吃大白饭",
+    "text_lang": "zh",
+    "prompt_lang": "zh",
+    "timeout_seconds": 180,
+    "max_chars": 800,
+    "max_audio_bytes": 20000000
+  }
+}

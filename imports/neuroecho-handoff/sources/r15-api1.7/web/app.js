@@ -1856,37 +1856,9 @@
   const chatTransport = window.XinjiChatTransport.create(api, {ledger:chatLedger});
   const displayedTurns = new Map();
   let localTurnId = 0;
-  let recognition = null;
-  let listening = false;
-
   function setupVoice() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const btn = $("#mic-btn");
-    if (!SR) { btn.classList.add("is-hidden"); return; }
-    recognition = new SR();
-    recognition.lang = "zh-CN";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.onresult = (e) => {
-      let text = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
-      els.input.value = text.trim();
-    };
-    recognition.onstart = () => {
-      listening = true; btn.classList.add("listening"); btn.textContent = "在听…";
-    };
-    recognition.onend = () => {
-      listening = false; btn.classList.remove("listening"); btn.textContent = "语音";
-      if (els.input.value.trim()) sendMessage(els.input.value);
-    };
-    recognition.onerror = (e) => {
-      listening = false; btn.classList.remove("listening"); btn.textContent = "语音";
-      if (e.error !== "aborted") toast(e.error === "not-allowed" ? "麦克风权限未开启" : "语音识别失败，可改用文字");
-    };
-    btn.onclick = () => {
-      if (listening) { recognition.stop(); return; }
-      try { recognition.start(); } catch (_) {}
-    };
+    window.XinjiVoiceInput?.attach({button: btn, input: els.input, api, toast, stopButton: $("#stop-btn")});
   }
 
   function pendingMessages(sessionId) {

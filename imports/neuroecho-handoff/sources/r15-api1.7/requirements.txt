@@ -5,3 +5,7 @@ qrcode[pil]>=7.4
 
 # Windows has no system IANA zone database; used by follow-up time zones.
 tzdata; sys_platform == "win32"
+
+# Optional Tencent Cloud SentenceRecognition client for local voice input.
+tencentcloud-sdk-python-common>=3.0.0
+tencentcloud-sdk-python-asr>=3.0.0

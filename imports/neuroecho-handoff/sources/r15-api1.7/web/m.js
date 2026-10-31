@@ -1975,28 +1975,8 @@
   }
 
   function setupVoice() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const btn = $("#m-mic");
-    if (!SR) { btn.classList.add("is-hidden"); return; }
-    recog = new SR();
-    recog.lang = "zh-CN";
-    recog.interimResults = true;
-    recog.continuous = false;
-    recog.onresult = (e) => {
-      let text = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
-      $("#m-input").value = text.trim();
-    };
-    recog.onstart = () => {
-      recogListening = true; btn.classList.add("listening"); btn.textContent = "在听…";
-    };
-    recog.onend = () => {
-      recogListening = false; btn.classList.remove("listening"); btn.textContent = "语音";
-      const t = $("#m-input").value.trim();
-      if (t) send(t);
-    };
-    recog.onerror = () => { recogListening = false; btn.classList.remove("listening"); btn.textContent = "语音"; toast("语音识别失败，可改用文字"); };
-    btn.onclick = () => { if (recogListening) recog.stop(); else { try { recog.start(); } catch (_) {} } };
+    window.XinjiVoiceInput?.attach({button: btn, input: $("#m-input"), api, toast, stopButton: $("#m-stop")});
   }
 
   function mPendingMessages(sessionId) {

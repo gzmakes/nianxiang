@@ -49,7 +49,7 @@ def test_empty_or_oversize_input_never_starts_subprocess(value):
         voice_clip.synthesize(value)
 
 
-@pytest.mark.parametrize('platform', ['win32','linux'])
+@pytest.mark.parametrize('platform', ['linux'])
 def test_unsupported_platform_fails_without_tool_probe(monkeypatch, platform):
     monkeypatch.setattr(voice_clip,'sys',SimpleNamespace(platform=platform))
     monkeypatch.setattr(voice_clip,'os',SimpleNamespace(path=SimpleNamespace(exists=lambda value:pytest.fail('No probe on unsupported platform'))))
@@ -119,7 +119,7 @@ def test_all_failed_synthesis_cleans_temp_and_releases_slot(local_speech, monkey
 @pytest.fixture()
 def conversation():
     core.init_db()
-    sid = core.create_session('empty')['session']['id']
+    sid = core.create_session('empty', persona_id='whale')['session']['id']
     message = core.add_message(sid,'assistant','合成语音内容')
     return TestClient(main.app), sid, message
 
@@ -180,6 +180,8 @@ def test_api_unsupported_service_platform_is_503_and_metadata_is_honest(conversa
     client,sid,message = conversation
     monkeypatch.setattr(voice_clip,'sys',SimpleNamespace(platform='win32'))
     monkeypatch.setattr(api_contract,'sys',SimpleNamespace(platform='win32'))
+    monkeypatch.setattr(voice_clip.voice_settings, 'load_settings', lambda: {'tts': {'enabled': False}})
+    monkeypatch.setattr(voice_clip.voice_settings, 'load_settings', lambda: {'tts': {'enabled': False}})
     response = request_voice(client,sid,message['id'])
     assert response.status_code == 503 and response.json()['error_code'] == 'service_unavailable'
     capabilities = client.get('/api/capabilities').json()

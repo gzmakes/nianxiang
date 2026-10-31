@@ -376,7 +376,7 @@ def capabilities(*, chat_budget: int, budget_window_minutes: int) -> dict:
             "companion_boundaries": True,
             "bounded_followup_contact": True,
             "unified_contact_claim": True,
-            "voice_clip_from_assistant_message": sys.platform == "darwin",
+            "voice_clip_from_assistant_message": _voice_ready(),
             "memory_expected_version_patch": True,
             "memory_expected_version_delete": True,
             "source_preview_confirmation": True,
@@ -398,7 +398,7 @@ def capabilities(*, chat_budget: int, budget_window_minutes: int) -> dict:
                             "apple_reminders": "conditions_required" if sys.platform == "darwin" else "platform_unsupported",
                             "windows_calendar": "conditions_required" if sys.platform == "win32" else "platform_unsupported",
                             "windows_reminders": "conditions_required" if sys.platform == "win32" else "platform_unsupported",
-                            "voice_clip": "conditions_required" if sys.platform == "darwin" else "platform_unsupported"},
+                            "voice_clip": _voice_state()},
         "limits": {"chat_text_characters": 4000, "memory_text_characters": 2000,
                    "source_count": 8, "file_count_per_attach": 3,
                    "chat_turns_per_window": chat_budget, "chat_window_minutes": budget_window_minutes},
@@ -409,6 +409,21 @@ def capabilities(*, chat_budget: int, budget_window_minutes: int) -> dict:
             "Loopback origin protection is not remote user authentication.",
             "Unknown action or turn results require review; do not silently retry system writes.",
             "Stopping reply delivery requires its current assistant message_id; missing or stale targets do not stop newer replies.",
-            "Voice clips require an explicit request and installed platform speech tools/voice; metadata does not probe availability.",
+            "Voice clips require an explicit request and a ready local speech service.",
         ],
     }
+
+
+def _voice_state() -> str:
+    try:
+        from . import voice_settings
+        if sys.platform == "win32" and not voice_settings.load_settings().get("tts", {}).get("enabled"):
+            return "platform_unsupported"
+        from . import voice_clip
+        return voice_clip.status().get("state", "service_not_running")
+    except Exception:
+        return "voice_not_configured"
+
+
+def _voice_ready() -> bool:
+    return _voice_state() == "ready"

@@ -28,7 +28,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources, system_source
 from .core import BudgetExceeded
-from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents
+from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents, asr_service, voice_settings
 from . import notion_cli_source, git_source, feishu_account, lark_account_auth, connection_intro, gmail_cli_source, connector_auth, prompts
 from .runtime_lock import DatabaseLease
 from . import visitors
@@ -210,6 +210,17 @@ class VoiceClipIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
+
+
+class VoiceStatusResponse(BaseModel):
+    asr_enabled: bool
+    asr_credentials_configured: bool
+    ffmpeg_available: bool
+    tts_enabled: bool
+    tts_reference_audio: bool
+    tts_base_url: str
+    tts_port: int
+    tts_state: str
 
 
 class DeliveryStopIn(BaseModel):
@@ -616,6 +627,9 @@ def make_voice_clip(body: VoiceClipIn):
     if message.get('delivery_pending'):
         raise HTTPException(409, '请等这条回复发送完成。')
     try:
+        tts_enabled = voice_settings.load_settings().get('tts', {}).get('enabled')
+        if tts_enabled and message.get('persona_id') != 'whale':
+            raise voice_clip.VoiceUnavailable('只有小鲸鱼人格可以生成小鲸鱼语音。')
         audio = voice_clip.synthesize(message['text'])
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -628,6 +642,32 @@ def make_voice_clip(body: VoiceClipIn):
             or core._model_context_stamp(body.session_id) != context_before):
         raise HTTPException(409, '这条回复已变化，请重新选择。')
     return Response(audio, media_type='audio/wav', headers={'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff'})
+
+
+@app.post('/api/voice/transcribe')
+async def transcribe_voice(request: Request):
+    settings = voice_settings.load_settings()
+    chunks, total = [], 0
+    limit = int(settings.get('asr', {}).get('max_upload_bytes', 4_194_304))
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(413, '录音超过 4MB 限制。')
+        chunks.append(chunk)
+    try:
+        return asr_service.transcribe_bytes(b''.join(chunks), request.headers.get('content-type', ''), settings=settings)
+    except asr_service.TranscriptionError as exc:
+        detail = str(exc)
+        status = 503 if any(word in detail for word in ('未配置', 'SDK', '权限', '开通', '额度', '调用失败')) else 422
+        raise HTTPException(status, detail) from exc
+
+
+@app.get('/api/voice/status', response_model=VoiceStatusResponse)
+def voice_status():
+    settings = voice_settings.load_settings()
+    result = voice_settings.status(settings)
+    result.update({'tts_state': voice_clip.status(settings)['state']})
+    return result
 
 
 @app.get("/api/capabilities", response_model=contract.CapabilityResponse, response_model_exclude_unset=True)

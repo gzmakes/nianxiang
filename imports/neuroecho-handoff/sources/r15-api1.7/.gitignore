@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 server/model-settings.json
+server/voice-settings.json
 server/data.db*
 server/*.sqlite*
 server/*.server.lock
