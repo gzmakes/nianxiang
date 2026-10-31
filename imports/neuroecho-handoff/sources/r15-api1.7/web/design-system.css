@@ -699,3 +699,12 @@ html[data-reduce-motion=true] #app .msg .meta{transition:none}
 @keyframes music-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
 html[data-reduce-motion=true] #app .conversation-tools [data-tool=music] .ui-icon{animation:none}
 @media(prefers-reduced-motion:reduce){#app .conversation-tools [data-tool=music] .ui-icon{animation:none}}
+/* Web 改版 18 (2026-10-31，产品要求)：对话栏右侧胶囊只留图标、整体变短（文字仍在 aria-label / 悬停提示里）；
+   首条消息上方那行「按你的节奏 / 暂时没能核对关心设置…」不再显示。 */
+@media(min-width:900px){
+  #app .conversation-tools{padding:2px;border-radius:17px}
+  #app .conversation-tools .text-btn{gap:0;padding:4px 9px;min-width:34px;justify-content:center}
+  #app .conversation-tools .text-btn>span{display:none}
+  #app .conversation-tools .text-btn .ui-icon{width:16px;height:16px}
+  #app #messages::before{display:none}
+}
