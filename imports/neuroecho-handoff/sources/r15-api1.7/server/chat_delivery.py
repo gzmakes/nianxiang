@@ -19,6 +19,7 @@ _ABBREVIATIONS = frozenset({
     'i.e', 'fig', 'no', 'approx', 'inc', 'jan', 'feb', 'mar', 'apr', 'jun',
     'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
 })
+_STICKER_MARKER = re.compile(r"\[表情[:：]\s*([^\]\r\n]{1,240}?)\s*\]")
 
 
 def _rich_reply(text):
@@ -106,20 +107,48 @@ def _sentence_parts(text):
 def _cap_parts(parts, limit=4):
     if len(parts) <= limit:
         return parts
+    sticker_indexes = [index for index, part in enumerate(parts)
+                       if _STICKER_MARKER.fullmatch(part.strip())]
+    if sticker_indexes:
+        sticker_index = sticker_indexes[0]
+        # Reserve one complete bubble for the sticker even when sentence or
+        # paragraph splitting would otherwise exceed the delivery cap.
+        before, after = parts[:sticker_index], parts[sticker_index + 1:]
+
+        def compress(values, slots):
+            if not values or slots <= 0:
+                return []
+            if len(values) <= slots:
+                return values
+            head = values[:slots - 1]
+            head.append(' '.join(values[slots - 1:]))
+            return head
+
+        after_slots = 1 if after else 0
+        before_slots = max(0, limit - 1 - after_slots)
+        return compress(before, before_slots) + [parts[sticker_index]] + compress(after, after_slots)
     # Keep the first three turns natural and append the remainder to the last
     # one, preventing a long response from becoming notification spam.
     return parts[:limit - 1] + [' '.join(parts[limit - 1:])]
 
 
-def _work_parts(text):
+def _explicit_parts(text):
+    """Split on explicit bubble markers outside fenced code blocks.
+
+    The marker is an internal delivery protocol, so it is removed from the
+    delivered text.  A marker inside a fenced code block remains literal and
+    must never trigger a split.
+    """
     marker = '<!--NX-BUBBLE-->'
     parts, start, cursor, fenced = [], 0, 0, False
+    found = False
     while cursor < len(text):
         if text.startswith('```', cursor):
             fenced = not fenced
             cursor += 3
             continue
         if not fenced and text.startswith(marker, cursor):
+            found = True
             piece = text[start:cursor].strip()
             if piece:
                 parts.append(piece)
@@ -130,7 +159,49 @@ def _work_parts(text):
     tail = text[start:].strip()
     if tail:
         parts.append(tail)
+    return parts if found else None
+
+
+def _sticker_parts(text):
+    """Keep each sticker marker in its own delivery bubble.
+
+    Sticker markers are rendered as images by the clients.  Keeping a marker
+    beside prose in the same bubble makes a response that conceptually has a
+    text message followed by an image look like one combined message.  Scan
+    fences first so an example marker in a code block remains literal.
+    """
+    matches = []
+    cursor, fenced = 0, False
+    while cursor < len(text):
+        if text.startswith('```', cursor):
+            fenced = not fenced
+            cursor += 3
+            continue
+        if not fenced:
+            match = _STICKER_MARKER.match(text, cursor)
+            if match:
+                matches.append((match.start(), match.end()))
+                cursor = match.end()
+                continue
+        cursor += 1
+    if not matches:
+        return None
+    parts, start = [], 0
+    for marker_start, marker_end in matches:
+        prose = text[start:marker_start].strip()
+        if prose:
+            parts.append(prose)
+        parts.append(text[marker_start:marker_end].strip())
+        start = marker_end
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
     return parts or [text.strip()]
+
+
+def _work_parts(text):
+    """Backward-compatible work helper; markers are now mode-independent."""
+    return _explicit_parts(text) or [str(text or '').strip()]
 
 
 def split_reply(text, mode='auto'):
@@ -143,8 +214,15 @@ def split_reply(text, mode='auto'):
     text = str(text or '')
     if not text.strip():
         return []
-    if mode == 'work':
-        return _work_parts(text)
+    explicit = _explicit_parts(text)
+    if explicit is not None:
+        parts = []
+        for part in explicit:
+            parts.extend(_sticker_parts(part) or [part])
+        return _cap_parts(parts)
+    stickers = _sticker_parts(text)
+    if stickers is not None:
+        return _cap_parts(stickers)
     if mode not in ('auto', 'paragraph', 'sentence'):
         mode = 'auto'
     if _rich_reply(text) or mode == 'paragraph':

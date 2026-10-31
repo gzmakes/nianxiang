@@ -483,11 +483,8 @@ body:has(#app,#m-app) .design-search-head input{-webkit-appearance:none;appearan
 #app .context .today-head h3,#app .context .followup-head b,#app .context .panel-title-row h3{margin:0}
 #app .context .row,#app .context .today-footer-actions,#app .context .action-row,#app .context .mood-actions,#app .context .design-shortcuts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #app .context .followup-card>.text-btn,#app .context .today-app-list>.text-btn{margin-top:4px}
-/* Web 改版 9 (2026-10-31，产品要求)：人格切换（念响 / 小鲸鱼）与模式切换（陪伴 / 工作）。四个空间是本设备的视图（persona-switch.js），
-   换空间就像换了一个对话框；小鲸鱼的光球换成鲸鱼形状和海蓝配色，眼睛、表情、状态变化照旧。 */
-html[data-space-arming] #app #messages,html[data-space-arming] #m-app #m-messages{visibility:hidden}
-#app #design-topics{display:none}
-#app .space-modes{flex:none}
+/* Web 改版 9 (2026-10-31)：人格切换（念响 / 小鲸鱼）。话题筛选仍由设计系统保留，
+   人格只改变当前说话方式，不创建或切换另一套对话空间。 */
 #app .conversation-persona{position:relative}
 #app .conversation-persona h2.persona-name{cursor:pointer;user-select:none;padding-right:22px;position:relative}
 #app .conversation-persona h2.persona-name::after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);opacity:.55}
@@ -571,8 +568,8 @@ html[data-reduce-motion=true] [data-companion-art]::before{animation:none}
 #app .context input[type=checkbox]:active,#app .context input[type=radio]:active{transform:scale(.85)}
 html[data-reduce-motion=true] #app .context .tab-panel,html[data-reduce-motion=true] #app .context .tab-panel>*,html[data-reduce-motion=true] #app .context details>*,html[data-reduce-motion=true] #app .context .tab-indicator{animation:none;transition:none}
 @media(prefers-reduced-motion:reduce){#app .context .tab-panel,#app .context .tab-panel>*,#app .context details>*,#app .context .tab-indicator{animation:none;transition:none}}
-/* H5 同步 (2026-10-31，产品要求)：把 Web 改版 2–11 搬到手机页（m.html）。顶栏改成居中的光球 + 人格胶囊 + 标语；
-   话题行换成 陪伴 / 工作；气泡宽度随文字、去掉气泡下的文字按钮、语音图标与 emoji 笑脸排在气泡下；输入框改成白色胶囊（＋ / 表情 / 语音 / 发送）；
+/* H5 同步 (2026-10-31)：把 Web 改版 2–11 搬到手机页（m.html）。顶栏改成居中的光球 + 人格胶囊 + 标语；
+   保留普通话题筛选；气泡宽度随文字、去掉气泡下的文字按钮、语音图标与 emoji 笑脸排在气泡下；输入框改成白色胶囊（＋ / 表情 / 语音 / 发送）；
    搜索框、设置里的开关、心情卡、光球表情 / 小鲸鱼、底部页签滑块与弹层切入都复用 Web 的同一套模块
    （emoji-reactions / message-voice / orb-face / mood-polish / persona-switch / panel-motion，各模块里加了 #m-app 的选择器）。 */
 #m-app .m-top{position:relative;z-index:5;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;margin:10px 16px 4px;padding:10px 16px 10px;border-radius:30px;min-height:0}
@@ -595,10 +592,7 @@ html[data-persona=whale] #m-app .m-brand h2{color:#2B4A8A}
 #m-app #m-design-search{--t-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M16 16l4.5 4.5'/></svg>")}
 #m-app #m-design-settings{--t-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M4 7h10M18 7h2M4 17h4M12 17h8'/><circle cx='16' cy='7' r='2'/><circle cx='10' cy='17' r='2'/></svg>")}
 #m-app .persona-menu{top:calc(100% + 4px)}
-/* 话题行：陪伴 / 工作 在左，安静开关在右（话题筛选由 persona-switch.js 接管） */
-#m-app #m-design-topics{display:none}
-#m-app .space-modes{flex:none;padding:2px;border-radius:17px}
-#m-app .space-modes .topic-chip{min-height:30px;padding:4px 14px;font-size:12px;border-radius:15px}
+/* 话题行保留普通筛选，安静开关在下方。 */
 /* 空状态：问候上面加一句小字（人格切换时跟着换）；矮屏的「光球在左、文字在右」布局照旧 */
 #m-app .chat-hello{font-size:13px;color:var(--ink-mute);margin:0 0 4px}
 @media(max-width:600px) and (max-height:900px){#m-app .m-chat-empty>.chat-hello{grid-column:2;align-self:end}}

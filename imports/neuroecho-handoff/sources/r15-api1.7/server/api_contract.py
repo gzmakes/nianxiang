@@ -27,7 +27,10 @@ class SessionResponse(OpenResponse):
     source_label: str | None = None
     conversation_style: str | None = None
     persona_id: str | None = None
-    interaction_mode: Literal['companion', 'work'] | None = None
+    interaction_mode: Literal['companion', 'work'] | None = Field(
+        default=None,
+        description='Deprecated compatibility field retained for historical sessions; it does not select model behavior.',
+    )
 
 
 class MessageResponse(OpenResponse):
@@ -38,7 +41,10 @@ class MessageResponse(OpenResponse):
     suggestions: list[str] | None = None
     created_at: str | None = None
     persona_id: str | None = None
-    interaction_mode: Literal['companion', 'work'] | None = None
+    interaction_mode: Literal['companion', 'work'] | None = Field(
+        default=None,
+        description='Deprecated compatibility field retained for historical messages; it does not select delivery behavior.',
+    )
     bubbles: list[str] | None = Field(default=None, description="Currently delivered parts of this reply, in order.")
     delivery_pending: bool | None = Field(default=None, description="Additional reply parts are still scheduled.")
     delivery_next_ms: int | None = Field(default=None, description="Suggested delay before refreshing pending parts.")
