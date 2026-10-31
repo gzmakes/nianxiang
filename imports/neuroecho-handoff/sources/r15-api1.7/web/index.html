@@ -4,9 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>念响 · 具身个人伙伴</title>
-<link rel="stylesheet" href="/static/styles.css?v=b21fcb6e9e0eadff" />
+<link rel="stylesheet" href="/static/styles.css?v=57cf541aeafce964" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=624a50bb1b134597" />
+<link rel="stylesheet" href="/static/design-system.css?v=171cb5661a5d8cd2" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
@@ -157,9 +157,12 @@
         <div class="conversation-persona">
           <div class="persona-face" data-companion-art></div>
           <div>
-            <h2>回响</h2>
+            <div class="brand-line">
+              <span class="echo-slogan echo-slogan-side" data-slogan-part="left" aria-hidden="true"><span>念有所感</span></span>
+              <h2>回响</h2>
+              <span class="echo-slogan echo-slogan-side" data-slogan-part="right" aria-hidden="true"><span>必有回响</span></span>
+            </div>
             <p class="companion-status" role="status" aria-live="polite"><span id="state-label">我在这里</span><span id="state-hint">慢慢说，我在听</span></p>
-            <p class="echo-slogan">念有所感，必有回响</p>
             <p class="session-technical" id="session-meta" hidden>—</p>
           </div>
         </div>
@@ -168,6 +171,12 @@
 
       <div class="conversation-toolbar">
         <div class="topic-toolbar"><div id="design-topics" class="topic-tabs" aria-label="话题视图"></div><p class="topic-description">未标记归入「日常」；话题仅筛选本设备视图，不另建对话。</p></div>
+        <div class="conversation-tools" data-conversation-tools role="group" aria-label="搜索、记录心情与面板">
+          <button type="button" class="text-btn" data-tool="search" aria-label="搜索对话和记忆"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>搜索</span></button>
+          <button type="button" class="text-btn" data-tool="mood" aria-label="记录今天的心情"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z"/></svg><span>记录心情</span></button>
+          <button type="button" class="text-btn" data-tool="music" aria-label="播放或暂停背景音乐" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6.5l10-2.5v11.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg><span data-tool-music-label>播放音乐</span></button>
+          <button type="button" class="text-btn" data-tool="panel" aria-label="展开或收起侧面板" aria-expanded="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M14.5 5v14"/></svg><span data-tool-panel-label>展开面板</span></button>
+        </div>
         <section class="companion-boundary" data-companion-boundary aria-label="陪伴与安静"></section>
       </div>
   <div class="content-update-line" data-content-update><span data-update-status role="status" aria-live="polite"></span><button type="button" class="text-btn" data-update-check data-copy-key="connection.sync.check">检查更新</button></div>
@@ -501,12 +510,15 @@
 <script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
 <script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
-<script src="/static/app.js?v=c47aec6d3fb8873a"></script>
-<script src="/static/emoji-reactions.js?v=343cbe7f2fcb6316"></script>
+<script src="/static/app.js?v=7b6d573902e3fb9a"></script>
+<script src="/static/emoji-reactions.js?v=984098af2341e32a"></script>
 <script src="/static/message-voice.js?v=d2f5f242df660536"></script>
 <script src="/static/orb-face.js?v=40a8f976250f2036"></script>
 <script src="/static/mood-polish.js?v=1c748d608167772c"></script>
-<script src="/static/persona-switch.js?v=c0af4cb1d036c4d5"></script>
+<script src="/static/persona-switch.js?v=ad89ffc98e91932c"></script>
 <script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
+<script src="/static/ambient-music.js?v=c3b737469cea581b"></script>
+<script src="/static/conversation-tools.js?v=0fa7fdbc93c85fe4"></script>
+<script src="/static/slogan-particles.js?v=83b507e6ba7d7917"></script>
 </body>
 </html>

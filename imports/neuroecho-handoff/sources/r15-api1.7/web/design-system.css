@@ -647,3 +647,52 @@ html[data-reduce-motion=true] #m-app .msg [data-voice-clip]::before{animation:no
 #m-sheet.is-entering .sheet-body>*:nth-child(n+4){animation-delay:.12s}
 html[data-reduce-motion=true] #m-app .m-tabbar .tab-indicator,html[data-reduce-motion=true] #m-sheet .sheet-body>*{animation:none;transition:none}
 @media(prefers-reduced-motion:reduce){#m-app .m-tabbar .tab-indicator,#m-sheet .sheet-body>*{animation:none;transition:none}}
+/* Web 改版 15 (2026-10-31，产品要求)：标语拆成两半，分列名字胶囊左右；每 90 秒化作粒子散开再聚回文字（slogan-particles.js）。
+   对话栏右侧胶囊改为 搜索 / 记录心情 / 展开面板 三个图标+文字入口（conversation-tools.js），陪伴开关从这条线上移走；
+   顶栏（搜索 / 面板 / 导出数据）整条去掉，右侧面板随之上移到顶；「上次停在这里」、「偶尔提议记住我的原话」、「希望回响…」三行不再显示。 */
+#app #resume-banner,#app .memory-preference-toggle,#app .response-choices{display:none!important}
+@media(min-width:900px){
+  #app .topbar{display:none}
+  #app .layout{margin-top:0}
+  #app .context{margin-top:0}
+  html[data-desktop=true][data-native-platform=win32] #app .layout{margin-top:40px}
+  /* 名字一行：标语左右各一半，和胶囊垂直居中 */
+  #app .brand-line{display:flex;align-items:center;justify-content:center;gap:16px}
+  #app .brand-line .echo-slogan{display:block;position:relative;margin:0;padding:2px 2px 0;white-space:nowrap;line-height:1.25;font-size:18px;letter-spacing:.1em;color:#56627A;-webkit-text-fill-color:#56627A;opacity:1}
+  #app .brand-line .echo-slogan>span{display:inline-block;transition:opacity .35s ease}
+  #app .brand-line .echo-slogan.is-particles>span{opacity:0}
+  #app .brand-line .echo-slogan canvas{position:absolute;left:-32px;top:-32px;width:calc(100% + 64px);height:calc(100% + 64px);pointer-events:none}
+  #app .conversation-persona h2{position:relative;z-index:1}
+  /* 右侧胶囊：和话题筛选同款玻璃，三个图标+文字入口 */
+  #app .conversation-toolbar .companion-boundary{display:none}
+  #app .conversation-tools{display:inline-flex;align-items:center;gap:0;padding:2px;border-radius:17px;margin-left:auto;
+    background:linear-gradient(135deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 48%,rgba(255,255,255,.4));border:1px solid rgba(255,255,255,.72);
+    -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 4px 12px rgba(80,100,170,.12)}
+  #app .conversation-tools .text-btn{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:4px 12px;border:0;border-radius:14px;background:transparent;color:var(--ink-mute);font-size:12px;font-weight:500;line-height:20px}
+  #app .conversation-tools .text-btn .ui-icon{width:15px;height:15px;stroke-width:1.8}
+  #app .conversation-tools .text-btn:hover{background:rgba(255,255,255,.88);color:var(--ink);box-shadow:0 1px 4px rgba(80,100,170,.14)}
+  #app .conversation-tools [data-tool=panel][aria-expanded=true]{color:var(--ink)}
+}
+@media(max-width:899px){#app .conversation-tools{display:none}}
+html[data-reduce-transparency=true] #app .conversation-tools{background:rgba(255,255,255,.94);-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Web 改版 16 (2026-10-31，产品要求)：去掉「有新内容…」提示和「检查更新」；气泡上方的「你 / 回响 · 时间」平时不占位不显示，
+   悬停或键盘聚焦到这条消息时才在气泡上方淡出；emoji 笑脸按每个气泡各挂一个（emoji-reactions.js），拆成几条的回复各自独立回应。 */
+#app .content-update-line{display:none!important}
+@media(min-width:900px){
+  #app .msg .meta{position:absolute;top:-18px;left:0;right:auto;margin:0;line-height:16px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease}
+  #app .msg.user .meta{left:auto;right:0}
+  #app .msg:hover .meta,#app .msg:focus-within .meta{opacity:1}
+  #app .msg [data-voice-clip]{top:6px}
+  #app .msg.assistant .bubble>.emoji-react-btn{top:6px;right:-40px}
+  #app .msg.assistant:has([data-voice-clip]:not([hidden])) .bubble>.emoji-react-btn{right:-80px}
+  #app .msg.assistant .bubble:hover>.emoji-react-btn,#app .msg.assistant .bubble>.emoji-react-btn:focus-visible{opacity:1}
+}
+html[data-reduce-motion=true] #app .msg .meta{transition:none}
+@media(prefers-reduced-motion:reduce){#app .msg .meta{transition:none}}
+/* Web 改版 17 (2026-10-31，产品要求)：对话栏右侧胶囊在「记录心情」和「收起面板」之间加「播放音乐」（ambient-music.js，WebAudio 现场合成的轻环境音，
+   不带音频文件）；播放中按钮为墨色并带一个轻微起伏的音符。人格 / 陪伴-工作 切换在服务端同步失败时也照常切换（persona-switch.js）。 */
+#app .conversation-tools [data-tool=music][aria-pressed=true]{color:var(--ink);background:rgba(255,255,255,.88);box-shadow:0 1px 4px rgba(80,100,170,.14)}
+#app .conversation-tools [data-tool=music][aria-pressed=true] .ui-icon{animation:music-bob 1.6s ease-in-out infinite}
+@keyframes music-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+html[data-reduce-motion=true] #app .conversation-tools [data-tool=music] .ui-icon{animation:none}
+@media(prefers-reduced-motion:reduce){#app .conversation-tools [data-tool=music] .ui-icon{animation:none}}

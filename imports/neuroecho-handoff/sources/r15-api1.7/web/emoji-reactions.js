@@ -47,12 +47,17 @@
     write(STORE, reactions);
   }
 
-  function badgeFor(msg, emoji) {
-    const bubbles = msg.querySelectorAll(':scope > .bubble');
-    const bubble = bubbles[bubbles.length - 1];
+  // 一条回复可能拆成几个气泡：每个气泡各自一个回应。第一个气泡沿用消息 id 作键（兼容已存的），其余用「id#序号」。
+  const keyOf = (id, index) => (index > 0 ? `${id}#${index}` : id);
+  const bubblesOf = msg => [...msg.querySelectorAll(':scope > .bubble')];
+  // Web 的笑脸挂在各自气泡里（贴着气泡右侧）；H5 仍是整条消息下方一个，指向最后一个气泡。
+  const perBubble = !!document.querySelector('#app #messages');
+  function badgeFor(msg, emoji, index = 0) {
+    const bubbles = bubblesOf(msg);
+    const bubble = bubbles[Math.min(index, bubbles.length - 1)];
     if (!bubble) return null;
     let badge = bubble.querySelector(':scope > .emoji-badge');
-    if (!emoji) { badge?.remove(); msg.classList.remove('has-emoji'); return null; }
+    if (!emoji) { badge?.remove(); msg.classList.toggle('has-emoji', !!msg.querySelector(':scope > .bubble > .emoji-badge')); return null; }
     if (!badge) { badge = document.createElement('span'); badge.className = 'emoji-badge'; badge.setAttribute('role', 'img'); bubble.appendChild(badge); }
     badge.textContent = emoji;
     badge.setAttribute('aria-label', (msg.classList.contains('user') ? '回响回应：' : '你的回应：') + NAME[emoji]);
@@ -92,12 +97,14 @@
     if (restoreFocus) barOpener?.focus();
     barTarget = barOpener = null;
   }
-  function openBar(msg, opener) {
-    const bubble = msg.querySelector(':scope > .bubble');
+  function openBar(msg, opener, index = 0) {
+    const bubbles = bubblesOf(msg);
+    const bubble = bubbles[Math.min(index, bubbles.length - 1)];
     if (!bubble) return;
-    barTarget = msg.dataset.messageId; barOpener = opener;
+    const id = msg.dataset.messageId;
+    barTarget = { id, index, key: keyOf(id, index) }; barOpener = opener;
     bar.hidden = false;
-    for (const button of bar.querySelectorAll('button')) button.setAttribute('aria-pressed', String(reactions[barTarget] === button.dataset.emoji));
+    for (const button of bar.querySelectorAll('button')) button.setAttribute('aria-pressed', String(reactions[barTarget.key] === button.dataset.emoji));
     const rect = bubble.getBoundingClientRect(), width = bar.offsetWidth, height = bar.offsetHeight;
     const left = Math.min(Math.max(16, rect.left), window.innerWidth - width - 16);
     const top = rect.top - height - 8 >= 8 ? rect.top - height - 8 : rect.bottom + 8;
@@ -107,14 +114,14 @@
   bar.addEventListener('click', event => {
     const button = event.target.closest('[data-emoji]');
     if (!button || !barTarget) return;
-    const emoji = button.dataset.emoji, id = barTarget;
+    const emoji = button.dataset.emoji, { id, index, key } = barTarget;
     const msg = messagesRoot()?.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
-    if (reactions[id] === emoji) delete reactions[id]; else reactions[id] = emoji;
+    if (reactions[key] === emoji) delete reactions[key]; else reactions[key] = emoji;
     persist();
     closeBar(true);
     if (!msg) return;
-    const badge = badgeFor(msg, reactions[id]);
-    if (reactions[id]) { celebrate(badge, emoji); glow(emoji); }
+    const badge = badgeFor(msg, reactions[key], index);
+    if (reactions[key]) { celebrate(badge, emoji); glow(emoji); }
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !bar.hidden) { event.stopPropagation(); closeBar(true); } }, true);
   document.addEventListener('pointerdown', event => { if (!bar.hidden && !bar.contains(event.target) && !event.target.closest('.emoji-react-btn')) closeBar(false); });
@@ -124,7 +131,7 @@
   let initialized = false, sinceLastBadge = 2;
   const byId = id => id && messagesRoot()?.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
   const messageText = msg => [...msg.querySelectorAll(':scope > .bubble')].map(bubble => {
-    const copy = bubble.cloneNode(true); copy.querySelectorAll('.emoji-badge').forEach(node => node.remove()); return copy.textContent;
+    const copy = bubble.cloneNode(true); copy.querySelectorAll('.emoji-badge, .emoji-react-btn').forEach(node => node.remove()); return copy.textContent;
   }).join('\n').trim();
   // 你的新消息：连续 3 条里最多贴 1 次；先不打扰或关掉开关时不贴。
   function decide(text) {
@@ -159,14 +166,20 @@
         continue;
       }
       sawHistory = true;
-      if (msg.classList.contains('assistant') && !msg.querySelector(':scope > .emoji-react-btn')) {
-        const button = document.createElement('button');
-        button.type = 'button'; button.className = 'emoji-react-btn'; button.setAttribute('aria-label', '给这条回复一个 emoji 回应'); button.title = 'emoji 回应';
-        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2"/><path d="M9.5 10h.01M14.5 10h.01"/></svg>';
-        button.onclick = () => (bar.hidden || barTarget !== id ? openBar(msg, button) : closeBar(true));
-        msg.appendChild(button);
-      }
-      if (reactions[id]) badgeFor(msg, reactions[id]);
+      if (msg.classList.contains('assistant')) {
+        const bubbles = bubblesOf(msg);
+        const makeButton = index => {
+          const button = document.createElement('button');
+          button.type = 'button'; button.className = 'emoji-react-btn'; button.setAttribute('aria-label', '给这条回复一个 emoji 回应'); button.title = 'emoji 回应';
+          button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2"/><path d="M9.5 10h.01M14.5 10h.01"/></svg>';
+          const key = keyOf(id, index);
+          button.onclick = () => (bar.hidden || barTarget?.key !== key ? openBar(msg, button, index) : closeBar(true));
+          return button;
+        };
+        if (perBubble) bubbles.forEach((bubble, index) => { if (!bubble.querySelector(':scope > .emoji-react-btn')) bubble.appendChild(makeButton(index)); });
+        else if (bubbles.length && !msg.querySelector(':scope > .emoji-react-btn')) msg.appendChild(makeButton(bubbles.length - 1));
+        bubbles.forEach((_, index) => { const key = keyOf(id, index); if (reactions[key]) badgeFor(msg, reactions[key], index); });
+      } else if (reactions[id]) badgeFor(msg, reactions[id]);
       if (seen.has(id)) continue;
       seen.add(id);
       if (!initialized || !msg.classList.contains('user')) continue;
