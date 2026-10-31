@@ -59,13 +59,22 @@ def _http_error_message(error: urllib.error.HTTPError) -> str:
 
 
 class ModelClient:
-    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = DEFAULT_TIMEOUT):
+    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = DEFAULT_TIMEOUT,
+                 fallback: "ModelClient | None" = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
+        self.fallback = fallback
 
-    def complete(self, system: str, user: str, max_tokens: int = 1200) -> str:
+    @staticmethod
+    def _can_fail_over(error: ModelError) -> bool:
+        message = str(error).lower()
+        return (message.startswith("model http 429") or
+                any(message.startswith(f"model http {code}") for code in (502, 503, 504)) or
+                message.startswith("model network:"))
+
+    def _complete_once(self, system: str, user: str, max_tokens: int = 1200) -> str:
         payload = {
             "model": self.model,
             "messages": [
@@ -113,8 +122,19 @@ class ModelClient:
             raise ModelError("model empty response")
         return text.strip()
 
+    def complete(self, system: str, user: str, max_tokens: int = 1200) -> str:
+        try:
+            return self._complete_once(system, user, max_tokens)
+        except ModelError as error:
+            # A configured personal gateway can be rate-limited or briefly
+            # unavailable.  The public node is a safe, credential-free
+            # fallback for ordinary chat; never retry the same failing node.
+            if self.fallback is not None and self._can_fail_over(error):
+                return self.fallback._complete_once(system, user, max_tokens)
+            raise
 
-    def complete_tools(self, messages: list[dict], tools: list[dict], max_tokens: int = 700) -> dict:
+
+    def _complete_tools_once(self, messages: list[dict], tools: list[dict], max_tokens: int = 700) -> dict:
         """One OpenAI-compatible tool-capable step; no model content is logged."""
         payload = {"model": self.model, "messages": messages, "tools": tools,
                    "tool_choice": "auto", "temperature": 0.6, "max_tokens": max_tokens}
@@ -145,6 +165,14 @@ class ModelClient:
             return message
         except (KeyError, IndexError, TypeError, ValueError) as e:
             raise ModelError("model malformed or incomplete response") from e
+
+    def complete_tools(self, messages: list[dict], tools: list[dict], max_tokens: int = 700) -> dict:
+        try:
+            return self._complete_tools_once(messages, tools, max_tokens)
+        except ModelError as error:
+            if self.fallback is not None and self._can_fail_over(error):
+                return self.fallback._complete_tools_once(messages, tools, max_tokens)
+            raise
 
 
 def _resolve() -> dict:
@@ -185,6 +213,15 @@ def from_env() -> ModelClient | None:
         timeout = fallback
     client = ModelClient(cfg["base_url"], cfg["api_key"], cfg["model"], timeout)
     client.source = cfg["source"] or "env"
+    # Keep the user's configured gateway as the primary choice, but make a
+    # transient 429/5xx survivable when the public demo node is available.
+    # The public key is only the literal gateway marker; no user credential is
+    # copied to the fallback origin.
+    public = model_settings.public_endpoint()
+    if (public and cfg["source"] == "file" and
+            public["base_url"].rstrip("/") != client.base_url):
+        client.fallback = ModelClient(public["base_url"], public["api_key"],
+                                      public["model"], public["timeout"])
     return client
 
 

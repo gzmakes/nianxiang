@@ -12,6 +12,7 @@ Desktop.ini
 .env.*
 !.env.example
 *.local
+.runtime-data/
 
 # Dependencies and caches
 node_modules/
