@@ -1,44 +1,31 @@
-/* User initiated MediaRecorder upload. Recognition never submits the chat. */
+/* Browser-local speech recognition. No audio is recorded or uploaded. */
 (function (global) {
   'use strict';
-  function attach({button, input, api, toast, stopButton}) {
-    let recorder = null, stream = null, timer = null, started = 0, busy = false;
-    const original = () => String(input?.value || '').trim();
-    const set = (label, active = false) => { if (button) { button.textContent = label; button.classList.toggle('listening', active); button.disabled = busy && !active; } };
-    const cleanup = () => { if (timer) global.clearTimeout(timer); timer = null; stream?.getTracks?.().forEach(track => track.stop()); stream = null; recorder = null; };
-    const fail = (message) => { cleanup(); busy = false; set('语音'); toast?.(message); };
-    async function transcribe(blob, draft) {
-      busy = true; set('正在识别…');
-      try {
-        const response = await fetch('/api/voice/transcribe', {method:'POST', headers:{'Content-Type': blob.type || 'application/octet-stream'}, body: blob});
-        if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail || '语音识别失败，可改用文字'); }
-        const result = await response.json(); const text = String(result.text || '').trim();
-        if (!text) throw new Error('没有识别到可用文字，请再说一次。');
-        input.value = draft ? `${draft}\n${text}` : text;
-        input.dispatchEvent(new Event('input', {bubbles:true}));
-        busy = false; set('语音');
-      } catch (error) { fail(error.message || '语音识别失败，可改用文字'); }
+  function attach({button, input, toast}) {
+    const Recognition = global.SpeechRecognition || global.webkitSpeechRecognition;
+    let recognition = null, listening = false, draft = '';
+    const set = (label, active = false) => { if (button) { button.textContent = label; button.classList.toggle('listening', active); button.setAttribute('aria-pressed', active ? 'true' : 'false'); } };
+    const fail = message => { listening = false; recognition = null; set('语音'); toast?.(message); };
+    if (!Recognition) {
+      set('文字');
+      button?.setAttribute('title', '当前浏览器不支持本地语音识别，请直接输入文字。');
+      button?.addEventListener('click', () => toast?.('当前浏览器不支持本地语音识别，请直接输入文字。'));
+      return {stop() {}};
     }
-    async function start() {
-      if (busy) return;
-      if (!global.MediaRecorder || !global.navigator?.mediaDevices?.getUserMedia) { fail('当前浏览器不支持麦克风录音。'); return; }
+    const stop = () => { if (recognition && listening) recognition.stop(); };
+    button?.addEventListener('click', () => {
+      if (listening) return stop();
       try {
-        stream = await navigator.mediaDevices.getUserMedia({audio:true});
-        const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
-        const type = types.find(value => MediaRecorder.isTypeSupported?.(value)) || '';
-        const chunks = []; recorder = new MediaRecorder(stream, type ? {mimeType:type} : undefined); started = Date.now();
-        recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-        recorder.onerror = () => fail('麦克风录音失败，可改用文字');
-        recorder.onstop = () => { const blob = new Blob(chunks, {type: recorder?.mimeType || type || 'audio/webm'}); cleanup(); transcribe(blob, original()); };
-        recorder.start(); set('停止', true); if (stopButton) stopButton.hidden = false;
-        timer = global.setTimeout(() => stop(), 55_000);
-      } catch (error) { fail(error?.name === 'NotAllowedError' ? '麦克风权限未开启。语音将发送到腾讯云进行识别；念响本机不长期保存原始录音。' : '无法开始麦克风录音。'); }
-    }
-    function stop() { if (recorder && recorder.state !== 'inactive') recorder.stop(); }
-    button?.addEventListener('click', () => recorder ? stop() : start());
-    stopButton?.addEventListener('click', stop);
-    global.addEventListener?.('pagehide', cleanup); global.document?.addEventListener?.('visibilitychange', () => { if (global.document.hidden) stop(); });
-    return {stop, cleanup};
+        recognition = new Recognition(); recognition.lang = 'zh-CN'; recognition.interimResults = true; recognition.continuous = false;
+        recognition.onstart = () => { listening = true; draft = String(input?.value || '').trim(); set('停止', true); };
+        recognition.onresult = event => { let text = ''; for (let i = event.resultIndex; i < event.results.length; i++) text += event.results[i][0].transcript; const value = text.trim(); if (input && value) { input.value = draft ? `${draft}\n${value}` : value; input.dispatchEvent(new Event('input', {bubbles:true})); } };
+        recognition.onerror = event => { if (event.error === 'not-allowed' || event.error === 'service-not-allowed') fail('浏览器未允许麦克风或本地语音识别。'); else if (event.error !== 'aborted') fail('本地语音识别失败，请重试或改用文字。'); };
+        recognition.onend = () => { listening = false; recognition = null; set('语音'); };
+        recognition.start();
+      } catch (_) { fail('无法启动本地语音识别，请重试或改用文字。'); }
+    });
+    global.addEventListener?.('pagehide', stop);
+    return {stop};
   }
   global.XinjiVoiceInput = {attach};
 })(window);

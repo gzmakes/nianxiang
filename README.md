@@ -44,12 +44,4 @@ Linux/macOS 的完整开发命令和跨端同步说明见 `imports/neuroecho-han
 .\scripts\setup_windows_voice.ps1 -EnableTts -ReferenceAudio 'C:\\path\\to\\reference.wav'
 ```
 
-ASR 使用每台电脑自己的腾讯云凭证，放在 `%USERPROFILE%\.tencentcloud\credentials`，不要提交到 GitHub：
-
-```ini
-[default]
-secret_id = 你的 SecretId
-secret_key = 你的 SecretKey
-```
-
-最小 CAM 权限是 `asr:SentenceRecognition` 和 `asr:GetUsageByDate`。小鲸鱼 TTS 还需要本机运行 GPT-SoVITS `127.0.0.1:9880`，参考音频路径可以通过脚本参数调整。运行 `.\scripts\check_windows_voice.ps1` 检查配置、念响服务、FFmpeg、ASR 凭证和 TTS 端口。
+语音输入使用浏览器已有的 `SpeechRecognition` / `webkitSpeechRecognition`，录音不会上传到腾讯云，也不需要 ASR 密钥。Chrome/Edge 支持时点击“语音”即可把识别结果放回草稿；不支持的浏览器请直接输入文字。小鲸鱼 TTS 需要本机运行 GPT-SoVITS `127.0.0.1:9880`，参考音频路径可以通过脚本参数调整。运行 `./scripts/check_windows_voice.ps1` 检查本地语音状态。

@@ -1,6 +1,6 @@
 {
   "asr": {
-    "enabled": true,
+    "enabled": false,
     "region": "ap-shanghai",
     "engine": "16k_zh",
     "max_record_seconds": 55,

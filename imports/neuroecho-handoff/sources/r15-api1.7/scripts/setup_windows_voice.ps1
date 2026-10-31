@@ -27,20 +27,15 @@ if ($EnableTts -and [string]::IsNullOrWhiteSpace($ReferenceAudio)) {
 }
 if ($EnableTts -and -not (Test-Path $ReferenceAudio)) { throw "Reference audio not found: $ReferenceAudio" }
 
-$config = Get-Content -Raw $examplePath | ConvertFrom-Json
-$config.asr.enabled = [bool]$ffmpegAvailable
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$config = [System.IO.File]::ReadAllText($examplePath, $utf8) | ConvertFrom-Json
+$config.asr.enabled = $false
 $config.asr.ffmpeg_path = $FfmpegPath
 $config.tts.enabled = [bool]($EnableTts -and (Test-Path $ReferenceAudio))
 if ($EnableTts) { $config.tts.ref_audio_path = $ReferenceAudio }
-$config | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 $configPath
+$json = $config | ConvertTo-Json -Depth 8
+[System.IO.File]::WriteAllText($configPath, $json, [System.Text.UTF8Encoding]::new($false))
 
-$credentialPath = Join-Path $env:USERPROFILE '.tencentcloud\credentials'
 Write-Host "Wrote local voice config: $configPath"
-Write-Host "Tencent credentials file: $credentialPath"
-if (-not (Test-Path $credentialPath)) {
-  Write-Host 'ASR is not ready yet. Create the credentials file yourself with:'
-  Write-Host '[default]'
-  Write-Host 'secret_id = YOUR_SECRET_ID'
-  Write-Host 'secret_key = YOUR_SECRET_KEY'
-}
+Write-Host 'Speech input uses browser-local SpeechRecognition; Tencent Cloud credentials are not required.'
 Write-Host 'This script never writes credentials or copies private audio into the repository.'

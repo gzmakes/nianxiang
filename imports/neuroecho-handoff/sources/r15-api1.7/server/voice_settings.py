@@ -1,4 +1,4 @@
-"""Optional local voice configuration. Secrets stay in the Tencent SDK profile."""
+"""Local voice configuration. Speech input is browser-local; TTS stays local."""
 from __future__ import annotations
 
 import json
@@ -46,14 +46,26 @@ def _merge(base, override):
     return out
 
 
+def _sanitize(settings: dict) -> dict:
+    """Keep damaged local text from breaking GPT-SoVITS on Windows."""
+    tts = settings.setdefault("tts", {})
+    prompt = str(tts.get("prompt_text", ""))
+    if any(0xE000 <= ord(char) <= 0xF8FF for char in prompt) or "\ufffd" in prompt:
+        tts["prompt_text"] = DEFAULTS["tts"]["prompt_text"]
+    return settings
+
+
 def load_settings() -> dict:
     target = ROOT / "voice-settings.json"
     if not target.is_file():
-        return _env_override(_merge(DEFAULTS, {}))
+        return _env_override(_sanitize(_merge(DEFAULTS, {})))
     try:
-        return _env_override(_merge(DEFAULTS, json.loads(target.read_text(encoding="utf-8"))))
+        # PowerShell's UTF-8 output may include a BOM; accept both BOM and
+        # BOM-less JSON so a generated local config is never mistaken for a
+        # missing config and silently replaced by defaults.
+        return _env_override(_sanitize(_merge(DEFAULTS, json.loads(target.read_text(encoding="utf-8-sig")))))
     except (OSError, ValueError, TypeError):
-        return _env_override(_merge(DEFAULTS, {}))
+        return _env_override(_sanitize(_merge(DEFAULTS, {})))
 
 
 def _credentials_available() -> bool:

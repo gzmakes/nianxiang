@@ -70,3 +70,21 @@ def test_portable_voice_settings_accept_environment_overrides(monkeypatch, tmp_p
     assert settings['asr']['enabled'] is False
     assert settings['asr']['ffmpeg_path'] == str(tmp_path / 'ffmpeg.exe')
     assert settings['tts']['ref_audio_path'] == str(tmp_path / 'fish.wav')
+
+
+def test_voice_settings_accepts_utf8_bom(monkeypatch, tmp_path):
+    target = tmp_path / 'voice-settings.json'
+    target.write_text(json.dumps({'asr': {'enabled': True}, 'tts': {'enabled': True}}), encoding='utf-8-sig')
+    monkeypatch.setattr(voice_settings, 'ROOT', tmp_path)
+    settings = voice_settings.load_settings()
+    assert settings['asr']['enabled'] is True
+    assert settings['tts']['enabled'] is True
+
+
+def test_voice_settings_replaces_corrupted_tts_prompt(monkeypatch, tmp_path):
+    target = tmp_path / 'voice-settings.json'
+    target.write_text(json.dumps({'tts': {'enabled': True, 'prompt_text': '正常\ue6e6文本'}}), encoding='utf-8')
+    monkeypatch.setattr(voice_settings, 'ROOT', tmp_path)
+    settings = voice_settings.load_settings()
+    assert '\ue6e6' not in settings['tts']['prompt_text']
+    assert settings['tts']['prompt_text'] == voice_settings.DEFAULTS['tts']['prompt_text']
