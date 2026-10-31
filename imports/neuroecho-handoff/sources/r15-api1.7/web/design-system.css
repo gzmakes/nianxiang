@@ -279,21 +279,21 @@ html[data-reduce-transparency=true] #app .context,html[data-reduce-transparency=
 html[data-reduce-motion=true] .emoji-badge.is-new,html[data-reduce-motion=true] .emoji-float,html[data-reduce-motion=true] .emoji-orb{animation:none}
 @media(prefers-reduced-motion:reduce){.emoji-badge.is-new,.emoji-float,.emoji-orb{animation:none}}
 /* 搜索框：遮罩 + 液态玻璃卡；白色实底输入胶囊带放大镜；结果为白卡 */
-body:has(#app) .design-search{background:rgba(27,36,51,.28);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding-top:14vh}
-body:has(#app) .design-search-card{width:min(600px,100%);padding:16px;border-radius:28px;
+body:has(#app,#m-app) .design-search{background:rgba(27,36,51,.28);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding-top:14vh}
+body:has(#app,#m-app) .design-search-card{width:min(600px,100%);padding:16px;border-radius:28px;
   background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(255,255,255,.62) 48%,rgba(255,255,255,.76));border:1px solid rgba(255,255,255,.8);
   -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
   box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 24px 64px rgba(27,36,51,.18)}
-body:has(#app) .design-search-head{gap:8px}
-body:has(#app) .design-search-head input{height:48px;min-height:48px;padding:0 16px 0 44px;border-radius:24px;border:1px solid rgba(27,36,51,.10);font-size:14px;color:var(--ink);outline:none;
+body:has(#app,#m-app) .design-search-head{gap:8px}
+body:has(#app,#m-app) .design-search-head input{height:48px;min-height:48px;padding:0 16px 0 44px;border-radius:24px;border:1px solid rgba(27,36,51,.10);font-size:14px;color:var(--ink);outline:none;
   background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2356627A' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M16 16l4.5 4.5'/></svg>") no-repeat 16px center/18px}
-body:has(#app) .design-search-head input:focus-visible{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
-body:has(#app) .design-search-head .icon-btn{width:40px;height:40px;min-height:40px;padding:0;border-radius:20px;border:0;background:rgba(27,36,51,.07);color:var(--ink-mute);font-size:20px}
-body:has(#app) .design-search-card>.note{margin:12px 8px 4px;font-size:12px;color:var(--ink-mute)}
-body:has(#app) .design-search-results button{padding:12px 16px;margin:8px 0 0;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.86);cursor:pointer}
-body:has(#app) .design-search-results button:hover,body:has(#app) .design-search-results button:focus-visible{background:#fff;box-shadow:0 4px 12px rgba(80,100,170,.12)}
-body:has(#app) .design-search-results p{font-size:14px;margin:4px 0 0}
-html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96);-webkit-backdrop-filter:none;backdrop-filter:none}
+body:has(#app,#m-app) .design-search-head input:focus-visible{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+body:has(#app,#m-app) .design-search-head .icon-btn{width:40px;height:40px;min-height:40px;padding:0;border-radius:20px;border:0;background:rgba(27,36,51,.07);color:var(--ink-mute);font-size:20px}
+body:has(#app,#m-app) .design-search-card>.note{margin:12px 8px 4px;font-size:12px;color:var(--ink-mute)}
+body:has(#app,#m-app) .design-search-results button{padding:12px 16px;margin:8px 0 0;border-radius:16px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.86);cursor:pointer}
+body:has(#app,#m-app) .design-search-results button:hover,body:has(#app,#m-app) .design-search-results button:focus-visible{background:#fff;box-shadow:0 4px 12px rgba(80,100,170,.12)}
+body:has(#app,#m-app) .design-search-results p{font-size:14px;margin:4px 0 0}
+html[data-reduce-transparency=true] .emoji-bar,html[data-reduce-transparency=true] body:has(#app,#m-app) .design-search-card{background:rgba(255,255,255,.96);-webkit-backdrop-filter:none;backdrop-filter:none}
 /* Web 改版 4 (2026-10-30，产品要求)：设置并入右侧面板（替代“更多”）、对话在左侧区域居中、输入框改为单行胶囊（ChatGPT 式）、
    标语使用随项目打包的马善政楷书子集（OFL，见 web/fonts/README.md）。 */
 @font-face{font-family:"Echo Slogan";src:url("fonts/mashanzheng-slogan.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
@@ -430,7 +430,7 @@ html[data-reduce-motion=true] .presence-light-core,html[data-reduce-motion=true]
 .presence-light-core::before,.presence-light-core::after{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf);transition:transform .3s cubic-bezier(.2,.8,.2,1),height .4s ease,width .4s ease,top .4s ease,left .4s ease,border-radius .4s ease,background .3s ease,opacity .3s ease}
 @keyframes orb-blink{0%,90%,100%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}93%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(.08)}96%{transform:translate(var(--gaze-x),var(--gaze-y)) var(--eye-tf) scaleY(1)}}
 /* 搜索框：聚焦只是边缘略深、投影略大 */
-body:has(#app) .design-search-head input:focus,body:has(#app) .design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18);box-shadow:0 6px 18px rgba(80,100,170,.14)}
+body:has(#app,#m-app) .design-search-head input:focus,body:has(#app,#m-app) .design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18);box-shadow:0 6px 18px rgba(80,100,170,.14)}
 /* emoji 回应按钮：和语音图标一样 32×32、同一条线 */
 #app .msg .emoji-react-btn{top:28px;width:32px;height:32px;min-width:32px;min-height:32px;border-radius:16px}
 /* 心情记录卡 */
@@ -467,7 +467,7 @@ html[data-reduce-motion=true] .mood-card .mood-point::after{animation:none}
 #app .msg [data-voice-clip]{min-width:32px;right:-40px}
 #app .msg .emoji-react-btn{right:-40px}
 #app .msg.assistant:has([data-voice-clip]:not([hidden])) .emoji-react-btn{right:-80px}
-body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none}
+body:has(#app,#m-app) .design-search-head input{-webkit-appearance:none;appearance:none}
 /* Web 改版 8 (2026-10-31，产品要求)：搜索弹层里任何元素聚焦都不画描边（不依赖 :has）；标语更浅更小；右侧面板按钮统一成小号、同高、对齐。 */
 .design-search :focus,.design-search :focus-visible,.design-search:focus,.design-search:focus-visible,.design-search-card:focus,.design-search-card:focus-visible{outline:none!important;outline-offset:0!important}
 .design-search-head input:focus,.design-search-head input:focus-visible{outline:none!important;border-color:rgba(27,36,51,.18)!important;box-shadow:0 6px 18px rgba(80,100,170,.14)!important;background:#fff!important}
@@ -482,7 +482,7 @@ body:has(#app) .design-search-head input{-webkit-appearance:none;appearance:none
 #app .context .followup-card>.text-btn,#app .context .today-app-list>.text-btn{margin-top:4px}
 /* Web 改版 9 (2026-10-31，产品要求)：人格切换（念响 / 小鲸鱼）与模式切换（陪伴 / 工作）。四个空间是本设备的视图（persona-switch.js），
    换空间就像换了一个对话框；小鲸鱼的光球换成鲸鱼形状和海蓝配色，眼睛、表情、状态变化照旧。 */
-html[data-space-arming] #app #messages{visibility:hidden}
+html[data-space-arming] #app #messages,html[data-space-arming] #m-app #m-messages{visibility:hidden}
 #app #design-topics{display:none}
 #app .space-modes{flex:none}
 #app .conversation-persona{position:relative}
@@ -568,3 +568,82 @@ html[data-reduce-motion=true] [data-companion-art]::before{animation:none}
 #app .context input[type=checkbox]:active,#app .context input[type=radio]:active{transform:scale(.85)}
 html[data-reduce-motion=true] #app .context .tab-panel,html[data-reduce-motion=true] #app .context .tab-panel>*,html[data-reduce-motion=true] #app .context details>*,html[data-reduce-motion=true] #app .context .tab-indicator{animation:none;transition:none}
 @media(prefers-reduced-motion:reduce){#app .context .tab-panel,#app .context .tab-panel>*,#app .context details>*,#app .context .tab-indicator{animation:none;transition:none}}
+/* H5 同步 (2026-10-31，产品要求)：把 Web 改版 2–11 搬到手机页（m.html）。顶栏改成居中的光球 + 人格胶囊 + 标语；
+   话题行换成 陪伴 / 工作；气泡宽度随文字、去掉气泡下的文字按钮、语音图标与 emoji 笑脸排在气泡下；输入框改成白色胶囊（＋ / 表情 / 语音 / 发送）；
+   搜索框、设置里的开关、心情卡、光球表情 / 小鲸鱼、底部页签滑块与弹层切入都复用 Web 的同一套模块
+   （emoji-reactions / message-voice / orb-face / mood-polish / persona-switch / panel-motion，各模块里加了 #m-app 的选择器）。 */
+#m-app .m-top{position:relative;z-index:5;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;margin:10px 16px 4px;padding:10px 16px 10px;border-radius:30px;min-height:0}
+#m-app .m-brand.conversation-persona{position:relative;flex-direction:column;align-items:center;gap:0;text-align:center;font-family:var(--sans);letter-spacing:0}
+#m-app .m-brand .mark{display:grid;width:56px;height:56px;margin:0 auto -8px;position:relative;z-index:1}
+#m-app .m-brand .mark .presence-light{width:56px;height:56px}
+#m-app .m-brand-text{display:flex;flex-direction:column;align-items:center}
+#m-app .m-brand h2{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;padding:12px 24px 5px;border-radius:999px;font-size:15px;font-weight:600;line-height:1.3;color:var(--ink);letter-spacing:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,.66));border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.98),0 6px 18px rgba(80,100,170,.12)}
+#m-app .m-brand h2.persona-name{cursor:pointer;user-select:none;-webkit-user-select:none}
+#m-app .m-brand h2.persona-name::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.55}
+#m-app .m-brand h2.persona-name[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+#m-app .m-brand h2:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
+html[data-persona=whale] #m-app .m-brand h2{color:#2B4A8A}
+#m-app .m-brand small{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+#m-app .echo-slogan{display:block;margin:6px 0 0;font-family:"Echo Slogan","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi",serif;font-size:17px;font-weight:400;line-height:1.3;letter-spacing:.1em;color:#56627A}
+#m-app .m-top-actions{position:absolute;top:8px;right:8px;gap:0}
+#m-app .m-top-actions button{width:40px;height:40px;min-width:40px;min-height:40px;padding:0;display:grid;place-items:center;color:var(--ink-mute);font-size:0}
+#m-app .m-top-actions button::before{content:"";width:20px;height:20px;background:currentColor;-webkit-mask:var(--t-icon) center/contain no-repeat;mask:var(--t-icon) center/contain no-repeat}
+#m-app #m-design-search{--t-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M16 16l4.5 4.5'/></svg>")}
+#m-app #m-design-settings{--t-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M4 7h10M18 7h2M4 17h4M12 17h8'/><circle cx='16' cy='7' r='2'/><circle cx='10' cy='17' r='2'/></svg>")}
+#m-app .persona-menu{top:calc(100% + 4px)}
+/* 话题行：陪伴 / 工作 在左，安静开关在右（话题筛选由 persona-switch.js 接管） */
+#m-app #m-design-topics{display:none}
+#m-app .space-modes{flex:none;padding:2px;border-radius:17px}
+#m-app .space-modes .topic-chip{min-height:30px;padding:4px 14px;font-size:12px;border-radius:15px}
+/* 空状态：问候上面加一句小字（人格切换时跟着换）；矮屏的「光球在左、文字在右」布局照旧 */
+#m-app .chat-hello{font-size:13px;color:var(--ink-mute);margin:0 0 4px}
+@media(max-width:600px) and (max-height:900px){#m-app .m-chat-empty>.chat-hello{grid-column:2;align-self:end}}
+/* 气泡：宽度随文字；去掉「朗读」「标记话题」；语音图标与 emoji 笑脸排在气泡下面（手机上没有悬停，所以常显） */
+#m-app .msg{position:relative;width:fit-content;max-width:min(88%,540px)}
+#m-app .msg .bubble{position:relative;width:fit-content;max-width:100%;box-sizing:border-box}
+#m-app .msg.user .bubble{margin-left:auto}
+#m-app .msg.has-emoji{margin-bottom:12px}
+#m-app .msg [data-voice-message],#m-app .msg [data-topic-message],#m-app .msg [data-voice-clip-slot]{display:none!important}
+#m-app .msg [data-voice-clip],#m-app .msg .emoji-react-btn{position:static;display:inline-flex;align-items:center;justify-content:center;vertical-align:top;width:32px;height:32px;min-width:32px;min-height:32px;margin:6px 4px 0 0;padding:0;
+  border-radius:16px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.7);color:var(--ink-mute);font-size:0!important;opacity:1;box-shadow:0 2px 8px rgba(80,100,170,.12)}
+#m-app .msg [data-voice-clip][hidden]{display:none}
+#m-app .msg [data-voice-clip]::before{content:"";width:18px;height:18px;background:currentColor;-webkit-mask:var(--v-icon) center/contain no-repeat;mask:var(--v-icon) center/contain no-repeat}
+#m-app .msg [data-voice-clip]{--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M4 10v4M8 7v10M12 4v16M16 8v8M20 10.5v3'/></svg>")}
+#m-app .msg [data-voice-clip][data-voice-state=ready]{color:var(--ink);--v-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8.5 6.2v11.6c0 .7.8 1.2 1.4.8l9-5.8a1 1 0 0 0 0-1.6l-9-5.8c-.6-.4-1.4 0-1.4.8z' fill='black'/></svg>")}
+#m-app .msg [data-voice-clip][data-voice-state=playing]{color:#fff;background:var(--ink);border-color:var(--ink)}
+#m-app .msg [data-voice-clip][data-voice-state=playing]::before{animation:voice-wave 1s ease-in-out infinite}
+#m-app .msg [data-voice-clip][data-voice-state=busy]::before{animation:voice-wave .8s ease-in-out infinite;opacity:.6}
+#m-app .msg [data-voice-clip][data-voice-state=error]{color:var(--danger)}
+html[data-reduce-motion=true] #m-app .msg [data-voice-clip]::before{animation:none}
+/* 输入框：一行白色胶囊，左 ＋，中间输入，右侧 表情 / 语音 / 发送（圆形主按钮） */
+#m-app #m-composer{display:flex;align-items:flex-end;gap:0;min-height:56px;padding:8px;box-sizing:border-box;border-radius:28px;border:1px solid rgba(27,36,51,.10);background:#fff!important;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 4px 16px rgba(80,100,170,.10)}
+#m-app #m-composer:focus-within{border-color:rgba(27,36,51,.24)}
+#m-app #m-input{flex:1;min-width:0;min-height:40px;max-height:160px;margin:0;padding:9px 4px;border:0!important;border-radius:0;outline:none;box-shadow:none!important;background:transparent!important;font-size:16px;line-height:22px;color:var(--ink);resize:none;field-sizing:content}
+#m-app #m-input:focus,#m-app #m-input:focus-visible{outline:none;box-shadow:none!important}
+#m-app #m-input::placeholder{color:rgba(86,98,122,.7)}
+#m-app #m-composer button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;min-width:40px;min-height:40px;padding:0;border:0!important;border-radius:20px;background:transparent!important;color:var(--ink)!important;font-size:0!important;box-shadow:none;cursor:pointer}
+#m-app #m-composer button.is-hidden{display:none}
+#m-app #m-composer #m-mic.listening{background:var(--chip-peach)!important}
+#m-app #m-composer .send{background:var(--ink)!important;color:#fff!important}
+#m-app #m-composer:has(#m-input:placeholder-shown) .send{background:rgba(27,36,51,.16)!important}
+#m-app #m-composer button::before{content:"";width:20px;height:20px;background:currentColor;-webkit-mask:var(--c-icon) center/contain no-repeat;mask:var(--c-icon) center/contain no-repeat}
+#m-app #m-composer-connect{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><path d='M12 5v14M5 12h14'/></svg>")}
+#m-app #m-meme{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8.5'/><path d='M8.5 14c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2'/><path d='M9.5 10h.01M14.5 10h.01' stroke-width='2.4'/></svg>")}
+#m-app #m-mic{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='3.5' width='6' height='11' rx='3'/><path d='M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V20.5'/></svg>")}
+#m-app #m-stop{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='7' y='7' width='10' height='10' rx='2' fill='black'/></svg>")}
+#m-app #m-composer .send{--c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 18.5V5.5M6.5 11 12 5.5 17.5 11'/></svg>")}
+/* 底部页签：会滑动的白色底（panel-motion.js）；弹层打开时内容依次淡入；弹层里的按钮有涟漪 */
+#m-app .m-tabbar.has-indicator{isolation:isolate}
+#m-app .m-tabbar .tab-indicator{position:absolute;left:0;top:0;z-index:0;border-radius:26px;background:#ffffffed;box-shadow:0 2px 8px #5064aa12;opacity:0;pointer-events:none;
+  transition:transform .32s cubic-bezier(.3,.9,.3,1),width .32s cubic-bezier(.3,.9,.3,1),opacity .2s ease}
+#m-app .m-tabbar.has-indicator .m-tab{position:relative;z-index:1;transition:color .18s ease}
+#m-app .m-tabbar.has-indicator .m-tab.active{background:transparent;box-shadow:none}
+#m-app .sheet-card .has-ripple{position:relative;overflow:hidden}
+#m-app .sheet-card .click-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.14;transform:scale(0);animation:click-ripple .5s ease-out forwards;pointer-events:none}
+#m-sheet.is-entering .sheet-body>*{animation:panel-item-in .36s cubic-bezier(.2,.8,.2,1) both}
+#m-sheet.is-entering .sheet-body>*:nth-child(2){animation-delay:.04s}
+#m-sheet.is-entering .sheet-body>*:nth-child(3){animation-delay:.08s}
+#m-sheet.is-entering .sheet-body>*:nth-child(n+4){animation-delay:.12s}
+html[data-reduce-motion=true] #m-app .m-tabbar .tab-indicator,html[data-reduce-motion=true] #m-sheet .sheet-body>*{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){#m-app .m-tabbar .tab-indicator,#m-sheet .sheet-body>*{animation:none;transition:none}}

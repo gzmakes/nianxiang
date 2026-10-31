@@ -1992,6 +1992,7 @@
     $("#m-onboarding-return")?.addEventListener("click", () => closeMobileWizard());
     $("#m-skip")?.addEventListener("click", () => closeMobileWizard());
     $("#m-open-connect")?.addEventListener("click", showMobileOnboarding);
+    $("#m-composer-connect")?.addEventListener("click", showMobileOnboarding);
     $("#m-skip-connect")?.addEventListener("click", () => $("#m-chat-empty")?.classList.add("is-hidden"));
     $("#m-chat-empty")?.querySelectorAll("[data-prompt]").forEach((b) => b.onclick = () => window.XinjiCompanionChoices.put($("#m-input"), b.dataset.prompt));
     $("#m-back-2").onclick = showMobileOnboarding;

@@ -10,7 +10,7 @@
 <link rel="manifest" href="/static/manifest.webmanifest" />
 <link rel="stylesheet" href="/static/m.css?v=c9e1175006f1722f" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=50fb7c1efdff4681" />
+<link rel="stylesheet" href="/static/design-system.css?v=624a50bb1b134597" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
@@ -62,7 +62,7 @@
 <!-- 主界面 -->
 <div id="m-app" class="app is-hidden">
   <header class="m-top">
-    <div class="m-brand"><span class="mark" data-design-light></span><span>回响<small id="m-design-state">安静陪着</small></span></div>
+    <div class="m-brand conversation-persona"><span class="mark persona-face" data-design-light data-companion-art></span><div class="m-brand-text"><h2>回响</h2><small id="m-design-state" class="companion-status" role="status" aria-live="polite">安静陪着</small><p class="echo-slogan">念有所感，必有回响</p></div></div>
     <div class="m-top-actions"><button type="button" id="m-design-search" aria-label="搜索对话和记忆">⌕</button><button type="button" id="m-design-settings" aria-label="打开设置与连接">⚙</button></div>
     <div class="m-chips" style="display:none">
       <span id="m-engine" class="chip">在线</span>
@@ -74,7 +74,8 @@
   <div class="chat-viewport">
   <main id="m-main" class="m-main">
     <div id="m-chat-empty" class="m-chat-empty">
-      <div data-design-light aria-hidden="true"></div>
+      <div data-design-light data-companion-art aria-hidden="true"></div>
+      <div class="chat-hello">属于你的一小段空白</div>
       <div class="m-greet">今天，也留一点空间给自己。</div>
       <p>我是回响。想说一件小事，或慢慢理一理心情，<br class="m-greeting-break">都可以从这里开始。</p>
       <div class="m-chips-row" aria-label="选择一句话开始聊天">
@@ -129,6 +130,7 @@
     <span class="response-choices-hint">加入草稿，发送后生效；随时可换</span>
   </div>
   <form id="m-composer" class="composer">
+    <button type="button" class="composer-connect" id="m-composer-connect" aria-label="连接应用" title="连接应用">＋</button>
     <textarea id="m-input" rows="1" placeholder="说点什么……"></textarea>
     <button type="button" class="mic is-hidden" id="m-meme">表情</button>
     <button type="button" class="mic" id="m-mic">语音</button>
@@ -238,6 +240,12 @@
 <script src="/static/voice-reply.js?v=9f7d25bfe2a4ec2d"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
 <script src="/static/chat-delivery.js?v=00d83fc7f39a8459"></script>
-<script src="/static/m.js?v=dfce6c2173f305b3"></script>
+<script src="/static/m.js?v=5dcfcb506f4246ea"></script>
+<script src="/static/emoji-reactions.js?v=343cbe7f2fcb6316"></script>
+<script src="/static/message-voice.js?v=d2f5f242df660536"></script>
+<script src="/static/orb-face.js?v=40a8f976250f2036"></script>
+<script src="/static/mood-polish.js?v=1c748d608167772c"></script>
+<script src="/static/persona-switch.js?v=c0af4cb1d036c4d5"></script>
+<script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
 </body>
 </html>
