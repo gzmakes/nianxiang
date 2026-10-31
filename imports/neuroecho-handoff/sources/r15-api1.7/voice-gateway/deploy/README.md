@@ -26,6 +26,19 @@ If you use a different layout, edit `WorkingDirectory`, `PATH`, and
 API after the process is healthy; private filenames are intentionally not
 committed.
 
+Some HAI images do not boot with systemd. For those images, use
+`deploy/run_hai.sh` from the gateway directory. It starts both loopback-only
+processes with `nohup`, pidfiles, and the same paths as the service templates:
+
+```bash
+chmod +x /opt/nianxiang/voice-gateway/deploy/run_hai.sh
+/opt/nianxiang/voice-gateway/deploy/run_hai.sh start
+/opt/nianxiang/voice-gateway/deploy/run_hai.sh status
+```
+
+The script does not open a public port and does not contain tokens or model
+filenames. Re-run it after an instance restart.
+
 Keep ports 9880 and 9881 loopback-only. Use `nginx.conf.example` with a real
 certificate, or a private overlay network, for remote R15 backends. The
 Tencent Cloud console must be used by an authorized operator to confirm the
