@@ -805,3 +805,18 @@ html[data-reduce-transparency=true] #onboarding.onboarding{background:#eef1fc;-w
 /* 第 16 轮修正：接入资料的卡片改成和右侧面板同款玻璃（之前被早期的白卡规则盖住），气泡在上面才分得开。 */
 #onboarding .onboarding-card{background:rgba(255,255,255,.5)!important;border:1px solid rgba(255,255,255,.8)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 16px 48px rgba(80,100,170,.14)!important;-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);padding:16px 18px 14px!important}
 html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba(255,255,255,.94)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* Web 改版 20 (2026-10-31，产品要求)：气泡旁的语音图标和 emoji 笑脸改为垂直居中对齐气泡；
+   心情平面改用四个色系（左上 黄 / 右上 绿 / 左下 粉 / 右下 蓝，同样的柔和渐变），两条滑杆和坐标标签跟着换色。 */
+@media(min-width:900px){
+  #app .msg [data-voice-clip]{top:50%;transform:translateY(-50%)}
+  #app .msg.assistant .bubble>.emoji-react-btn{top:50%;transform:translateY(-50%)}
+}
+.mood-card .mood-map{
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.88) 0,rgba(255,255,255,0) 56%),
+    radial-gradient(circle at 0 0,#F3DE8E 0,rgba(243,222,142,0) 64%),radial-gradient(circle at 100% 0,#C5E0C8 0,rgba(197,224,200,0) 64%),
+    radial-gradient(circle at 0 100%,#F2BFC6 0,rgba(242,191,198,0) 64%),radial-gradient(circle at 100% 100%,#BFC8EA 0,rgba(191,200,234,0) 64%),
+    linear-gradient(135deg,#F7EBC2,#D9E3F0 55%,#D7DCEF)}
+.mood-card .mood-axis.top{color:#1B2433}.mood-card .mood-axis.bottom{color:#56627A}
+.mood-card .mood-axis.left{color:#B35A67}.mood-card .mood-axis.right{color:#4E8A5F}
+.mood-card .mood-sliders input[type=range]{--track-a:#EFB7BE;--track-b:#B9D7BF;--track-dim-a:rgba(239,183,190,.4);--track-dim-b:rgba(185,215,191,.4);--thumb:#4E8A5F}
+.mood-card .mood-sliders input[data-mood-y]{--track-a:#C3CBEA;--track-b:#F1DB8C;--track-dim-a:rgba(195,203,234,.4);--track-dim-b:rgba(241,219,140,.45);--thumb:#1B2433}
