@@ -221,6 +221,7 @@ class VoiceStatusResponse(BaseModel):
     tts_base_url: str
     tts_port: int
     tts_state: str
+    tts_provider: str = "local"
 
 
 class DeliveryStopIn(BaseModel):
@@ -666,7 +667,8 @@ async def transcribe_voice(request: Request):
 def voice_status():
     settings = voice_settings.load_settings()
     result = voice_settings.status(settings)
-    result.update({'tts_state': voice_clip.status(settings)['state']})
+    clip_status = voice_clip.status(settings)
+    result.update({'tts_state': clip_status['state'], 'tts_provider': clip_status.get('provider', 'local')})
     return result
 
 

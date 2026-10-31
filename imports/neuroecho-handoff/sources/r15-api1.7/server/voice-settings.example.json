@@ -10,7 +10,10 @@
   },
   "tts": {
     "enabled": true,
+    "provider": "local",
     "base_url": "http://127.0.0.1:9880",
+    "gateway_url": "",
+    "gateway_token": "",
     "persona_id": "whale",
     "ref_audio_path": "D:\\Apps\\GPT-SoVITS\\refs\\fish_20261027.wav",
     "prompt_text": "你终于来了，我好饿啊，爸爸给我喂点饭吧，我要吃大白饭",

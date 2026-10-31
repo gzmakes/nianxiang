@@ -52,9 +52,10 @@ async def serve(args):
         raise ValueError('Existing data-dir is not a private directory; permissions were not changed.')
     args.data_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
     sys.path.insert(0,str(PROJECT))
-    from server import core,model_settings
+    from server import core,model_settings,voice_settings
     core.DB_PATH=str(args.data_dir/'data.db')
     model_settings.PATH=str(args.data_dir/'model-settings.json')
+    voice_settings.PATH=str(args.data_dir/'voice-settings.json')
     from server.main import app
     from server.paired_app import create_remote_app
     import uvicorn

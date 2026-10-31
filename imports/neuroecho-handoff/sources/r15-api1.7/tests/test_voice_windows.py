@@ -36,6 +36,39 @@ def test_windows_tts_rejects_non_whale(monkeypatch):
     with pytest.raises(voice_clip.VoiceUnavailable): voice_clip.synthesize('你好', persona_id='nianxiang')
 
 
+def test_remote_tts_posts_gateway_token_and_wav(monkeypatch):
+    expected = wav_bytes(frames=4000)
+    config = {'tts': {'enabled': True, 'provider': 'remote',
+                      'gateway_url': 'https://voice.example/v1',
+                      'gateway_token': 'test-token', 'timeout_seconds': 4}}
+    calls = []
+    class Reply:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self, *args): return expected
+    def open_url(request, timeout):
+        calls.append((request, timeout))
+        return Reply()
+    monkeypatch.setattr(voice_settings, 'load_settings', lambda: config)
+    monkeypatch.setattr(voice_clip.urllib.request, 'urlopen', open_url)
+    assert voice_clip.synthesize('你好', persona_id='whale') == expected
+    request, timeout = calls[0]
+    assert request.full_url == 'https://voice.example/v1/tts'
+    assert request.get_header('Authorization') == 'Bearer test-token'
+    assert json.loads(request.data) == {'persona_id': 'whale', 'text': '你好'}
+    assert timeout == 4
+
+
+def test_remote_tts_does_not_use_local_url_when_gateway_missing(monkeypatch):
+    config = {'tts': {'enabled': True, 'provider': 'remote',
+                      'base_url': 'http://127.0.0.1:9880', 'gateway_token': 'secret'}}
+    monkeypatch.setattr(voice_settings, 'load_settings', lambda: config)
+    monkeypatch.setattr(voice_clip.urllib.request, 'urlopen',
+                        lambda *args, **kwargs: pytest.fail('must not call local TTS'))
+    with pytest.raises(voice_clip.VoiceUnavailable, match='未配置'):
+        voice_clip.synthesize('你好', persona_id='whale')
+
+
 def test_asr_converts_and_calls_sdk_then_cleans(monkeypatch, tmp_path):
     converted = tmp_path / 'converted.wav'; converted.write_bytes(wav_bytes(rate=16000)); calls = []
     monkeypatch.setattr(asr_service, 'run_ffmpeg', lambda *args: converted)

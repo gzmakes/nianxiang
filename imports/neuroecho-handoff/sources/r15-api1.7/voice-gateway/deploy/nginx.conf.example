@@ -1,0 +1,18 @@
+# Install as a server block after replacing the hostname and certificate paths.
+# Keep 9880/9881 bound to loopback; expose only HTTPS 443.
+server {
+    listen 443 ssl http2;
+    server_name voice.example.com;
+    ssl_certificate /etc/letsencrypt/live/voice.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/voice.example.com/privkey.pem;
+
+    client_max_body_size 1m;
+    location / {
+        proxy_pass http://127.0.0.1:9881;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 130s;
+        proxy_send_timeout 130s;
+    }
+}

@@ -49,3 +49,22 @@ node --test desktop/test/*.js
 ```
 
 原生宿主/HTTP脚本按各端README显式运行。最终日志在`docs/技术交接/验证记录/`及两端`ACCEPTANCE-ROUND15.md`。资源生成不替代手写布局与平台权限验收，不以测试数推算90%产品完成率。
+
+## 云端小鲸鱼语音（可选）
+
+语音输入仍由浏览器的本地 `SpeechRecognition` 处理。小鲸鱼 TTS 默认保留本机
+GPT-SoVITS；团队后端也可以把 R15 配置为调用 `voice-gateway`：
+
+```text
+NIANXIANG_TTS_ENABLED=true
+NIANXIANG_TTS_PROVIDER=remote
+NIANXIANG_TTS_BASE_URL=https://你的网关域名/v1
+NIANXIANG_TTS_TOKEN=仅服务端保存的个人 Token
+NIANXIANG_TTS_PERSONA_ID=whale
+NIANXIANG_TTS_TIMEOUT=120
+```
+
+Token 只由 R15 后端读取，不会进入浏览器或静态资源。网关应通过可信 HTTPS 或
+私有网络访问；GPT-SoVITS 的 `9880` 只监听云主机回环地址。没有网关配置时，
+Windows 本机模式仍使用 `XINJI_TTS_URL` 和 `voice-settings.json` 中的本地设置。
+网关的部署、Token 哈希轮换和 Nginx 模板见 `voice-gateway/README.md`。

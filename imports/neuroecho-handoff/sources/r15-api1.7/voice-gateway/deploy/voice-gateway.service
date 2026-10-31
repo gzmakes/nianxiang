@@ -1,0 +1,20 @@
+[Unit]
+Description=Nianxiang Voice Gateway
+After=network.target gpt-sovits.service
+Wants=gpt-sovits.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/nianxiang/voice-gateway
+EnvironmentFile=/etc/nianxiang/voice-gateway.env
+ExecStart=/opt/nianxiang/voice-gateway/start.sh
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/nianxiang
+
+[Install]
+WantedBy=multi-user.target

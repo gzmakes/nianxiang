@@ -30,6 +30,44 @@ def _synthesize_windows(text,persona_id,settings):
         return _validate_wav(data,int(cfg.get('max_audio_bytes',MAX_BYTES)))
     except VoiceUnavailable: raise
     except (OSError,urllib.error.URLError,TimeoutError) as exc: raise VoiceUnavailable('GPT-SoVITS 服务不可用，可使用朗读功能。') from exc
+
+def _synthesize_remote(text,persona_id,settings):
+    """Call the authenticated cloud Voice Gateway from the R15 backend.
+
+    The bearer token is read only from the server-side settings and is never
+    included in an exception or response.  The gateway returns WAV bytes just
+    like the local provider, so the existing message ownership and playback
+    checks remain unchanged.
+    """
+    cfg=settings.get('tts', {})
+    if persona_id != str(cfg.get('persona_id', 'whale')) or persona_id != 'whale':
+        raise VoiceUnavailable('只有小鲸鱼人格可以生成小鲸鱼语音。')
+    base=str(cfg.get('gateway_url') or '').strip().rstrip('/')
+    token=str(cfg.get('gateway_token') or '').strip()
+    if not base or not token:
+        raise VoiceUnavailable('云端语音服务未配置，可使用朗读功能。')
+    if base.endswith('/v1/tts'):
+        url = base
+    elif base.endswith('/v1'):
+        url = base + '/tts'
+    else:
+        url = base + '/v1/tts'
+    req=urllib.request.Request(url,
+        data=json.dumps({'persona_id': persona_id, 'text': text}, ensure_ascii=False).encode('utf-8'),
+        headers={'Content-Type':'application/json; charset=utf-8', 'Authorization':'Bearer '+token}, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=float(cfg.get('timeout_seconds', 120))) as response:
+            data=response.read(int(cfg.get('max_audio_bytes', MAX_BYTES))+1)
+        return _validate_wav(data, int(cfg.get('max_audio_bytes', MAX_BYTES)))
+    except urllib.error.HTTPError as exc:
+        # Do not forward the gateway body: it can contain deployment details.
+        if exc.code in (401, 403):
+            raise VoiceUnavailable('云端语音鉴权失败，请检查本机语音 Token。') from exc
+        if exc.code in (429, 503, 504):
+            raise VoiceUnavailable('云端语音服务繁忙，请稍后再试。') from exc
+        raise VoiceUnavailable('云端语音服务返回错误，可使用朗读功能。') from exc
+    except (OSError, urllib.error.URLError, TimeoutError) as exc:
+        raise VoiceUnavailable('云端语音服务不可用，可使用朗读功能。') from exc
 def _synthesize_macos(text):
     if not os.path.exists('/usr/bin/say') or not os.path.exists('/usr/bin/afconvert'): raise VoiceUnavailable('本机语音生成不可用，可使用浏览器朗读。')
     with tempfile.TemporaryDirectory(prefix='xinji-voice-') as folder:
@@ -44,9 +82,16 @@ def synthesize(text:str,persona_id:str='whale')->bytes:
     if not text: raise ValueError('这条回复没有可生成语音的文字。')
     settings=voice_settings.load_settings(); cfg=settings.get('tts',{})
     if len(text)>int(cfg.get('max_chars',MAX_CHARS)): raise ValueError(f"这条回复超过 {int(cfg.get('max_chars',MAX_CHARS))} 字，请使用朗读功能。")
-    if sys.platform=='win32' and not cfg.get('enabled'): raise VoiceUnavailable('本机语音生成未配置，可使用浏览器朗读。')
+    provider=str(cfg.get('provider','local')).strip().lower()
+    if provider not in ('local','remote'):
+        raise VoiceUnavailable('语音服务配置无效，可使用朗读功能。')
+    if provider=='remote' and not cfg.get('enabled', True):
+        raise VoiceUnavailable('云端语音服务未启用，可使用朗读功能。')
+    if provider=='local' and sys.platform=='win32' and not cfg.get('enabled'):
+        raise VoiceUnavailable('本机语音生成未配置，可使用朗读功能。')
     if not _slot.acquire(blocking=False): raise VoiceUnavailable('正在生成另一条语音，请稍后再试。')
     try:
+        if provider=='remote': return _synthesize_remote(text,persona_id,settings)
         if sys.platform=='win32': return _synthesize_windows(text,persona_id,settings)
         if sys.platform=='darwin': return _synthesize_macos(text)
         raise VoiceUnavailable('本机语音生成不可用，可使用浏览器朗读。')
@@ -61,8 +106,21 @@ def _port_open(base_url):
     except Exception: return False
 def status(settings=None):
     cfg=(settings or voice_settings.load_settings()).get('tts',{}); ref=Path(str(cfg.get('ref_audio_path','')))
+    if str(cfg.get('provider','local')).strip().lower()=='remote':
+        base=str(cfg.get('gateway_url') or '').strip().rstrip('/')
+        token=bool(str(cfg.get('gateway_token') or '').strip())
+        if not cfg.get('enabled', True): state='voice_not_configured'
+        elif not base or not token: state='remote_not_configured'
+        else:
+            try:
+                root = base[:-3].rstrip('/') if base.endswith('/v1') else base
+                with urllib.request.urlopen(urllib.request.Request(root+'/healthz'), timeout=.8): state='ready'
+            except Exception: state='service_not_running'
+        return {'enabled':bool(cfg.get('enabled', True)), 'state':state, 'provider':'remote',
+                'base_url':base, 'reference_audio':False}
     if sys.platform not in ('win32', 'darwin'): state='platform_unsupported'
     elif not cfg.get('enabled'): state='voice_not_configured'
     elif sys.platform=='win32' and not ref.is_file(): state='reference_audio_missing'
     else: state='ready' if _port_open(str(cfg.get('base_url','http://127.0.0.1:9880'))) else 'service_not_running'
-    return {'enabled':bool(cfg.get('enabled')),'state':state,'base_url':str(cfg.get('base_url','')),'reference_audio':ref.is_file()}
+    return {'enabled':bool(cfg.get('enabled')),'state':state,'provider':'local',
+            'base_url':str(cfg.get('base_url','')),'reference_audio':ref.is_file()}
