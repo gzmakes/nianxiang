@@ -24,6 +24,40 @@ class ModelError(RuntimeError):
     pass
 
 
+def _http_error_message(error: urllib.error.HTTPError) -> str:
+    """Keep provider status details useful without ever echoing credentials.
+
+    OpenAI-compatible gateways commonly put the actionable reason (quota,
+    concurrency, temporary outage) in a small JSON error body.  The old
+    adapter discarded it and only reported ``model http 429``, which made a
+    provider throttle look like a local chat failure.  Include only the
+    provider's message/type and correlation headers; never include request
+    headers or the bearer token.
+    """
+    detail = ""
+    try:
+        raw = error.read(4096).decode("utf-8", "replace")
+        payload = json.loads(raw)
+        item = payload.get("error") if isinstance(payload, dict) else None
+        if isinstance(item, dict):
+            bits = [item.get("message"), item.get("type"), item.get("code")]
+            detail = ": ".join(str(value) for value in bits if value)
+        elif isinstance(payload, dict) and payload.get("message"):
+            detail = str(payload["message"])
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        detail = ""
+    request_id = error.headers.get("X-Request-Id") or error.headers.get("x-request-id")
+    retry_after = error.headers.get("Retry-After")
+    suffix = []
+    if detail:
+        suffix.append(detail[:180])
+    if request_id:
+        suffix.append(f"request_id={request_id[:100]}")
+    if retry_after:
+        suffix.append(f"retry_after={retry_after[:40]}")
+    return f"model http {error.code}" + (": " + "; ".join(suffix) if suffix else "")
+
+
 class ModelClient:
     def __init__(self, base_url: str, api_key: str, model: str, timeout: float = DEFAULT_TIMEOUT):
         self.base_url = base_url.rstrip("/")
@@ -60,7 +94,7 @@ class ModelClient:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 data = json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
-            raise ModelError(f"model http {e.code}") from e
+            raise ModelError(_http_error_message(e)) from e
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             raise ModelError(f"model network: {e}") from e
         except (json.JSONDecodeError, UnicodeError) as e:
@@ -98,7 +132,7 @@ class ModelClient:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 data = json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
-            raise ModelError(f"model http {e.code}") from e
+            raise ModelError(_http_error_message(e)) from e
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             raise ModelError(f"model network: {e}") from e
         except (json.JSONDecodeError, UnicodeError) as e:
