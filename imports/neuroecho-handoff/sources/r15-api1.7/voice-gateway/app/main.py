@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
-import json
 import os
 import secrets
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import wave
 from dataclasses import dataclass
@@ -109,7 +109,11 @@ def synthesize(text: str, persona_id: str) -> bytes:
         raise ValueError(f"text exceeds {settings.max_chars} characters")
     if not settings.ref_audio_path or not os.path.isfile(settings.ref_audio_path):
         raise RuntimeError("reference audio is not configured")
-    payload = {
+    # GPT-SoVITS api_v2 exposes /tts as a GET endpoint.  Keep the gateway
+    # contract JSON/POST, but translate it to the local service's query
+    # parameters here.  Booleans must be lowercase strings because the
+    # service parses them through FastAPI/Pydantic query coercion.
+    params = {
         "text": clean,
         "text_lang": settings.text_lang,
         "ref_audio_path": settings.ref_audio_path,
@@ -118,13 +122,13 @@ def synthesize(text: str, persona_id: str) -> bytes:
         "text_split_method": "cut5",
         "batch_size": 1,
         "media_type": "wav",
-        "streaming_mode": False,
+        "streaming_mode": "false",
     }
+    separator = "&" if "?" in settings.tts_url else "?"
     request = urllib.request.Request(
-        settings.tts_url,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json; charset=utf-8"},
-        method="POST",
+        f"{settings.tts_url}{separator}{urllib.parse.urlencode(params)}",
+        headers={"Accept": "audio/wav, application/json"},
+        method="GET",
     )
     try:
         with urllib.request.urlopen(request, timeout=settings.timeout_seconds) as response:
