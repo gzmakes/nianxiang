@@ -540,3 +540,31 @@ html[data-reduce-motion=true] [data-companion-art]::before{animation:none}
 #app .context .tabs .tab:active{transform:scale(.95)}
 #app .context .mood-date:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.7)}
 #app .context .mini-btn.confirm:hover,#app .context .mood-save:hover{box-shadow:0 6px 16px rgba(27,36,51,.28)}
+/* Web 改版 11 (2026-10-31，产品要求)：右侧面板的点击动效——页签滑块、面板内容切入、按钮涟漪、卡片悬停、展开淡入（panel-motion.js） */
+#app .context .tabs.has-indicator{position:relative;isolation:isolate}
+#app .context .tabs .tab-indicator{position:absolute;left:0;top:0;z-index:0;border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(80,100,170,.14);opacity:0;pointer-events:none;
+  transition:transform .32s cubic-bezier(.3,.9,.3,1),width .32s cubic-bezier(.3,.9,.3,1),opacity .2s ease}
+#app .context .tabs.has-indicator .tab{position:relative;z-index:1}
+#app .context .tabs.has-indicator .tab.active{background:transparent;box-shadow:none}
+#app .context .tabs .tab{transition:color .18s ease,background-color .18s ease,transform .12s ease}
+#app .context .tab-panel.is-entering{animation:panel-in .3s cubic-bezier(.2,.8,.2,1) both}
+#app .context .tab-panel.is-entering>*{animation:panel-item-in .36s cubic-bezier(.2,.8,.2,1) both}
+#app .context .tab-panel.is-entering>*:nth-child(2){animation-delay:.04s}
+#app .context .tab-panel.is-entering>*:nth-child(3){animation-delay:.08s}
+#app .context .tab-panel.is-entering>*:nth-child(4){animation-delay:.12s}
+#app .context .tab-panel.is-entering>*:nth-child(5){animation-delay:.16s}
+#app .context .tab-panel.is-entering>*:nth-child(n+6){animation-delay:.2s}
+@keyframes panel-in{from{opacity:0}to{opacity:1}}
+@keyframes panel-item-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#app .context .has-ripple{position:relative;overflow:hidden}
+#app .context .click-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.14;transform:scale(0);animation:click-ripple .5s ease-out forwards;pointer-events:none}
+@keyframes click-ripple{to{transform:scale(1);opacity:0}}
+#app .context .today-card,#app .context .followup-card,#app .context .mood-card,#app .context .app-card,#app .context .mem-item{transition:transform .18s ease,box-shadow .2s ease}
+#app .context .today-card:hover,#app .context .followup-card:hover,#app .context .app-card:hover,#app .context .mem-item:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(80,100,170,.12)}
+#app .context details>*:not(summary){animation:panel-item-in .26s cubic-bezier(.2,.8,.2,1) both}
+#app .context summary{transition:background-color .16s ease}
+#app .context summary:hover{background:rgba(255,255,255,.5);border-radius:12px}
+#app .context input[type=checkbox],#app .context input[type=radio]{transition:transform .12s ease}
+#app .context input[type=checkbox]:active,#app .context input[type=radio]:active{transform:scale(.85)}
+html[data-reduce-motion=true] #app .context .tab-panel,html[data-reduce-motion=true] #app .context .tab-panel>*,html[data-reduce-motion=true] #app .context details>*,html[data-reduce-motion=true] #app .context .tab-indicator{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){#app .context .tab-panel,#app .context .tab-panel>*,#app .context details>*,#app .context .tab-indicator{animation:none;transition:none}}
