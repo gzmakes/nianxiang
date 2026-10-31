@@ -30,7 +30,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import apple_source, connectors, core, device_bridge, faults, gmail_source, insight_ai, lark, lark_auth, lark_search_auth, local_source, mindlink, model, model_settings, notion_source, plugin_bridge, real_sources, system_source
 from .core import BudgetExceeded
 from . import chat_turns, followups, moods, mood_operations, proactive_policy, companion_boundary, voice_clip, local_documents
-from . import notion_cli_source, git_source, feishu_account, lark_account_auth, connection_intro, gmail_cli_source, connector_auth, prompts
+from . import notion_cli_source, git_source, feishu_account, lark_account_auth, connection_intro, gmail_cli_source, connector_auth, neuroecho_client, prompts
 from .runtime_lock import DatabaseLease
 from . import visitors
 from . import api_contract as contract
@@ -614,7 +614,8 @@ def health():
 @app.get("/api/config")
 def config():
     return {"model": model.status(), "demo_available": False, "budget": core.CHAT_BUDGET,
-            "budget_window_minutes": core.CHAT_BUDGET_WINDOW_MINUTES}
+            "budget_window_minutes": core.CHAT_BUDGET_WINDOW_MINUTES,
+            "neuroecho": neuroecho_client.status()}
 
 
 def _retired_simulation() -> None:

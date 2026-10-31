@@ -20,7 +20,7 @@ from contextlib import nullcontext
 from contextvars import ContextVar
 from typing import Callable
 
-from . import auto_memory, agent_runtime, apple_source, chat_delivery, companion_boundary, connection_intro, conversation_changes, faults, feishu_account, followups, proactive_policy, model, moods, mood_operations, plugin_bridge, prompts, source_context
+from . import auto_memory, agent_runtime, apple_source, chat_delivery, companion_boundary, connection_intro, conversation_changes, faults, feishu_account, followups, proactive_policy, model, moods, mood_operations, neuroecho_client, plugin_bridge, prompts, source_context
 from .conversation_intent import confirmed_preference_mode, requested_response_mode, requested_conversation_style
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
@@ -119,6 +119,11 @@ def init_db() -> None:
         );
         CREATE TABLE IF NOT EXISTS app_state(
             key TEXT PRIMARY KEY, value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS neuroecho_interactions(
+            session_id TEXT NOT NULL, interaction_id TEXT NOT NULL,
+            decision_id TEXT NOT NULL, consumed_at TEXT NOT NULL,
+            PRIMARY KEY(session_id, interaction_id)
         );
         """
     )
@@ -1453,6 +1458,47 @@ def _warm_start_sticker_id(text: str, catalog: list[dict]) -> str:
     return next((item["id"] for item in catalog if item.get("id")), "")
 
 
+def _neuroecho_for_turn(sid: str, text: str) -> dict | None:
+    """Read the optional remote decision for this exact user turn.
+
+    The teammate credential is read-only. A remote snapshot for another
+    utterance or an unavailable/expired snapshot must never influence the R15
+    conversation, so this helper fails closed and returns ``None``.
+    """
+    try:
+        status = neuroecho_client.status()
+        if not status.get("configured"):
+            return None
+        enrichment = neuroecho_client.fetch_latest()
+    except neuroecho_client.NeuroEchoUnavailable as error:
+        audit(sid, "neuroecho.unavailable", type(error).__name__, "远程 NeuroEcho 不可用，沿用 R15 聊天流程")
+        return None
+    if not enrichment.get("available"):
+        audit(sid, "neuroecho.unavailable", str(enrichment.get("reason") or "unavailable"), "远程快照无效或已过期")
+        return None
+    if enrichment.get("source_utterance") != text:
+        audit(sid, "neuroecho.ignored", "utterance_mismatch", "远程决策不属于当前 R15 用户消息")
+        return None
+    decision = enrichment.get("decision")
+    if not isinstance(decision, dict):
+        audit(sid, "neuroecho.ignored", "decision_invalid", "远程决策未通过交接包契约")
+        return None
+    conn = get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        inserted = conn.execute(
+            "INSERT OR IGNORE INTO neuroecho_interactions(session_id,interaction_id,decision_id,consumed_at) VALUES(?,?,?,?)",
+            (sid, decision["interaction_id"], decision["decision_id"], now()),
+        ).rowcount
+        conn.commit()
+    finally:
+        conn.close()
+    if inserted != 1:
+        audit(sid, "neuroecho.ignored", "interaction_already_consumed", "同一 NeuroEcho interaction_id 已处理")
+        return None
+    return enrichment
+
+
 def _model_reply(sid: str, text: str, user_message_id: str = "",
                  generation_stamp: list[str] | None = None,
                  current_mode: str | None = None, proposal_out: list | None = None,
@@ -1462,6 +1508,9 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
     before = _model_context_stamp(sid)
     if generation_stamp is not None:
         generation_stamp.append(before)
+    neuroecho = _neuroecho_for_turn(sid, text)
+    if neuroecho and neuroecho["decision"].get("mode") == "quiet":
+        return None, "remote_quiet"
     client = model.from_env()
     if client is None:
         return None, "unconfigured"
@@ -1515,6 +1564,11 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
     last_sticker_turns_ago, last_sticker_id, user_turn_count = sticker_state()
     sticker_due = last_sticker_turns_ago is None or last_sticker_turns_ago >= 2
     warm_start_required = user_turn_count <= 2 and _sticker_allowed_for_warm_start(text)
+
+    remote_decision = neuroecho.get("decision") if neuroecho else None
+    if remote_decision:
+        effective_mode = remote_decision["mode"]
+        mode_from_preference = False
     audit(sid, "model.call",
           f"model={client.model} · facts={len(facts)} · inferences={len(inferences)} · items={len(ctx.get('items') or [])}",
           "发送必要上下文（不含正文内容）")
@@ -1541,6 +1595,9 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
         user = prompts.build_user_prompt(facts, inferences, questions, recent, remote_text,
                                       items=ctx.get("items"), insights=ctx.get("insights"),
                                       candidate_facts=candidates, auto_facts=automatic, source_excerpts=excerpts,
+                                      neuroecho=({"decision": remote_decision,
+                                                  "observations": neuroecho.get("observations", {})}
+                                                 if neuroecho else None),
                                       response_mode=effective_mode, mode_from_preference=mode_from_preference,
                                       conversation_style=session.get("conversation_style", "warm"))
         turn_citations: list[dict] = []
@@ -1562,6 +1619,8 @@ def _model_reply(sid: str, text: str, user_message_id: str = "",
                 out = out.rstrip() + f"\n\n[表情: {default_sticker}]"
         if not out.strip():
             raise ValueError("model response contained no displayable content")
+        if remote_decision and not neuroecho_client.validate_reply(out, remote_decision):
+            raise ValueError("remote_decision_output_contract_failed")
         if get_session(sid) is None:
             # Do not revive a session removed while the model was running.
             return None, "deleted"
@@ -1665,6 +1724,14 @@ def generate_reply(sid: str, text: str, *,
                         conn.execute('INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)',
                                      (uid('aud'), sid, 'chat.cancelled', '', '新输入已到达，未保存或展示旧回复', now()))
                 else:
+                    if action == 'neuroecho.quiet':
+                        conn.execute('UPDATE sessions SET state=? WHERE id=?', (state, sid))
+                        conn.execute('INSERT INTO audit(id,session_id,action,detail,reason,created_at) VALUES(?,?,?,?,?,?)',
+                                     (uid('aud'), sid, 'chat.turn', text[:60], action, now()))
+                        conn.commit()
+                        return {'reply': '', 'action': action, 'state': state,
+                                'memories': list_memories(sid), 'messages': get_messages(sid),
+                                'user_message_id': user_message['id'], 'assistant_message_id': None, **extra}
                     if generation_stamp and generation_stamp[-1] != _model_context_stamp(sid, conn):
                         reply = '刚才记忆或来源发生了变化，这次旧回复没有展示。你可以再说一次。'
                         action, state, extra = 'model.stale', 'responding', {}
@@ -1768,7 +1835,11 @@ def generate_reply(sid: str, text: str, *,
     grounded = None if (command or model_reply or model_state == "changed" or response_mode == "listen") else _grounded_reply(sid, model_text)
     capability = None if (command or model_reply or grounded or model_state == "changed") else _capability_reply(sid, model_text)
 
-    if model_state == "changed":
+    if model_state == "remote_quiet":
+        reply = ""
+        action = "neuroecho.quiet"
+        state = "quiet"
+    elif model_state == "changed":
         reply = "刚才记忆或来源发生了变化，这次旧回复没有展示。你可以再说一次。"
         action = "model.stale"
     elif model_reply:
