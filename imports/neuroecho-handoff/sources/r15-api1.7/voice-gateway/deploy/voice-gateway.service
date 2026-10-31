@@ -7,6 +7,8 @@ Wants=gpt-sovits.service
 Type=simple
 WorkingDirectory=/opt/nianxiang/voice-gateway
 EnvironmentFile=/etc/nianxiang/voice-gateway.env
+# The gateway dependencies are installed in this dedicated environment.
+Environment=PATH=/opt/nianxiang/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 ExecStart=/opt/nianxiang/voice-gateway/start.sh
 Restart=on-failure
 RestartSec=3

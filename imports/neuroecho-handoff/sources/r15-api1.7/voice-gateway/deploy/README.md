@@ -18,10 +18,13 @@ curl -fsS -H "Authorization: Bearer $VOICE_TOKEN" http://127.0.0.1:9881/v1/statu
 ```
 
 `gpt-sovits.service.example` matches the documented HAI layout used by this
-project (`/opt/nianxiang/GPT-SoVITS` plus `/opt/nianxiang/venv`). If you use a
-different layout, edit `WorkingDirectory`, `PATH`, and `ExecStart` before
-enabling it. Set GPT/SoVITS weights through GPT-SoVITS's own API after the
-process is healthy; private filenames are intentionally not committed.
+project (`/opt/nianxiang/GPT-SoVITS` plus the CUDA-enabled Python at
+`/root/miniforge3/bin/python`). The separate `/opt/nianxiang/venv` is for the
+gateway only and must not be used to start GPT-SoVITS because it has no Torch.
+If you use a different layout, edit `WorkingDirectory`, `PATH`, and
+`ExecStart` before enabling it. Set GPT/SoVITS weights through GPT-SoVITS's own
+API after the process is healthy; private filenames are intentionally not
+committed.
 
 Keep ports 9880 and 9881 loopback-only. Use `nginx.conf.example` with a real
 certificate, or a private overlay network, for remote R15 backends. The

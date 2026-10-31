@@ -5,10 +5,13 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/nianxiang/GPT-SoVITS
-Environment=PATH=/opt/nianxiang/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+# GPT-SoVITS itself needs the CUDA-enabled Python installation.  The
+# /opt/nianxiang/venv environment is intentionally reserved for the small
+# gateway process and does not contain Torch.
+Environment=PATH=/root/miniforge3/bin:/opt/nianxiang/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 Environment=PYTHONUTF8=1
 Environment=PYTHONIOENCODING=utf-8
-ExecStart=/opt/nianxiang/venv/bin/python /opt/nianxiang/GPT-SoVITS/api_v2.py -a 127.0.0.1 -p 9880
+ExecStart=/root/miniforge3/bin/python /opt/nianxiang/GPT-SoVITS/api_v2.py -a 127.0.0.1 -p 9880
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
