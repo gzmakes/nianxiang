@@ -1104,8 +1104,20 @@ def _memory_digest(sid: str) -> list[str]:
     return [memory['text'] for memory in _available_memories(sid)][:4]
 
 
+def _is_generic_source_fragment(memory: dict) -> bool:
+    """Exclude boilerplate source-analysis questions and counts, without deleting records."""
+    text = (memory.get('text') or '').strip()
+    if memory.get('status') != 'candidate':
+        return False
+    if memory.get('kind') == 'question':
+        return bool(re.fullmatch(r'「[^」]+」需要我先帮你做什么[？?]?', text))
+    if memory.get('kind') == 'inference':
+        return bool(re.match(r'^(?:洞察\s*[（(]pattern[）)]\s*[：:]|本次展示\s*\d+\s*条)', text, re.I))
+    return False
+
+
 def _memory_groups(sid: str, query: str | None = None) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
-    mems = _available_memories(sid)
+    mems = [m for m in _available_memories(sid) if not _is_generic_source_fragment(m)]
     if query is not None:
         from .memory_retrieval import relevant_memories, user_declines_recall
         selected = relevant_memories(mems, query)

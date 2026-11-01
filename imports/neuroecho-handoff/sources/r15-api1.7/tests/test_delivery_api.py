@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from uuid import uuid4
 from server import core, chat_delivery
 from fastapi.testclient import TestClient
 from server.main import app
@@ -44,3 +45,33 @@ def test_context_change_drops_hidden_proposal(tmp_path, monkeypatch):
     assert db.execute("SELECT COUNT(*) FROM agent_action_proposals").fetchone()[0] == 0
     assert db.execute("SELECT text FROM messages WHERE id='m'").fetchone()[0] == '已见'
     db.close()
+
+
+def test_replayed_request_returns_only_currently_delivered_text(tmp_path, monkeypatch):
+    monkeypatch.setattr(core, 'DB_PATH', str(tmp_path / 'replay.db'))
+    core.init_db()
+    clock = SimpleNamespace(value=100.0)
+    monkeypatch.setattr(chat_delivery, 'time', SimpleNamespace(time=lambda: clock.value))
+    class Fake:
+        model = 'synthetic'
+        calls = 0
+        def complete(self, system, prompt):
+            self.calls += 1
+            return '第一段\n\n第二段\n\n第三段'
+    model = Fake()
+    monkeypatch.setattr(core.model, 'from_env', lambda: model)
+    client = TestClient(app)
+    sid = client.post('/api/session', json={'mode': 'empty'}).json()['session']['id']
+    body = {'session_id': sid, 'request_id': str(uuid4()), 'text': '来聊聊'}
+    first = client.post('/api/chat', json=body).json()
+    replay = client.post('/api/chat', json=body).json()
+    assert first['reply'] == replay['reply'] == '第一段'
+    assert first['assistant_message_id'] == replay['assistant_message_id']
+    clock.value = 100.9
+    replay = client.post('/api/chat', json=body).json()
+    assert replay['reply'] == '第一段\n\n第二段'
+    assert model.calls == 1
+    stopped = client.post('/api/session/' + sid + '/delivery/stop', json={'message_id': first['assistant_message_id']}).json()
+    assert stopped['stopped']
+    clock.value = 999
+    assert client.post('/api/chat', json=body).json()['reply'] == '第一段\n\n第二段'

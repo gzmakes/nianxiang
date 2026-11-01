@@ -34,3 +34,54 @@
 @media(max-width:560px){.onboarding.connection-compact .onboarding-card{padding:24px;}.connection-card h3{font-size:22px;}.connection-card>.lark-actions>.btn.primary{flex:1;}}
 
 .connection-compact .connection-auto-snapshot{display:none;}
+
+/* A compact permission dialog: the source and its action are the focus. */
+#onboarding.onboarding.connection-compact {
+  background:rgba(27,36,51,.34)!important;
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+}
+#onboarding.connection-compact .onboarding-card {
+  width:min(460px,100%);padding:28px!important;border:1px solid rgba(255,255,255,.9)!important;
+  border-radius:28px;background:#fbfcff!important;
+  box-shadow:0 24px 80px rgba(27,36,51,.2)!important;
+}
+#onboarding.connection-compact .onboarding-orb,
+#onboarding.connection-compact .wizard-top {display:none!important;}
+#onboarding.connection-compact .onboarding-return {
+  top:20px;right:22px;min-height:36px;padding:7px 12px;
+  background:#f2f4fa;border-color:transparent;color:#5c6981;
+}
+#onboarding.connection-compact #wz-3 {width:100%;gap:0;}
+#onboarding.connection-compact #wz-back-2 {
+  margin:0 0 26px;padding:7px 12px;min-height:36px;border-color:transparent;background:#f2f4fa;
+}
+#onboarding.connection-compact #read-head,
+#onboarding.connection-compact #read-scope,
+#onboarding.connection-compact .wizard-actions {width:100%;}
+.connection-compact .connection-card-header {gap:14px;margin:0 0 18px;}
+.connection-compact .connection-card-icon {
+  width:56px;height:56px;border-radius:17px;background:#eef2ff;
+}
+.connection-compact .connection-card h3 {font-size:21px;letter-spacing:0;}
+.connection-compact .connection-scope {font-size:13px;line-height:1.7;color:#65728a;margin:0;}
+.connection-compact .connection-status {font-size:13px;line-height:1.5;margin:18px 0 0;min-height:0;}
+.connection-compact .connection-status.is-connected {color:#478664;}
+.connection-compact .connection-card>.lark-actions {margin:22px 0 0;}
+.connection-compact .connection-card .feishu-account-disconnect-note {margin:14px 0 0;font-size:12px;}
+#onboarding.connection-compact .wizard-actions {margin-top:22px;}
+#onboarding.connection-compact .connection-card .btn.primary,
+#onboarding.connection-compact #wz-read {min-height:42px;padding:10px 22px;border-radius:16px;}
+.onboard.connection-compact {
+  left:50%;right:auto;top:auto;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);
+  width:min(460px,calc(100% - 24px));box-sizing:border-box;max-height:calc(100dvh - 32px);
+  border-radius:26px;padding:24px;background:#fbfcff!important;
+  box-shadow:0 20px 70px rgba(27,36,51,.2);
+}
+.connection-compact #m-wz-3 {width:100%;}
+.connection-compact #m-back-2 {margin:0 0 24px;}
+.connection-compact #m-read-btn {margin-top:22px;min-height:44px;border-radius:16px;}
+@media(max-width:560px) {
+  #onboarding.onboarding.connection-compact {padding:16px;}
+  #onboarding.connection-compact .onboarding-card {padding:24px!important;}
+  #onboarding.connection-compact .onboarding-return {top:18px;right:18px;}
+}

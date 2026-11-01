@@ -229,9 +229,10 @@
   }
   function showConnectedMobileSource(id, meta) {
     $("#m-read-btn").classList.add('is-hidden'); $("#m-read-items").innerHTML = ''; $("#m-read-scope").innerHTML = '';
-    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '✓')}</span><h3>${esc(meta?.name || '已连接')}</h3></div><p class="connection-value">✓ 已连接，可以接着聊了。</p><p class="connection-scope">需要时会参考已接入的内容。你可以在资料管理里移除。</p><button type="button" class="btn primary" id="m-connection-return">回到聊天</button><button type="button" class="text-btn" id="m-connection-manage">管理资料</button></div>`;
-    $("#m-connection-return").onclick = () => { closeMobileWizard(); closeSheet(); };
-    $("#m-connection-manage").onclick = () => { closeMobileWizard(); openSheet('more'); };
+    const matches = mobileSources().filter(item => item.connector_id === id && !item.stale);
+    const source = matches.length === 1 && matches[0].id ? matches[0] : null;
+    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '✓')}</span><h3>${esc(meta?.name || '已连接')}</h3></div><p class="connection-value">✓ 已连接</p><p class="connection-scope">${source ? '移除这份资料；系统权限请在系统设置中管理。' : '请在数据设置中选择要移除的资料。'}</p><button type="button" class="btn primary" id="m-connection-disconnect">${source ? '取消授权' : '管理连接'}</button></div>`;
+    $("#m-connection-disconnect").onclick = () => { closeMobileWizard(); if (source) void revokeMobileSelectedSource(source.id); else openSheet('more'); };
     showWz(3);
   }
 
@@ -240,6 +241,7 @@
     if (typeof pairedDevicesPanel !== "undefined") pairedDevicesPanel?.suspend();
     const previous = state.session?.id;
     if (previous && previous !== d.session.id) {
+      clearMobileImage();
       followups.stop();
       state.mobileDrafts = state.mobileDrafts || {};
       state.mobileDrafts[previous] = $("#m-input")?.value || "";
@@ -362,14 +364,15 @@
       const [d] = await Promise.all([api("/api/onboarding/sources?force=1"), readFeishuAccountState()]);
       if (!current()) return;
       const labels = { ready: "可读取", needs_click: "读取前确认权限", needs_config: "需填写配置", needs_auth: "需授权", needs_install: "需安装", unavailable: "暂不可用", empty: "暂无内容" };
-      box.innerHTML = (d.sources || []).map((source) => `<div class="m-connector">
-        <div class="ico">${esc(source.icon)}</div><div class="bd"><b>${esc(source.name)}</b>
+      box.innerHTML = (d.sources || []).filter(source => !["waytoagi", "jike", "github", "git", "notion", "gmail"].includes(source.id)).map((source) => `<div class="m-connector">
+        <div class="ico">${window.XinjiDeviceConnections?.sourceIcon(source.id, source.icon) || esc(source.icon)}</div><div class="bd"><b>${esc(source.name)}</b>
         <small>${esc(source.id === "apple_calendar" ? "过去 7 天的日程" : source.id === "apple_reminders" ? "最近 7 天有更新的提醒" : source.blurb)} · <span ${source.id === "feishu" ? "data-feishu-account-status" : `data-connection-source="${esc(source.id)}" data-connection-idle="${esc(labels[source.status] || "待检查")}"`}>${esc(source.id === "feishu" ? window.XinjiFeishuAccountPicker.statusLabel(state.feishuAccount) : window.XinjiConnectionIntro.connected(state.context,source.id) ? "✓ 已连接" : labels[source.status] || "待检查")}</span></small></div>
         <button type="button" class="go" data-real="${esc(source.id)}" ${source.id === "feishu" ? "data-feishu-account-control" : `data-connection-control="${esc(source.id)}" data-connection-idle="连接"`}>${source.id === "feishu" ? state.feishuAccount?.enabled ? "管理连接" : "连接" : window.XinjiConnectionIntro.connected(state.context,source.id) ? "管理" : source.id === "git" ? "选目录" : ["ready", "needs_click"].includes(source.status) ? "连接" : "查看"}</button>
-      </div>`).join("") || `<p class="synthetic">暂时没有可用来源，可以先返回聊天。</p>`;
+      </div>`).join("") + (window.XinjiDeviceConnections?.html({mobile:true}) || "");
       box.querySelectorAll("[data-real]").forEach(button => {
         button.onclick = () => { if (current()) { const source = d.sources.find(item => item.id === button.dataset.real); if (source) openMobileReal(source.id, source.status, source); } };
       });
+      window.XinjiDeviceConnections?.bind(box, {onMindLink: () => toast("请在连接设备的电脑上开启脑机接口。"), onUnavailable: ({message}) => toast(message)});
     } catch (error) {
       if (!current()) return;
       box.innerHTML = `<p class="synthetic">${esc(error.message)}</p><button type="button" class="btn ghost wide" id="m-source-retry">重新检查连接</button>`;
@@ -417,7 +420,7 @@
     const scope = id === 'apple_calendar' ? '只读过去 7 天的日程，相关片段会发送给当前模型。'
       : id === 'apple_reminders' ? '只读最近 7 天相关提醒；可用时间范围以实际读取结果为准，相关片段会发送给当前模型。'
       : '只读当前来源支持的内容，相关片段会发送给当前模型。';
-    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${esc(meta?.icon || '▦')}</span><h3>连接${esc(meta?.name || id)}</h3></div><p class="connection-value">陪你看看最近发生的事，找到此刻值得聊的一件。</p><p class="connection-scope">${esc(scope)}</p></div>`;
+    $("#m-read-head").innerHTML = `<div class="connection-card"><div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${window.XinjiDeviceConnections?.sourceIcon(id, meta?.icon || '▦') || esc(meta?.icon || '▦')}</span><h3>连接${esc(meta?.name || id)}</h3></div><p class="connection-scope">${esc(scope)}</p></div>`;
     $("#m-read-items").innerHTML = '';
     $("#m-read-scope").innerHTML = '';
     $("#m-read-btn").classList.remove("is-hidden");
@@ -782,12 +785,24 @@
 
   let mobileAction = null;
 
+  function setMobilePetActionPhase(action, phase) {
+    const pet = globalThis.NianxiangPet;
+    if (!action || !pet?.getState || !pet?.setWork) return;
+    const current = pet.getState().work;
+    if (phase === "waiting") {
+      if (current || state.session?.id !== action.sessionId) return;
+    } else if (!action.petPhase || current !== action.petPhase) return;
+    action.petPhase = phase;
+    pet.setWork(phase);
+  }
+
   function openMobileAction(kind, idx, draft = null) {
     const ins = draft ? {title: draft.title, text: draft.text} : (state.context?.insights || [])[idx];
     if (!ins || !state.session || !["message", "reminder", "calendar"].includes(kind)) return;
     if (!draft && (ins.source_id || state.context?.sources) && !mobileInsightUsable(ins)) {
       toast("相关来源已移除或待核对，请重新打开记忆。"); return;
     }
+    setMobilePetActionPhase(mobileAction, null);
     mobileAction = {kind, title: ins.title || "", detail: ins.text || "", sessionId: state.session.id};
     const titles = {reminder: "新建提醒", calendar: "新建日历安排", message: "新建消息草稿"};
     $("#m-action-title").textContent = titles[kind];
@@ -815,6 +830,7 @@
     $("#m-action-confirm").disabled = false;
     $("#m-action-result").classList.add("is-hidden");
     $("#m-action").classList.remove("is-hidden");
+    setMobilePetActionPhase(mobileAction, "waiting");
   }
 
   async function confirmMobileAction() {
@@ -839,6 +855,8 @@
     }
     button.disabled = true;
     result.classList.add("is-hidden");
+    let petResult = null;
+    setMobilePetActionPhase(action, "working");
     try {
       if (action.existingId) {
         const data = await api(`/api/actions?session_id=${encodeURIComponent(action.sessionId)}`);
@@ -854,13 +872,17 @@
         action.existingId = created.id;
       }
       if (mobileAction !== action || state.session?.id !== action.sessionId) return;
+      // The preview step completed; the separate commit is still pending.
+      setMobilePetActionPhase(action, "result");
       const done = await api(`/api/action/${encodeURIComponent(action.existingId)}/commit`, {method: "POST", body: JSON.stringify({real})});
       if (mobileAction !== action || state.session?.id !== action.sessionId) return;
       if (done.status !== "committed") {
+        if (done.status === "failed") petResult = "error";
         result.textContent = action.kind === "message" ? "草稿保存结果未确认，请到任务页核对，暂勿重复保存。" : ["unknown", "executing"].includes(done.status) ? "未确认写入，请先到系统检查，再到任务页核对；当前不会重试写入。" : done.error || "未能完成，请到任务页查看记录。";
         result.classList.remove("is-hidden"); return;
       }
       toast(done.real ? `已写入系统${action.kind === "calendar" ? "日历" : "提醒事项"}` : action.kind === "message" ? "消息草稿已保存（未发送）" : "已保存在本机，未写入系统。");
+      petResult = "success";
       $("#m-action").classList.add("is-hidden");
       mobileAction = null;
       if (typeof loadMobileTaskActions === "function") loadMobileTaskActions();
@@ -868,10 +890,13 @@
       if (mobileAction !== action || state.session?.id !== action.sessionId) return;
       result.textContent = action.kind === "message" ? "草稿保存结果未确认，请到任务页核对，暂勿重复保存。" : "未确认写入，请先到系统检查，再到任务页核对；当前不会重试写入。";
       result.classList.remove("is-hidden");
+    } finally {
+      setMobilePetActionPhase(action, petResult);
     }
   }
 
   function closeMobileAction() {
+    setMobilePetActionPhase(mobileAction, null);
     mobileAction = null;
     $("#m-action").classList.add("is-hidden");
   }
@@ -924,19 +949,26 @@
     const visibleMessages = showEmpty ? [] : state.messages;
     visibleMessages.forEach(decorateAssistantMessage);
     const sessionChanged = renderedChatSession !== state.session?.id;
+    if (sessionChanged && renderedChatSession !== null) {
+      window.NianxiangPet?.cancelConversation?.();
+      if (["waiting", "working"].includes(window.NianxiangPet?.getState?.().work)) window.NianxiangPet?.setWork(null);
+    }
     const newMessage = !sessionChanged && visibleMessages.some(message => !String(message.id).startsWith("local-") && !renderedMessageIds.has(message.id));
     const update = () => { box.innerHTML = visibleMessages.map((m, index) => {
       const role = m.role === "user" ? "user" : "assistant";
-      const sugg = (lastAssistant && m.id === lastAssistant.id && (m.suggestions || []).length)
-        ? `<div class="m-suggests">${m.suggestions.map((s) => `<button class="m-suggest" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>`
+      const choices = Array.isArray(m.suggestions) ? m.suggestions.filter(s => typeof s === "string" && s.trim()).slice(0, 3) : [];
+      const sugg = (lastAssistant && m.id === lastAssistant.id && !m.delivery_pending && state.messages[state.messages.length - 1]?.role === "assistant" && choices.length)
+        ? `<div class="conversation-choices" role="group" aria-label="选择一个话题继续对话"><div class="conversation-choices-label"><span aria-hidden="true">✦</span> 可以从这里聊起</div><div class="conversation-choices-options">${choices.map((s) => `<button type="button" class="conversation-choice" data-suggest="${esc(s)}">${esc(s)}<span aria-hidden="true">↗</span></button>`).join("")}</div></div>`
         : "";
       const cites = window.XinjiFeishuAccountPicker?.renderCitations(m, {includeMemories:false}) || "";
       const draft = window.XinjiActionCards.chatDraft(visibleMessages, index);
       const draftButton = draft ? `<div class="m-suggests"><button class="m-suggest" data-chat-draft="${index}">查看并保存为消息草稿</button></div>` : "";
-      const parts = role === "assistant" && Array.isArray(m.bubbles) && m.bubbles.length ? m.bubbles : [m.text];
+      const image = role === "user" && typeof m.image_data_url === "string" && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(m.image_data_url) ? m.image_data_url : "";
+      const text = image && typeof m.text === "string" ? m.text.replace(/^\[图片\](?:[ \t]*\r?\n|[ \t]+|$)/, "") : m.text;
+      const parts = role === "assistant" && Array.isArray(m.bubbles) && m.bubbles.length ? m.bubbles : [text];
       const voiceButton = role === "assistant" && !m.delivery_pending ? `<button type="button" class="message-topic" data-voice-message="${index}" aria-label="朗读这条回复" title="${esc(window.EchoShared?.copy?.['voice.disclosure'] || '由设备语音朗读，不会自动播放或创建语音文件。')}" aria-pressed="false">${esc(window.EchoShared?.copy?.['voice.read'] || '朗读')}</button><button type="button" class="message-topic" hidden data-voice-clip="${index}">生成语音</button><span data-voice-clip-slot="${index}"></span>` : "";
       const proposalButton = m.action_proposal && !m.delivery_pending ? `<div class="m-suggests"><button class="m-suggest" data-action-proposal="${index}">查看提醒预览</button></div>` : "";
-      return `<div class="msg ${role}" data-message-id="${esc(m.id)}" data-persona-id="${esc(m.persona_id || '')}" data-interaction-mode="${esc(m.interaction_mode || '')}">${parts.map(part => `<div class="bubble">${renderMemeText(part)}</div>`).join("")}${cites ? `<div class="cites">${cites}</div>` : ""}${sugg}${draftButton}${proposalButton}${voiceButton}<button type="button" class="message-topic" data-topic-message="${esc(m.id)}" ${String(m.id).startsWith("local-") ? 'disabled title="发送完成后可标记话题"' : ""}>标记话题</button></div>`;
+      return `<div class="msg ${role}" data-message-id="${esc(m.id)}" data-persona-id="${esc(m.persona_id || '')}" data-interaction-mode="${esc(m.interaction_mode || '')}">${image ? `<div class="bubble m-image-message"><img src="${esc(image)}" alt="已发送的图片"></div>` : ""}${parts.filter(Boolean).map(part => `<div class="bubble">${renderMemeText(part)}</div>`).join("")}${cites ? `<div class="cites">${cites}</div>` : ""}${sugg}${draftButton}${proposalButton}${voiceButton}<button type="button" class="message-topic" data-topic-message="${esc(m.id)}" ${String(m.id).startsWith("local-") ? 'disabled title="发送完成后可标记话题"' : ""}>标记话题</button></div>`;
     }).join(""); };
     if (showEmpty) {
       update();
@@ -992,7 +1024,10 @@
         if (draft) openMobileAction("message", null, draft);
       };
     });
-    box.querySelectorAll("[data-suggest]").forEach((b) => { b.onclick = () => send(b.dataset.suggest); });
+    box.querySelectorAll("[data-suggest]").forEach((b) => { b.onclick = () => {
+      if (state.session?.id !== draftSession) return;
+      send(b.dataset.suggest, { preserveDraft: true });
+    }; });
   }
 
   let mAuthTimer = null;
@@ -1328,33 +1363,18 @@
     const current = () => state.session?.id === sid && sheet._xinjiEpoch === epoch && sheet._xinjiKind === "today";
     body.innerHTML = `<p class="synthetic">正在整理今天…</p>`;
     try {
-      const [sess, next, saved] = await Promise.all([
-        api(`/api/session/${encodeURIComponent(sid)}`),
-        api(`/api/next-step?session_id=${encodeURIComponent(sid)}`),
-        api(`/api/actions?session_id=${encodeURIComponent(sid)}`),
-      ]);
+      const sess = await api(`/api/session/${encodeURIComponent(sid)}`);
       if (!current()) return;
       if (sess.session?.id !== sid) throw Error("返回的对话不匹配，请重新打开 Today。");
-      const bookmark = sess.bookmark, memories = (sess.memories || []).filter(item => item.status !== "deleted");
-      const sources = mobileSources(sess.context, sess.session), actions = saved.actions || [];
-      const carry = bookmark ? bookmark.next_step || bookmark.note : next.step || "我想从今天的一件小事说起。";
-      const pending = actions.filter(action => ["previewed", "unknown", "executing"].includes(action.status)).length;
+      const memories = (sess.memories || []).filter(item => item.status !== "deleted");
+      const sources = mobileSources(sess.context, sess.session);
       body.innerHTML = `
         <div id="m-today-mood"></div><div id="m-today-followups"></div>
-        <div class="m-today-card"><div class="k">${bookmark ? "上次停在这里" : "下一步 · 候选"}</div><b>${esc(bookmark ? bookmark.note : next.step || "先聊一件正在发生的事")}</b><p>${esc(bookmark ? bookmark.next_step || "可以接着说，也可以先放一放。" : next.rationale || "由你决定从哪里开始。")}</p><button type="button" class="btn ghost small" id="m-today-continue">把这条带回聊天</button></div>
-        <div class="m-today-card"><div class="k">任务与草稿</div><b>${actions.length} 个已保存动作${pending ? ` · ${pending} 个待确认` : ""}</b><p>查看保存的内容，或自己写一条消息、提醒和日历安排。</p><button type="button" class="text-btn" id="m-today-tasks">打开任务</button></div>
         <div class="m-today-card"><div class="k">关于你的记忆</div><b>${memories.length} 条待核对或已确认的理解</b><p>不准确的地方，随时可以纠正或删除。</p><button type="button" class="text-btn" id="m-today-memories">核对记忆</button></div>
         <div class="m-today-card"><div class="k">这次对话的资料</div><b>${sources.length} 份已接入来源</b><p>${sources.length ? sources.map(source => esc(mobileSourceTitle(source)) + (source.stale ? "（暂停使用）" : "")).join(" · ") : state.feishuAccount?.enabled === true && state.feishuAccount.ready !== false ? "✓ 飞书已连接，聊天时会按需查阅。" : "还没有接入资料。可以先聊聊，需要时再连接。"}</p><button type="button" class="text-btn" id="m-today-sources">管理来源</button></div>`;
       followups.mount($("#m-today-followups"));
       typeof mood !== "undefined" && mood?.mount($("#m-today-mood"));
-      $("#m-today-continue").onclick = () => {
-        if (!current()) return;
-        const input = $("#m-input");
-        input.value = input.value.trim() ? `${input.value}\n${carry}` : carry;
-        closeSheet();
-        input.focus();
-      };
-      for (const [id, kind] of [["tasks", "tasks"], ["memories", "understand"], ["sources", "more"]]) {
+      for (const [id, kind] of [["memories", "understand"], ["sources", "more"]]) {
         $("#m-today-" + id).onclick = () => { if (current()) openSheet(kind); };
       }
     } catch (error) {
@@ -1442,45 +1462,38 @@
   function memCard(m, tag) {
     const attached = m.source_attachment_id ? mobileSources().find(source => source.id === m.source_attachment_id) : null;
     const provenance = attached ? `${m.source || attached.label || "来源"} · ${mobileSourceTitle(attached)}` : m.source || "来源待补";
-    const uncertainSource = /撤回后来源待核对|来源待核对/.test([m.source, m.source_label].filter(Boolean).join(" "));
-    const status = m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你已添加" : "自动记录") : m.status === "confirmed" ? "已确认" : m.status === "candidate" ? "尚未核实" : "状态待核对";
+    const uncertainSource = (m.source_attachment_id && (!attached || attached.stale)) || /撤回后来源待核对|来源待核对/.test([m.source, m.source_label].filter(Boolean).join(" "));
+    const status = uncertainSource ? "来源待核对" : m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你已添加" : "自动记录") : m.status === "confirmed" ? "已确认" : m.status === "candidate" ? "尚未核实" : "状态待核对";
     const origin = m.kind === "inference" ? "推测" : m.source === "用户手动添加" ? "你手动添加" : m.source_attachment_id ? "来自你选定的资料" : /用户|原话|user|聊天/.test(m.source || "") ? "你的原话" : "来源见下方记录";
-    const use = uncertainSource ? "来源待核对，暂不用于回复。" : m.kind === "inference" ? "这是推测，不作为确定事实。" : m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你主动记下，可作为相关对话的背景。" : "自动记下；关闭自动记录后暂停用于回复，可确认或删除。") : m.status === "confirmed" ? "可作为相关对话的背景。" : "尚未核实，不作为确定事实。";
+    const use = String(m.source || "").startsWith("撤回后来源待核对") ? "来源已撤回，暂不用于回复。" : uncertainSource ? "来源已变化；已确认或修改过的内容仍可能用于回复，请核对。" : m.kind === "inference" ? "这是推测，不作为确定事实。" : m.status === "auto" ? (["用户手动添加", "对话原话 · 用户选存"].includes(m.source) ? "你主动记下，可作为相关对话的背景。" : "自动记下；关闭自动记录后暂停用于回复，可确认或删除。") : m.status === "confirmed" ? "可作为相关对话的背景。" : "尚未核实，不作为确定事实。";
     return `<div class="mem-item" data-id="${m.id}">
-      <div class="mem-kind">${tag} · v${m.version} · ${esc(provenance)}</div>
-      <div class="memory-origin ${m.kind === "inference" ? "is-inference" : ""}">${esc(origin)}</div><div class="mem-text">${esc(m.text)}</div><p class="memory-use">${esc(use)}</p><details class="memory-details"><summary>来源与使用方式</summary><p>说于：原话的具体时间未记录。<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")}<br>使用：${esc(use)} 可随时纠正或忘掉。</p></details>
+      <div class="mem-kind">${tag} · ${esc(status)}</div>
+      <div class="mem-text">${esc(m.text)}</div><details class="memory-details"><summary>来源与使用方式</summary><p>${esc(origin)} · ${esc(provenance)}<br>${esc(use)}<br>记下于：${esc(m.created_at ? String(m.created_at).replace("T", " ") : "未记录")} · v${m.version}</p></details>
       <div class="mem-meta">
-        <span>${esc(status)}</span>
         <span>
-          ${m.status === "auto" && m.source === "对话原话 · 自动记录" ? `<button class="mini" data-act="confirm" data-id="${m.id}">确认记住</button>` : ""}<button class="mini" data-act="edit" data-id="${m.id}">改一改</button>
-          <button class="mini" data-act="history" data-id="${m.id}">历史</button>
-          <button class="mini" data-act="delete" data-id="${m.id}">忘掉这条</button>
+          ${(m.status === "auto" && m.source === "对话原话 · 自动记录") || (m.kind === "fact" && m.status === "candidate") ? `<button class="mini" data-act="confirm" data-id="${m.id}">确认记住</button>` : ""}<button class="mini" data-act="edit" data-id="${m.id}">改一改</button>
+          <details class="memory-actions-more"><summary>更多</summary><button class="mini" data-act="history" data-id="${m.id}">历史</button>
+          <button class="mini" data-act="delete" data-id="${m.id}">忘掉这条</button></details>
         </span>
       </div>
     </div>`;
   }
 
   function renderUnderstanding() {
-    const g = memGroups();
-    const insights = state.context?.insights || [];
-    const insightSource = insight => {
-      const source = mobileSources().find(item => item.id === insight.source_id);
-      return source ? ` · ${esc(mobileSourceTitle(source))}` : "";
-    };
+    const records = state.memories.filter(m => m.status !== "deleted");
+    const sources = mobileSources();
+    const known = records.filter(m => window.XinjiMemoryInsights.known(m, sources));
+    const lines = window.XinjiMemoryInsights.summary(records, sources);
+    const pending = window.XinjiMemoryInsights.review(records, sources);
+    const page = pending.slice(0, 5);
+    const archive = records.filter(m => !known.includes(m) && !page.includes(m) && m.source !== "示例资料" && m.source_label !== "示例资料");
     $("#m-sheet-body").innerHTML = `
       <button type="button" class="btn ghost wide" id="m-add-memory" ${state.memorySaving ? 'disabled' : ''}>手动记下</button>
-      ${insights.length ? `<div class="section-label">洞察</div>${insights.map((i, idx) =>
-        `<div class="m-insight"><div class="t">${esc((i.type || "").toUpperCase())}${insightSource(i)}</div><b>${esc(i.title)}</b><p>${esc(i.text)}</p>
-          ${mobileInsightUsable(i) ? `<div class="m-actions" style="margin-top:6px">
-            <button class="mini-btn" data-m-insight="${idx}" data-m-source-id="${esc(mobileInsightSourceId(i) || "")}">变成下一步</button>
-            <button class="mini-btn" data-m-action="reminder" data-m-idx="${idx}">提醒</button>
-            <button class="mini-btn" data-m-action="calendar" data-m-idx="${idx}">日历</button>
-            <button class="mini-btn" data-m-action="message" data-m-idx="${idx}">消息</button>
-          </div>` : `<p class="synthetic">相关来源待核对，暂不生成下一步或动作。</p>`}</div>`).join("")}` : ""}
-      ${g.fact.length ? `<div class="section-label">事实</div>${g.fact.map((m) => memCard(m, "事实")).join("")}` : ""}
-      ${g.inference.length ? `<div class="section-label">推测</div>${g.inference.map((m) => memCard(m, "推测")).join("")}` : ""}
-      ${g.question.length ? `<div class="section-label">问题</div>${g.question.map((m) => memCard(m, "问题")).join("")}` : ""}
-      <p class="synthetic">纠正任意一条会让下一步随之变化，并保留版本与来源。</p>`;
+      <div class="section-label">我对你的了解</div>
+      ${lines.length ? `<ul class="memory-summary-excerpts">${lines.map(line => `<li>${esc(line)}</li>`).join('')}</ul>` : '<p class="note">聊得越多，我会慢慢记住对你重要的事。</p>'}
+      ${known.length ? `<details class="memory-review"><summary>记忆详情</summary>${known.map(m => memCard(m, "记忆")).join("")}</details>` : ''}
+      ${page.length ? `<details class="memory-review"><summary>有 ${page.length} 条想请你确认</summary>${page.map(m => memCard(m, "记忆")).join("")}</details>` : ""}
+      ${archive.length ? `<details class="memory-review"><summary>其他记忆</summary>${archive.map(m => memCard(m, m.kind === "question" ? "问题" : m.kind === "inference" ? "推测" : "记忆")).join("")}</details>` : ""}`;
     $('#m-add-memory').onclick=addMobileMemoryPrompt;
   }
 
@@ -1585,35 +1598,63 @@
   function renderBookmark(presetNext = "") {
     state.mobileBookmarkSourceId = null;
     state.mobileBookmarkSessionId = state.session?.id;
-    const b = state.bookmark;
-    const body = $("#m-sheet-body");
-    body.innerHTML = `
-      ${b ? `<div class="bm-card">
-        <p class="bm-note">${esc(b.note)}</p>
-        <div class="bm-row"><b>取舍：</b>${esc(b.choice || "—")}</div>
-        <div class="bm-row"><b>下一步：</b>${esc(b.next_step || "—")}</div>
-        <div class="bm-receipt"><span>${b.status === "committed" ? "已保存 " + esc(b.receipt || "") : "草稿"}</span>
-        ${b.status === "committed" ? "" : `<button class="mini confirm" id="m-bm-commit">确认保存</button>`}</div>
-      </div>` : ""}
-      <div class="section-label">${b ? "再标记一个" : "标记此刻"}</div>
-      <textarea id="m-bm-note" rows="2" placeholder="停在了哪里">${b ? "" : ""}</textarea>
-      <div style="height:8px"></div>
-      <input class="m-input" id="m-bm-choice" placeholder="当时的取舍" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.6);font-size:14px" />
-      <div style="height:8px"></div>
-      <input class="m-input" id="m-bm-next" value="${esc(presetNext)}" placeholder="下一步（可改）" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.6);font-size:14px" />
-      <div style="height:10px"></div>
-      <button class="btn primary wide" id="m-bm-save">先存为草稿</button>
-      <div class="section-label">提醒、日历与消息草稿</div>
-      <div class="m-task-create"><button type="button" class="btn ghost small" id="m-new-message">新建消息草稿</button><button type="button" class="btn ghost small" id="m-new-reminder">新建提醒</button><button type="button" class="btn ghost small" id="m-new-calendar">新建日历安排</button></div>
-      <p class="note">先编辑并确认。默认只保存在本机；写入系统需要你另行勾选。消息草稿不会自动发送。</p>
-      <div id="m-task-actions"><p class="synthetic">正在读取已保存的动作…</p></div>`;
-    if ($("#m-bm-commit")) $("#m-bm-commit").onclick = commitBookmark;
-    $("#m-bm-save").onclick = saveBookmark;
-    const sid = state.session?.id, sheet = $("#m-sheet"), epoch = sheet._xinjiEpoch;
-    for (const kind of ["message", "reminder", "calendar"]) $("#m-new-" + kind).onclick = () => {
-      if (state.session?.id === sid && sheet._xinjiEpoch === epoch) openMobileAction(kind, null, {title: "", text: ""});
+    const body = $("#m-sheet-body"), sheet = $("#m-sheet");
+    // 书签是洞察的独立入口；任务列表不再显示这些控件。
+    if (sheet._xinjiKind === "bookmark") {
+      const b = state.bookmark;
+      body.innerHTML = `${b ? `<div class="bm-card"><p class="bm-note">${esc(b.note)}</p><div class="bm-row"><b>取舍：</b>${esc(b.choice || "—")}</div><div class="bm-row"><b>下一步：</b>${esc(b.next_step || "—")}</div><div class="bm-receipt"><span>${b.status === "committed" ? "已保存 " + esc(b.receipt || "") : "草稿"}</span>${b.status === "committed" ? "" : `<button class="mini confirm" id="m-bm-commit">确认保存</button>`}</div></div>` : ""}
+        <div class="section-label">${b ? "再标记一个" : "标记此刻"}</div><textarea id="m-bm-note" rows="2" placeholder="停在了哪里"></textarea><div style="height:8px"></div>
+        <input class="m-input" id="m-bm-choice" placeholder="当时的取舍" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.6);font-size:14px" /><div style="height:8px"></div>
+        <input class="m-input" id="m-bm-next" value="${esc(presetNext)}" placeholder="下一步（可改）" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.6);font-size:14px" /><div style="height:10px"></div>
+        <button class="btn primary wide" id="m-bm-save">先存为草稿</button>`;
+      if ($("#m-bm-commit")) $("#m-bm-commit").onclick = commitBookmark;
+      $("#m-bm-save").onclick = saveBookmark;
+      return;
+    }
+    const sid = state.session?.id, epoch = sheet._xinjiEpoch;
+    const current = () => state.session?.id === sid && sheet._xinjiEpoch === epoch && ["tasks", "bookmark"].includes(sheet._xinjiKind);
+    const defaults = [
+      {title:"整理今日重点", detail:"把你今天要做的事情列清楚，排出最值得先完成的一件。"},
+      {title:"拆解一项计划", detail:"把一个目标拆成几步，明确下一步现在就能开始做什么。"},
+      {title:"梳理混乱想法", detail:"把你脑中的信息分组整理，提炼出重点、疑问和待决定事项。"},
+      {title:"回顾近期进展", detail:"根据我们的对话整理已经完成、暂时卡住和接下来要继续的事情。"},
+      {title:"清理待办清单", detail:"合并重复事项，删掉不再重要的内容，把剩下的安排得更清楚。"},
+    ];
+    let tasks = [], storageAvailable = true, view = "default";
+    try {
+      const stored = localStorage.getItem("xinji_personal_tasks_v1");
+      const data = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(data) || !data.every(item => item && typeof item.title === "string" && typeof item.detail === "string")) throw Error("invalid tasks");
+      tasks = data;
+    } catch (_) { storageAvailable = false; }
+    const draw = () => {
+      if (!current()) return;
+      const cards = view === "mine" ? tasks : defaults;
+      body.innerHTML = `<div style="display:flex;justify-content:flex-end"><button type="button" class="btn ghost small" data-m-task-create>＋ 创建任务</button></div>
+        <div class="row" role="group" aria-label="任务视图"><button type="button" class="btn ghost small" data-m-task-view="mine" aria-pressed="${view === "mine"}">☷ 我的任务</button><button type="button" class="btn ghost small" data-m-task-view="default" aria-pressed="${view === "default"}">◷ 自动任务</button></div>
+        ${view === "default" ? `<h3>推荐任务</h3><p class="synthetic">点击＋添加到对话。</p>` : ""}
+        ${cards.length ? cards.map((task, index) => `<div class="m-today-card"><b>${esc(task.title)}</b><p>${esc(task.detail)}</p><button type="button" class="btn ghost small" data-m-task-add="${index}" aria-label="将${esc(task.title)}添加到对话">＋</button></div>`).join("") : `<p class="synthetic">${storageAvailable ? "这里空空如也，点击上方去创建一个任务吧！" : "本地任务暂时无法读取。"}</p>`}
+        `;
     };
-    loadMobileTaskActions();
+    const intoChat = text => {
+      if (!current() || !text) return;
+      const input = $("#m-input");
+      input.value += input.value && !input.value.endsWith("\n") ? "\n" + text : text;
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+      window.XinjiComposerDraft?.save();
+      keepMobileChatDraft();
+      closeSheet();
+      input.focus();
+    };
+    body.onclick = event => {
+      if (!current()) return;
+      const button = event.target.closest("[data-m-task-create], [data-m-task-view], [data-m-task-add]");
+      if (!button || !body.contains(button)) return;
+      if (button.hasAttribute("data-m-task-create")) intoChat("我要创建任务：");
+      else if (button.hasAttribute("data-m-task-view")) { view = button.dataset.mTaskView === "mine" ? "mine" : "default"; draw(); }
+      else { const task = (view === "mine" ? tasks : defaults)[Number(button.dataset.mTaskAdd)]; if (task) intoChat(task.detail || task.title); }
+    };
+    draw();
   }
 
   async function loadMobileTaskActions() {
@@ -1941,6 +1982,40 @@
   const mChatTransport = window.XinjiChatTransport.create(api, {ledger:mChatLedger});
   const mDisplayedTurns = new Map();
 
+  let mSelectedImage = null, mImageReadToken = 0, mImageReading = false;
+  function clearMobileImage() {
+    ++mImageReadToken; mImageReading = false; mSelectedImage = null;
+    $("#m-image-preview")?.classList.add("is-hidden");
+    $("#m-image-preview-thumb")?.removeAttribute("src");
+    if ($("#m-image-input")) $("#m-image-input").value = "";
+  }
+  function setMobileImage(image) {
+    mSelectedImage = image;
+    $("#m-image-preview-thumb").src = image.dataUrl;
+    $("#m-image-preview").classList.remove("is-hidden");
+  }
+  function mImageOutstanding() {
+    return !!(mActiveTurn?.parts.some(p => p.image_data_url) || mQueuedTurns.some(t => t.parts.some(p => p.image_data_url)) ||
+      mTurnQueue.some(p => p.image_data_url) || [...mUncertainTurns.values()].some(t => t.transport?.image_data_url || t.transport?.has_image));
+  }
+  function selectMobileImage(file) {
+    if (!file || !state.session) return;
+    if (mImageOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; }
+    const token = ++mImageReadToken, sid = state.session.id;
+    mImageReading = false;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { toast("请选择 JPEG、PNG 或 WebP 图片。"); return; }
+    if (!file.size || file.size > 4 * 1024 * 1024) { toast("图片大小须在 4 MB 以内。"); return; }
+    const reader = new FileReader(); mImageReading = true;
+    reader.onload = () => {
+      if (token !== mImageReadToken) return;
+      mImageReading = false;
+      if (state.session?.id === sid && typeof reader.result === "string" && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(reader.result)) setMobileImage({dataUrl:reader.result, sessionId:sid});
+      else if (state.session?.id === sid) toast("图片读取失败，请重新选择。");
+    };
+    reader.onerror = () => { if (token === mImageReadToken) { mImageReading = false; toast("图片读取失败，请重新选择。"); } };
+    reader.readAsDataURL(file);
+  }
+
   function cancelPending() {
     if (state.delivery?.pending()) { void state.delivery?.stop(); return; }
     if (!mActiveTurn?.transport) return;
@@ -1956,6 +2031,8 @@
     try {
       const result=await mChatTransport.recover(turn.transport);
       if(state.session?.id!==turn.sessionId) return;
+      const recoveredUser = result.messages.find(m => m.id === result.user_message_id);
+      if (recoveredUser && turn.transport.image_data_url) mDisplayedTurns.set(recoveredUser.id, [{...recoveredUser, image_data_url:turn.transport.image_data_url}]);
       state.messages=[...result.messages.flatMap(m=>mDisplayedTurns.get(m.id)||[m]),...mPendingMessages(turn.sessionId)];
       state.memories=result.memories;
       mUncertainTurns.delete(turn.sessionId); mChatBlocked=mUncertainTurns.size>0;
@@ -1966,13 +2043,15 @@
         const snapshot=await api('/api/session/'+encodeURIComponent(turn.sessionId));
         if(state.session?.id!==turn.sessionId) return;
         state.messages=[...snapshot.messages,...mPendingMessages(turn.sessionId)]; state.memories=snapshot.memories;
-        const restored=[turn.transport.text,...mPendingMessages(turn.sessionId).map(p=>p.text),$("#m-input").value].filter(Boolean).join("\n");
+        const hadImage = !!(turn.transport.image_data_url || turn.transport.has_image);
+        const restored=[hadImage && turn.transport.text === "[图片]" ? "" : turn.transport.text,...mPendingMessages(turn.sessionId).map(p=>p.text),$("#m-input").value].filter(Boolean).join("\n");
+        if (turn.transport.image_data_url && !mSelectedImage) setMobileImage({dataUrl:turn.transport.image_data_url, sessionId:turn.sessionId});
         mChatLedger.returnDraft(turn.sessionId,restored,turn.transport.request_id);
         mQueuedTurns=mQueuedTurns.filter(item=>item.sessionId!==turn.sessionId);
         mTurnQueue=mTurnQueue.filter(item=>item.sessionId!==turn.sessionId);
         $("#m-input").value=restored; window.XinjiComposerDraft?.save();
         mUncertainTurns.delete(turn.sessionId); mChatBlocked=mUncertainTurns.size>0; button.classList.add("is-hidden"); renderAll();
-        $("#m-chat-error").textContent="上次回复结果未确认，已重新读取记录。原文放回输入框，请核对是否已保存再决定发送；没有自动重发。";
+        $("#m-chat-error").textContent=hadImage ? "上次图片发送结果未确认，已重新读取记录；请核对是否已保存。刷新后图片未保留，请重新选择；没有自动重发。" : "上次回复结果未确认，已重新读取记录。原文放回输入框，请核对是否已保存再决定发送；没有自动重发。";
         $("#m-chat-error").classList.remove('is-hidden');
         dispatchSend();
       } else toast(error.message);
@@ -1982,28 +2061,46 @@
   function setupVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const btn = $("#m-mic");
-    if (!SR) { btn.classList.add("is-hidden"); return; }
+    if (!SR) { btn.onclick = () => toast("当前浏览器暂不支持语音识别，请使用文字输入。"); return; }
     recog = new SR();
     recog.lang = "zh-CN";
     recog.interimResults = true;
     recog.continuous = false;
+    let originalDraft = "", recognized = "", failed = false, starting = false;
     recog.onresult = (e) => {
-      let text = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
-      $("#m-input").value = text.trim();
+      recognized = Array.from(e.results, result => result[0]?.transcript || "").join("").trim();
+      $("#m-input").value = [originalDraft, recognized].filter(Boolean).join("\n");
     };
     recog.onstart = () => {
+      starting = false;
       recogListening = true; window.NianxiangSound?.setRecording(true); btn.classList.add("listening"); btn.textContent = "在听…";
     };
     recog.onend = () => {
+      starting = false;
       recogListening = false; window.NianxiangSound?.setRecording(false); btn.classList.remove("listening"); btn.textContent = "语音";
-      const t = $("#m-input").value.trim();
-      if (t) send(t);
+      const input = $("#m-input");
+      if (!failed && recognized && !originalDraft && input.value.trim() === recognized) send(recognized);
+      else if (recognized) { window.XinjiComposerDraft?.save(); input.focus(); }
     };
-    recog.onerror = () => { recogListening = false; window.NianxiangSound?.setRecording(false); btn.classList.remove("listening"); btn.textContent = "语音"; toast("语音识别失败，可改用文字"); };
-    btn.onclick = () => { if (recogListening) recog.stop(); else { try { recog.start(); } catch (_) {} } };
+    recog.onerror = (e) => {
+      failed = true; starting = false;
+      recogListening = false; window.NianxiangSound?.setRecording(false); btn.classList.remove("listening"); btn.textContent = "语音";
+      if (e.error !== "aborted") toast(e.error === "not-allowed" || e.error === "service-not-allowed" ? "麦克风权限未开启" : "语音识别失败，可改用文字");
+    };
+    btn.onclick = () => {
+      if (recogListening) { recog.stop(); return; }
+      if (starting) return;
+      originalDraft = $("#m-input").value; recognized = ""; failed = false; starting = true;
+      try { recog.start(); } catch (_) { starting = false; toast("暂时无法启动语音识别，请稍后再试。"); }
+    };
   }
 
+  let mobilePetChatSession = null;
+  let mobilePetChatVersion = 0;
+  const mobilePetChatParts = new Map();
+  document.addEventListener("xinji-pet-chat-request", event => {
+    mobilePetChatSession = state.session?.id && Number.isSafeInteger(event.detail?.requestId) ? {sessionId:state.session.id, requestId:event.detail.requestId} : null;
+  });
   function mPendingMessages(sessionId) {
     return [...mQueuedTurns.flatMap((turn) => turn.sessionId === sessionId ? turn.parts : []),
       ...mTurnQueue.filter((part) => part.sessionId === sessionId)];
@@ -2021,8 +2118,8 @@
       mChatBlocked=mUncertainTurns.size>0;
       if (saved.pending.length || saved.restored) {
         $('#m-chat-error').textContent=saved.pending.length
-          ? '上次发送状态待核对；原请求已保存在本机。点击「核对发送状态」只读取结果，不会重新发送。'
-          : '刚才尚未发出的内容已放回输入框，由你决定是否发送。';
+          ? (saved.pending.some(record => record.has_image) ? '上次图片发送状态待核对；请求编号已保留，图片预览未保存。点击「核对发送状态」只读取结果，不会重新发送。' : '上次发送状态待核对；原请求已保存在本机。点击「核对发送状态」只读取结果，不会重新发送。')
+          : saved.imageLost ? '刚才未发出的文字已放回输入框；图片未保留，请重新选择。' : '刚才尚未发出的内容已放回输入框，由你决定是否发送。';
         $('#m-chat-error').classList.remove('is-hidden');
         $('#m-chat-recover')?.classList.toggle('is-hidden',!saved.pending.length);
       }
@@ -2040,32 +2137,45 @@
       || ["继续上次", "回到上次", "上次的书签", "回到书签", "别安排", "不用提醒"].some((word) => s.includes(word));
   }
 
-  function send(text) {
-    const clean = text.trim();
+  function send(text, { preserveDraft = false, includeImage = false } = {}) {
+    if (includeImage && mImageReading) { toast("图片正在读取，请稍候发送。"); return; }
+    const image = includeImage && mSelectedImage?.sessionId === state.session?.id ? mSelectedImage : null;
+    const clean = text.trim() || (image ? "[图片]" : "");
     if (!clean || !state.session) return;
+    if (image && mImageOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; }
     if (mChatStorageBlocked) { toast('本机发送记录未能保存。请先复制输入内容，检查存储后重新打开页面。'); return; }
     if (state.attachingSource || state.revokingSource) { toast("正在更新来源，请稍后发送。"); return; }
     if (mUncertainTurns.has(state.session.id)) { $("#m-chat-recover").classList.remove("is-hidden"); toast("这次发送状态待核对，请点击「核对发送状态」。"); return; }
     window.XinjiCompanionBoundary?.invalidate();
     if (state.delivery?.pending()) void state.delivery?.stop();
-    const part = { id: `local-${++mLocalTurnId}`, role: "user", text: clean, sessionId: state.session.id };
+    const part = { id: `local-${++mLocalTurnId}`, role: "user", text: clean, sessionId: state.session.id, ...(image ? {image_data_url:image.dataUrl} : {}) };
     part.id='local-'+mChatTransport.requestId();
     if(window.XinjiContactContract?.supported(state.companionBoundary?.capabilities())) part.time_zone=window.XinjiContactContract.timeZone();
     try { mChatLedger.enqueue(part); }
     catch(error) { toast(error.message); return; }
-    if (mActiveTurn?.sessionId === part.sessionId && mActiveTurn.transport) mChatTransport.cancel(mActiveTurn.transport);
+    if (mobilePetChatSession) {
+      if (mobilePetChatSession.sessionId === part.sessionId) mobilePetChatParts.set(part.id, mobilePetChatSession.requestId);
+      else window.NianxiangPet?.cancelConversation?.(mobilePetChatSession.requestId);
+      mobilePetChatSession = null;
+    }
+    window.XinjiPersonalTasks?.record(part).then(created => { if (created) toast("已添加到我的任务。"); })
+      .catch(() => toast("消息已加入发送队列，但任务未保存，请检查本地存储。"));
+    if (mActiveTurn?.sessionId === part.sessionId && mActiveTurn.transport && !image && !mActiveTurn.parts.some(p => p.image_data_url)) mChatTransport.cancel(mActiveTurn.transport);
     mTurnQueue.push(part);
+    if (image) clearMobileImage();
     window.NianxiangSound?.play("send");
     state.messages.push(part);
     renderMessages(true);
-    $("#m-input").value = "";
-    window.XinjiComposerDraft?.save();
-    $("#m-input").style.height = "auto";
+    if (!preserveDraft) {
+      $("#m-input").value = "";
+      window.XinjiComposerDraft?.save();
+      $("#m-input").style.height = "auto";
+    }
     clearTimeout(mTurnTimer);
     mTurnTimer = setTimeout(() => {
       for (const part of mTurnQueue) {
         const last = mQueuedTurns[mQueuedTurns.length - 1];
-        const standalone = mIsStandaloneCommand(part.text);
+        const standalone = !!part.image_data_url || mIsStandaloneCommand(part.text);
         if (last && last.sessionId === part.sessionId && !last.started && !last.standalone && !standalone && last.timeZone === part.time_zone) last.parts.push(part);
         else mQueuedTurns.push({ sessionId: part.sessionId, parts: [part], standalone, timeZone:part.time_zone });
       }
@@ -2082,30 +2192,39 @@
     const turn=mQueuedTurns.splice(next,1)[0];
     turn.started = true;
     mActiveTurn = turn;
-    globalThis.XinjiMobilePresence?.("thinking");
     const sameSession = () => state.session?.id === turn.sessionId;
+    let petOutcome = null;
+    let petReply = null;
+    const petRequestId = turn.parts.map(part => mobilePetChatParts.get(part.id)).find(id => id !== undefined);
+    const petVersion = ++mobilePetChatVersion;
+    if (sameSession()) globalThis.XinjiMobilePresence?.("thinking");
     const previousAssistantIds = new Set(state.messages.filter(message => message.role === "assistant").map(message => message.id));
     if (sameSession()) $("#m-stop")?.classList.remove("is-hidden");
     try {
-      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), memory_proposals:false, ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
+      turn.transport ||= {session_id:turn.sessionId, text:turn.parts.map(p=>p.text).join("\n"), ...(turn.parts[0].image_data_url ? {image_data_url:turn.parts[0].image_data_url} : {}), memory_proposals:false, ...(typeof turn.timeZone === "string" ? {time_zone:turn.timeZone} : {})};
       const d = await mChatTransport.send(turn.transport, message => {
         if (sameSession()) { $("#m-chat-error").textContent=message; $("#m-chat-error").classList.remove("is-hidden"); }
       },turn.parts);
       if (sameSession()) $("#m-chat-recover")?.classList.add("is-hidden");
       const userMessage = d.messages.find((m) => m.id === d.user_message_id);
       if (userMessage && turn.parts.length > 1) mDisplayedTurns.set(userMessage.id, turn.parts);
+      else if (userMessage && turn.parts[0].image_data_url) mDisplayedTurns.set(userMessage.id, [{...userMessage, image_data_url:turn.parts[0].image_data_url}]);
       if (sameSession()) {
         // Delayed delivery is announced by chat-delivery; immediate replies are announced after rendering,
         // so the sound controller can see whether this reply will be read aloud.
         const completedReply = !d.cancelled && !d.error && [...d.messages].reverse().find(message => message.role === "assistant" && !message.delivery_pending && !previousAssistantIds.has(message.id));
+        if (!d.cancelled && (d.error || d.state === "failed")) petOutcome = "error";
+        else if (completedReply) petOutcome = "success";
+        if (petRequestId !== undefined && petOutcome === "success" && typeof completedReply.text === "string") petReply = completedReply.text.trim();
         state.messages = [...d.messages.flatMap((m) => mDisplayedTurns.get(m.id) || [m]), ...mPendingMessages(turn.sessionId)];
         state.memories = d.memories;
         renderAll();
-        if (completedReply) window.NianxiangSound?.play("receive", {messageId: completedReply.id});
+        if (completedReply) { window.XinjiMessageVoice?.announce(completedReply.id); window.NianxiangSound?.play("receive", {messageId: completedReply.id}); }
         loadNextStep();
       }
     } catch (e) {
       if (e.notSent && sameSession()) {
+        petOutcome = "error";
         window.NianxiangSound?.play("gentleError");
         const waiting = [...turn.parts, ...mPendingMessages(turn.sessionId)];
         const ids = new Set(waiting.map((part) => part.id));
@@ -2113,7 +2232,9 @@
         mTurnQueue = mTurnQueue.filter((item) => item.sessionId !== turn.sessionId);
         state.messages = state.messages.filter((item) => !ids.has(item.id));
         const input = $("#m-input");
-        input.value = [...waiting.map((part) => part.text), input.value.trim()].filter(Boolean).join("\n");
+        input.value = [...waiting.map((part) => part.image_data_url && part.text === "[图片]" ? "" : part.text), input.value.trim()].filter(Boolean).join("\n");
+        const failedImage = waiting.find(part => part.image_data_url);
+        if (failedImage && !mSelectedImage) setMobileImage({dataUrl:failedImage.image_data_url, sessionId:turn.sessionId});
         try { mChatLedger.returnDraft(turn.sessionId,input.value,turn.transport?.request_id); }
         catch(_) { mChatStorageBlocked=true; }
         window.XinjiComposerDraft?.save();
@@ -2124,15 +2245,27 @@
       } else {
         mChatBlocked = true;
         mUncertainTurns.set(turn.sessionId, turn);
-        if (sameSession()) { $("#m-chat-error").textContent="发送结果尚未确认，原请求和待发内容已保存在本机。核对后可继续。"; $("#m-chat-error").classList.remove("is-hidden"); $("#m-chat-recover")?.classList.remove("is-hidden"); }
+        if (sameSession()) { $("#m-chat-error").textContent=turn.transport?.image_data_url ? "图片发送结果尚未确认，请核对状态；刷新后图片预览不会保留。" : "发送结果尚未确认，原请求和待发内容已保存在本机。核对后可继续。"; $("#m-chat-error").classList.remove("is-hidden"); $("#m-chat-recover")?.classList.remove("is-hidden"); }
         if (sameSession()) toast("发送结果尚未确认，请点击「核对发送状态」。");
       }
     } finally {
+      for (const part of turn.parts) mobilePetChatParts.delete(part.id);
       mActiveTurn = null;
       if (sameSession()) void state.companionBoundary?.refresh();
-      globalThis.XinjiMobilePresence?.("quiet");
+      if (sameSession()) globalThis.XinjiMobilePresence?.("quiet");
       if (sameSession()) state.delivery?.schedule();
       dispatchSend();
+      // Run after the presence observer; skip results for another active turn.
+      if (petOutcome) Promise.resolve().then(() => {
+        if (sameSession() && !mActiveTurn) {
+          window.NianxiangPet?.setWork(petOutcome);
+          if (petReply) window.NianxiangPet?.showReply?.(petReply, petRequestId, () => sameSession() && petVersion === mobilePetChatVersion && !mActiveTurn);
+          else if (petRequestId !== undefined) window.NianxiangPet?.cancelConversation?.(petRequestId);
+        } else if (petRequestId !== undefined) {
+          window.NianxiangPet?.cancelConversation?.(petRequestId);
+        }
+      });
+      else if (petRequestId !== undefined) window.NianxiangPet?.cancelConversation?.(petRequestId);
     }
   }
 
@@ -2174,7 +2307,10 @@
     $("#m-chat-recover")?.addEventListener("click", () => recoverMobileChat().catch(e=>toast(e.message)));
     $("#m-action-cancel").onclick = closeMobileAction;
     $("#m-action-confirm").onclick = confirmMobileAction;
-    $("#m-composer").addEventListener("submit", (e) => { e.preventDefault(); send($("#m-input").value); });
+    $("#m-image-btn")?.addEventListener("click", () => { if (mImageOutstanding()) { toast("上一张图片仍在发送或等待核对，请稍候。"); return; } $("#m-image-input").value = ""; $("#m-image-input").click(); });
+    $("#m-image-input")?.addEventListener("change", e => selectMobileImage(e.target.files?.[0]));
+    $("#m-image-remove")?.addEventListener("click", clearMobileImage);
+    $("#m-composer").addEventListener("submit", (e) => { e.preventDefault(); send($("#m-input").value, {includeImage:true}); });
     $("#m-input").addEventListener("input", (e) => {
       e.target.style.height = "auto";
       e.target.style.height = Math.min(120, e.target.scrollHeight) + "px";
@@ -2230,21 +2366,14 @@
 
   function renderDesignSettingsMobile() {
     const body = $("#m-sheet-body");
-    body.innerHTML = `<div class="design-shortcuts"><button type="button" class="btn ghost" id="m-settings-connect">连接应用</button><button type="button" class="btn ghost" id="m-settings-tasks">任务与草稿</button><button type="button" class="btn ghost" id="m-settings-data">资料与记录</button></div><div id="m-design-preferences"></div><div id="m-auto-memory-settings"></div><div id="m-sound-settings"></div><details class="m-today-card" id="m-settings-persona"><summary>伙伴角色</summary><p>虚构角色不写入你的事实；切换伙伴不会影响已确认的记忆。</p><button type="button" class="btn ghost small" id="m-settings-choose-persona">选择聊天伙伴</button></details><details class="m-today-card" id="m-settings-devices"><summary>设备</summary><div id="m-paired-devices"></div><div class="m-today-card"><div class="k">脑电设备</div><b>请在设备所在电脑开启</b><p>当前读取只支持连接 MindLink 服务的本机；手机远程接入仍待联调。</p></div><div class="m-today-card"><div class="k">Rokid 眼镜</div><b>规划中</b><p>将用于查看用户选择的简短提示；型号、连接方式和真机显示待联调。</p></div></details>`;
-    window.XinjiDesign.mountSettings($("#m-design-preferences"));
-    window.XinjiAutoMemorySettings?.mount($("#m-auto-memory-settings"), {api, getSessionId: () => state.session?.id});
+    body.innerHTML = `<div id="m-sound-settings"></div><details class="m-today-card" id="m-settings-persona"><summary>伙伴角色</summary><p>切换伙伴不会影响已确认的记忆。</p><button type="button" class="btn ghost small" id="m-settings-choose-persona">选择聊天伙伴</button></details>`;
     window.NianxiangSound?.mount($("#m-sound-settings"));
-    const settingsEpoch = $("#m-sheet")._xinjiEpoch;
-    pairedDevicesPanel = window.XinjiPairedDevices?.mount($("#m-paired-devices"), {api, getSessionId:() => state.session?.id, visible:() => $("#m-sheet")._xinjiKind === "settings" && $("#m-sheet")._xinjiEpoch === settingsEpoch});
-    $("#m-settings-connect").onclick = showMobileOnboarding;
-    $("#m-settings-tasks").onclick = () => openSheet("tasks");
     $("#m-settings-choose-persona").onclick = () => {
       closeSheet();
       const heading = document.querySelector(".conversation-persona h2");
       heading?.focus();
       heading?.click();
     };
-    $("#m-settings-data").onclick = () => openSheet("more");
   }
 
   function setupMobileDesign() {
@@ -2262,7 +2391,9 @@
     $("#m-design-search").onclick = () => { globalThis.XinjiVoice?.stop?.(); window.XinjiMobileWorkspace.openSearch(); };
     $("#m-design-settings").onclick = () => openSheet("settings");
     window.XinjiMobilePresence = status => { document.documentElement.dataset.presenceState = status; const label = $("#m-design-state"); if (label) label.textContent = {thinking:"正在生成回复",input:"在听你输入",quiet:"安静陪着"}[status] || "安静陪着"; };
-    $("#m-input").addEventListener("input", () => window.XinjiMobilePresence($("#m-input").value ? "input" : "quiet"));
+    $("#m-input").addEventListener("input", () => {
+      if (mActiveTurn?.sessionId !== state.session?.id) window.XinjiMobilePresence($("#m-input").value ? "input" : "quiet");
+    });
     const alignHeader = () => document.documentElement.style.setProperty("--design-header-bottom", `${$(".m-top").getBoundingClientRect().bottom + 8}px`);
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(alignHeader).observe($(".m-top"));
     document.documentElement.dataset.presenceState = "quiet";
@@ -2285,7 +2416,7 @@
       return sheet?.classList.contains('is-hidden') || (reviewedSheet && reviewedSheet.id === state.session?.id &&
         reviewedSheet.epoch === sheet?._xinjiEpoch && sheet?._xinjiKind === 'understand');
     };
-    const canRefresh = () => !!state.session && !document.hidden && !mActiveTurn && !state.delivery?.pending() && !mTurnQueue.length && !mQueuedTurns.length && !mChatBlocked && !contentMutationCount && !state.attachingSource && !state.revokingSource && !state.confirmingSource && !state.memorySaving && !mobileManualMemoryOperation && !(onMemAction.drafts?.size) && followups.canRefresh() && mood?.canRefresh() !== false && state.companionBoundary?.canRefresh() !== false && sheetMayRefresh() && !document.querySelector('dialog[open], [aria-modal="true"]:not(.is-hidden)');
+    const canRefresh = () => !!state.session && !document.hidden && !mActiveTurn && !state.delivery?.pending() && !mTurnQueue.length && !mQueuedTurns.length && !mChatBlocked && !contentMutationCount && !state.attachingSource && !state.revokingSource && !state.confirmingSource && !state.memorySaving && !mobileManualMemoryOperation && !(onMemAction.drafts?.size) && followups.canRefresh() && mood?.canRefresh() !== false && state.companionBoundary?.canRefresh() !== false && sheetMayRefresh() && !document.querySelector('#m-auto-memory-settings details[open], #m-auto-memory-settings[aria-busy="true"], dialog[open], [aria-modal="true"]:not(.is-hidden)');
     const refreshReviewedMemory = () => {
       const sheet = $('#m-sheet');
       if (!reviewedSheet || reviewedSheet.id !== state.session?.id || reviewedSheet.epoch !== sheet?._xinjiEpoch || sheet?._xinjiKind !== 'understand') return;

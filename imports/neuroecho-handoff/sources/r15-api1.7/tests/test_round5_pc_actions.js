@@ -6,11 +6,26 @@ function node() { const classes=new Set(); return {value:'',textContent:'',inner
 function fixture() {
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id)}, calls=[],notes=[],refresh=[];
  const state={session:{id:'one'},messages:[],nextStep:{step:'另一个面板的建议'}};
- let actions=[],lost=false,deferredCreate=null;
- const ctx=vm.createContext({$,state,els:{input:node(),bmNote:node(),bmNext:node()},Date,encodeURIComponent,toast:text=>notes.push(text),insightEntries:()=>[],connectedSources:()=>[],switchTab:name=>refresh.push(name),openMyTasks:()=>refresh.push('bookmark'),loadTaskActions:async()=>{calls.push(['/api/actions?session_id=one',{method:'GET'}]);refresh.push('tasks')},loadToday:()=>refresh.push('today'),loadAudit(){},touchLastSeen(){},openBookmarkModal(){ctx.els.bmNext.value=state.nextStep.step},api:async(path,options={})=>{calls.push([path,options]);if(path.startsWith('/api/actions?'))return {actions};if(path==='/api/action')return deferredCreate || {id:'created-one',status:'previewed'};if(path.endsWith('/commit')){if(lost)throw Error('response lost');return{status:'committed',real:0}};throw Error(path)}});
- vm.runInContext('let pendingAction=null;'+clip('  function closeAction(', '  function actionStatusLabel(')+clip('  function putTodayDraft(', '  async function loadToday(')+'\nObject.assign(this,{closeAction,openAction,openSavedAction,confirmAction,checkActionStatus,putTodayDraft,bookmarkTodayStep,getPending:()=>pendingAction});',ctx);
- return {ctx,$,calls,notes,refresh,state,setActions:value=>actions=value,lose:()=>lost=true,deferCreate:value=>deferredCreate=value};
+ let actions=[],lost=false,deferredCreate=null,deferredCommit=null;
+ const ctx=vm.createContext({$,state,els:{input:node(),bmNote:node(),bmNext:node()},Date,encodeURIComponent,toast:text=>notes.push(text),insightEntries:()=>[],connectedSources:()=>[],switchTab:name=>refresh.push(name),openMyTasks:()=>refresh.push('bookmark'),loadTaskActions:async()=>{calls.push(['/api/actions?session_id=one',{method:'GET'}]);refresh.push('tasks')},loadToday:()=>refresh.push('today'),loadAudit(){},touchLastSeen(){},openBookmarkModal(){ctx.els.bmNext.value=state.nextStep.step},api:async(path,options={})=>{calls.push([path,options]);if(path.startsWith('/api/actions?'))return {actions};if(path==='/api/action')return deferredCreate || {id:'created-one',status:'previewed'};if(path.endsWith('/commit')){if(lost)throw Error('response lost');return deferredCommit || {status:'committed',real:0}};throw Error(path)}});
+ vm.runInContext('let pendingAction=null;'+clip('  function setPetActionPhase(', '  function actionStatusLabel(')+clip('  function putTodayDraft(', '  async function loadToday(')+'\nObject.assign(this,{closeAction,openAction,openSavedAction,confirmAction,checkActionStatus,putTodayDraft,bookmarkTodayStep,getPending:()=>pendingAction});',ctx);
+ return {ctx,$,calls,notes,refresh,state,setActions:value=>actions=value,lose:()=>lost=true,deferCreate:value=>deferredCreate=value,deferCommit:value=>deferredCommit=value};
 }
+test('pet tracks an actual action preview and confirmed save without interrupting chat thinking',async()=>{
+ const f=fixture(),events=[];let work=null;
+ f.ctx.NianxiangPet={getState:()=>({work}),setWork:s=>{work=s;events.push(s)}};
+ f.ctx.openAction('message',-1,{title:'草稿',text:'正文'});assert.deepEqual(events,['waiting']);
+ await f.ctx.confirmAction();assert.deepEqual(events,['waiting','working','result','success']);
+ work='thinking';events.length=0;f.ctx.openAction('message',-1,{title:'草稿',text:'正文'});f.ctx.closeAction();assert.deepEqual(events,[]);
+});
+test('pet shows the preview result while a real commit is pending, then reports only the returned outcome',async()=>{
+ const f=fixture(),events=[];let work=null,release;f.deferCommit(new Promise(resolve=>release=resolve));
+ f.ctx.NianxiangPet={getState:()=>({work}),setWork:s=>{work=s;events.push(s)}};
+ f.ctx.openAction('message',-1,{title:'草稿',text:'正文'});const pending=f.ctx.confirmAction();
+ while(!f.calls.some(([path])=>path.endsWith('/commit'))) await Promise.resolve();
+ assert.deepEqual(events,['waiting','working','result']);release({status:'committed',real:0});await pending;
+ assert.deepEqual(events,['waiting','working','result','success']);
+});
 test('manual draft is editable and creates one local record only after confirmation',async()=>{
  const f=fixture();f.ctx.openAction('message',-1,{title:'',text:'',manual:true});assert.equal(f.calls.length,0);
  f.$('#action-name').value='给朋友';f.$('#action-message').value='完整正文\n第二行';await f.ctx.confirmAction();

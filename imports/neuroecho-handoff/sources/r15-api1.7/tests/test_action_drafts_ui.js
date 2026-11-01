@@ -70,7 +70,7 @@ for(const [variant,path,begin,end,fn,selector] of [
   });
 }
 
-test('mobile task sheet has a saved-action list and both surfaces load the helper',()=>{
-  assert.match(fs.readFileSync('web/m.js','utf8'),/id="m-task-actions"/);
+test('mobile tasks omit the old action list while both surfaces retain the shared helper',()=>{
+  assert.doesNotMatch(fs.readFileSync('web/m.js','utf8'),/id="m-task-actions"/);
   for(const path of ['web/index.html','web/m.html'])assert.match(fs.readFileSync(path,'utf8'),/\/static\/action-cards\.js/);
 });

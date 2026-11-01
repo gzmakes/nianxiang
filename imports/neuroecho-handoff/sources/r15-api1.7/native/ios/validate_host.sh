@@ -19,3 +19,6 @@ swiftc -parse-as-library Sources/EchoCore/*.swift App/DeviceCredentialStore.swif
 
 swiftc -parse-as-library Sources/EchoCore/*.swift App/DeviceCredentialStore.swift App/EchoStore.swift HostChecks/ChangeRefreshLifecycleChecks.swift -o .build/host-checks/change-refresh-lifecycle
 .build/host-checks/change-refresh-lifecycle
+
+swiftc -whole-module-optimization -parse-as-library Sources/EchoCore/*.swift App/DeviceCredentialStore.swift App/EchoStore.swift HostChecks/DeliveryLifecycleChecks.swift -o .build/host-checks/delivery-lifecycle
+.build/host-checks/delivery-lifecycle

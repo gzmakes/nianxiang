@@ -27,13 +27,13 @@ test('desktop restores the canonical conversation without probing any synthetic 
 });
 
 for(const [label,source,start,end,queue,local,active,blocked,dispatch,inputId] of [
- ['desktop',pc,'  function pendingMessages(','  function stopWaiting()','queuedTurns','turnQueue','activeTurn','chatBlocked','dispatchTurn',null],
- ['mobile',mobile,'  function mPendingMessages(','  // ---------- boot ----------','mQueuedTurns','mTurnQueue','mActiveTurn','mChatBlocked','dispatchSend','#m-input']]){
+ ['desktop',pc,'  let petChatSession','  function stopWaiting()','queuedTurns','turnQueue','activeTurn','chatBlocked','dispatchTurn',null],
+ ['mobile',mobile,'  let mobilePetChatSession','  // ---------- boot ----------','mQueuedTurns','mTurnQueue','mActiveTurn','mChatBlocked','dispatchSend','#m-input']]){
  test(`${label} 429 returns unsent messages and preserves draft`,async()=>{
   const {n,$}=nodeset();let message='';const input=element();if(inputId)n.set(inputId,input);input.value='正在输入';
   const p1={id:'local-1',role:'user',text:'第一条',sessionId:'s'},p2={id:'local-2',role:'user',text:'第二条',sessionId:'s'};
   const ctx=connectionContext({$,state:{session:{id:'s'},messages:[p1,p2],memories:[]},els:{input,messages:{insertAdjacentHTML(){},scrollTop:0,scrollHeight:0}},
-    window:{},chatLedger:{returnDraft(){}},mChatLedger:{returnDraft(){}},memoryProposal:{shouldRequest(){return false},offer(){}}, chatTransport:{send:async()=>{const e=Error('本次会话已达到 40 轮预算上限');e.status=429;e.notSent=true;throw e}}, mChatTransport:{send:async()=>{const e=Error('本次会话已达到 40 轮预算上限');e.status=429;e.notSent=true;throw e}},toast:s=>{message=s},setOrb(){},chatScroll:{render(fn){fn()}},renderMessages(){},renderAll(){},loadAudit(){},loadNextStep(){},touchLastSeen(){},setTimeout(){},clearTimeout(){},Date,Map,Set});
+    window:{},document:{addEventListener(){}},chatLedger:{returnDraft(){}},mChatLedger:{returnDraft(){}},memoryProposal:{shouldRequest(){return false},offer(){}}, chatTransport:{send:async()=>{const e=Error('本次会话已达到 40 轮预算上限');e.status=429;e.notSent=true;throw e}}, mChatTransport:{send:async()=>{const e=Error('本次会话已达到 40 轮预算上限');e.status=429;e.notSent=true;throw e}},toast:s=>{message=s},setOrb(){},chatScroll:{render(fn){fn()}},renderMessages(){},renderAll(){},loadAudit(){},loadNextStep(){},touchLastSeen(){},setTimeout(){},clearTimeout(){},Date,Map,Set});
   const init=`let ${queue}=[{sessionId:'s',parts:[${JSON.stringify(p1)}],standalone:true},{sessionId:'s',parts:[${JSON.stringify(p2)}],standalone:true}],${local}=[],${active}=null,${blocked}=false;`+(label==='desktop'?'let chatStorageBlocked=false,turnTimer=null, localTurnId=0; const displayedTurns=new Map(), uncertainTurns=new Map();':'let mChatStorageBlocked=false,mTurnTimer=null, mLocalTurnId=0; const mDisplayedTurns=new Map(), mUncertainTurns=new Map();');
   vm.runInContext(init+'\n'+clip(source,start,end)+`\nthis.run=${dispatch};this.getBlocked=()=>${blocked};`,ctx);await ctx.run();
   assert.equal(input.value,'第一条\n第二条\n正在输入');assert.match(message,/未发送/);assert.match($(inputId?'#m-chat-error':'#chat-error').textContent,/40 轮.*未发送/);assert.equal(ctx.getBlocked(),false);assert.equal(ctx.state.messages.length,0);
@@ -75,7 +75,8 @@ for (const [label,src,start,end,actionVar,fn,prefix] of [
  const {$}=nodeset();let calls=0, shown=[];const real=$(`#${prefix}action-real`),when=$(`#${prefix}action-when`),button=$(`#${prefix}action-confirm`),result=$(`#${prefix}action-result`);
  real.checked=true;when.value='';$(`#${prefix}action-name`).value='测试';$(`#${prefix}action-message`).value='测试';
  const ctx=connectionContext({$,state:{session:{id:'s'}},api:async path=>{calls++;return path==='/api/action'?{id:'a'}:{status:'unknown',real:0}},toast:s=>shown.push(s),touchLastSeen(){},loadAudit(){},loadTaskActions(){},loadToday(){}});
- vm.runInContext(`let ${actionVar}={kind:'calendar',sessionId:'s',title:'测试',detail:'测试'};\n`+clip(src,start,end)+`\nthis.run=${fn};`,ctx);
+ const petHelper=label==='desktop'?clip(src,'  function setPetActionPhase(', '  function closeAction()'):clip(src,'  function setMobilePetActionPhase(', '  function openMobileAction(');
+ vm.runInContext(`let ${actionVar}={kind:'calendar',sessionId:'s',title:'测试',detail:'测试'};\n`+petHelper+clip(src,start,end)+`\nthis.run=${fn};`,ctx);
  await ctx.run();assert.equal(calls,0);assert.match(result.textContent,/选择.*时间/);assert.notEqual(button.disabled,true);
  when.value='2026-10-30T10:00';await ctx.run();assert.equal(calls,2);assert.match(result.textContent,/未确认写入.*系统检查/);assert.equal(button.disabled,true);assert.equal(shown.length,0);
 });

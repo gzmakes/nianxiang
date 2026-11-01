@@ -70,7 +70,7 @@ private final class SyntheticProtocol: URLProtocol {
     override func stopLoading() {}
 }
 @MainActor private func makeSyntheticStore(defaults: UserDefaults) -> EchoStore {
-    EchoStore(defaults:defaults,apiFactory:{address,authorization in
+    EchoStore(defaults:defaults,automaticChangePolling:false,apiFactory:{address,authorization in
         let configuration=URLSessionConfiguration.ephemeral;configuration.protocolClasses=[SyntheticProtocol.self]
         return try EchoAPI(baseURL:address,session:URLSession(configuration:configuration),authorization:authorization)
     })
@@ -154,7 +154,7 @@ private final class SyntheticProtocol: URLProtocol {
             let (delivery,xd,xn) = try makeStore(seedPending:false); defer {xd.removePersistentDomain(forName:xn)}
             let originalSnapshot = SyntheticProtocol.snapshot
             SyntheticProtocol.snapshot = #"{"session":{"id":"canonical"},"messages":[{"id":"msg-1","role":"assistant","text":"第一段","bubbles":["第一段"],"delivery_pending":true,"delivery_next_ms":100}],"memories":[],"context":null}"#
-            await delivery.connect()
+            await delivery.connect();delivery.setChangeMonitoringActive(true)
             precondition(delivery.conversation?.messages[0].displayParts == ["第一段"])
             SyntheticProtocol.snapshot = #"{"session":{"id":"canonical"},"messages":[{"id":"msg-1","role":"assistant","text":"第一段\n\n第二段","bubbles":["第一段","第二段"],"delivery_pending":false}],"memories":[],"context":null}"#
             SyntheticProtocol.calls = []; await delivery.refreshDelivery()

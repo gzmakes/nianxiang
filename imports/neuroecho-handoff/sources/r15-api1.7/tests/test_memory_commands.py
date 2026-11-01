@@ -1,8 +1,9 @@
 """Synthetic coverage for explicit memory commands and mixed turns."""
 import pytest
 from fastapi.testclient import TestClient
+from types import SimpleNamespace
 
-from server import core, model
+from server import chat_delivery, core, model
 from server.main import app
 
 
@@ -30,6 +31,8 @@ def test_ordinary_narrative_does_not_save_memory_on_outage(client, monkeypatch, 
 @pytest.mark.parametrize('joiner', ['，也帮我', '，并帮我', '然后帮我', '，同时帮我'])
 def test_mixed_turn_saves_only_fact_and_answers_followup(client, monkeypatch, joiner):
     captured = []
+    clock = SimpleNamespace(value=100.0)
+    monkeypatch.setattr(chat_delivery, 'time', SimpleNamespace(time=lambda: clock.value))
     class Fake:
         model = 'fake'
         def complete(self, system, prompt):
@@ -41,7 +44,13 @@ def test_mixed_turn_saves_only_fact_and_answers_followup(client, monkeypatch, jo
     result = client.post('/api/chat', json={'session_id': sid, 'text': text}).json()
     assert [m['text'] for m in result['memories']] == ['我喜欢红茶']
     assert result['memories'][0]['status'] == 'auto'
-    assert '查看、修改或删除' in result['reply'] and '泡淡' in result['reply']
+    assert '查看、修改或删除' in result['reply']
+    assert result['messages'][-1]['delivery_pending']
+    assert '泡淡' not in result['reply']
+    clock.value = 120.0
+    delivered = client.get('/api/session/' + sid).json()['messages'][-1]
+    assert not delivered['delivery_pending']
+    assert '查看、修改或删除' in delivered['text'] and '泡淡' in delivered['text']
     assert '想一个喝茶的建议' in captured[-1]
     assert result['messages'][-2]['text'] == text
 

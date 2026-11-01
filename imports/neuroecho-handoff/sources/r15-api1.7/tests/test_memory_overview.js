@@ -30,6 +30,7 @@ function fixture(options = {}) {
   const values = new Map(); const root = new Element('main'); const list = new Element('div'); root.append(list);
   const localStorage = {getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value)};
   const context = vm.createContext({window: {XinjiDialogs: {confirm: options.confirm || (async () => true)}}, document: {createElement: tag => new Element(tag)}, localStorage, fetch: options.fetch || (() => { throw Error('unexpected fetch'); })});
+  vm.runInContext(fs.readFileSync('web/memory-insights.js', 'utf8'), context);
   vm.runInContext(code, context);
   const overview = context.window.XinjiMemoryOverview.mount({list});
   function setCards(records) { list.replaceChildren(...records.map(record => { const card = new Element('div'); card.className = 'mem-item'; card.dataset.id = record.id; const edit = new Element('textarea'); edit.value = '未提交的草稿'; card.append(edit); return card; })); }
@@ -41,133 +42,79 @@ const rows = [
   {id:'c', text:'已删除的合成内容', kind:'fact', status:'deleted', version:1, created_at:'2026-01-04'}
 ];
 
-test('overview derives only from confirmed live records and distinguishes pending and deleted', () => {
-  const f = fixture(); f.setCards(rows); f.overview.render(rows, 'session-one');
-  const summary = f.find('.memory-summary');
-  assert.match(summary.textContent, /我喜欢合成绿茶/);
-  assert.doesNotMatch(summary.textContent, /合成的项目内容|已删除的合成内容/);
-  assert.match(summary.textContent, /1 条其他记录未计入了解/);
-  assert.equal(f.list.hidden, true);
-  assert.equal(f.find('.memory-overview').hidden, false);
-});
-
-test('category navigation filters existing cards, preserves their edit state, and back returns to overview', () => {
-  const f = fixture(); f.setCards(rows); const card = f.list.children[0]; const edit = card.querySelector('textarea');
-  f.overview.render(rows, 'session-one'); f.find('[data-memory-group="preferences"]').dispatch('click');
-  assert.equal(f.list.hidden, false); assert.equal(card.hidden, false); assert.equal(f.list.children[1].hidden, true); assert.equal(f.list.children[2].hidden, true);
-  assert.equal(card.querySelector('textarea'), edit); assert.equal(edit.value, '未提交的草稿');
-  f.find('[data-memory-back]').dispatch('click'); assert.equal(f.list.hidden, true); assert.equal(f.find('.memory-overview').hidden, false);
-  f.find('[data-memory-all]').dispatch('click'); assert.equal(card.hidden, false); assert.equal(f.list.children[1].hidden, false); assert.equal(f.list.children[2].hidden, true);
-});
-
-test('corrected category persists without storing text, and sessions stay isolated', () => {
-  const f = fixture(); f.setCards(rows); f.overview.render(rows, 'session-one'); f.overview.showAll();
-  let select = f.list.children[0].querySelector('[data-memory-category]'); select.value = 'life'; select.dispatch('change');
-  const saved = f.values.get('xinji.memory.category.v1'); assert.ok(saved); assert.doesNotMatch(saved, /合成绿茶|项目内容/);
-  f.setCards(rows); f.overview.render(rows, 'session-one'); f.find('[data-memory-group="life"]').dispatch('click'); assert.equal(f.list.children[0].hidden, false);
-  f.setCards(rows); f.overview.render(rows, 'session-two'); assert.equal(f.find('.memory-overview').hidden, false);
-  f.find('[data-memory-group="life"]').dispatch('click'); assert.equal(f.list.children[0].hidden, true);
-  f.find('[data-memory-back]').dispatch('click'); f.overview.render(rows, 'session-one'); f.find('[data-memory-group="life"]').dispatch('click'); assert.equal(f.list.children[0].hidden, false);
-});
-
-test('removed and deleted records disappear after refresh and cannot leave stale summary or category entries', () => {
-  const f = fixture(); f.setCards(rows); f.overview.render(rows, 'session-one'); f.overview.showAll();
-  const select = f.list.children[0].querySelector('[data-memory-category]'); select.value = 'life'; select.dispatch('change');
-  const next = [{...rows[0], status:'deleted'}]; f.setCards(next); f.overview.render(next, 'session-one');
-  f.find('[data-memory-back]').dispatch('click'); assert.doesNotMatch(f.find('.memory-summary').textContent, /合成绿茶/);
-  assert.match(f.find('[data-memory-group="life"]').textContent, /0 条记忆/);
-  const saved = JSON.parse(f.values.get('xinji.memory.category.v1') || '{}'); assert.equal(saved['session-one']?.a, undefined);
-});
-
-const summaryRows = [
-  {id:'a', text:'我喜欢合成绿茶', kind:'fact', status:'confirmed', version:1, source:'合成来源'},
-  {id:'b', text:'我喜欢合成音乐', kind:'fact', status:'confirmed', version:2, source:'合成来源'},
-  {id:'c', text:'我喜欢待确认内容', kind:'fact', status:'candidate', version:1}
-];
-function choose(f, id) {
-  const checkbox = f.find(`[data-memory-summary-choice="${id}"]`); assert.ok(checkbox); checkbox.checked = true; checkbox.dispatch('change');
-}
-function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return {promise, resolve}; }
-function response(summary='合成总结', evidence=[{id:'a', version:1, text:'我喜欢合成绿茶', source:'合成来源'}]) { return {ok:true, status:200, json:async () => ({summary, evidence})}; }
-
-test('model summary is opt-in, defaults to no selection, and cancellation never calls the service', async () => {
-  let confirmations = 0, calls = 0; const f = fixture({confirm:async () => { confirmations++; return false; }, fetch:async () => { calls++; return response(); }});
-  f.setCards(summaryRows); f.overview.render(summaryRows, 's');
-  assert.equal(f.find('[data-memory-generate]').disabled, true);
-  assert.equal(f.find('[data-memory-summary-choice="a"]').checked, false);
-  assert.equal(f.find('[data-memory-summary-choice="b"]').checked, false);
-  assert.equal(f.find('[data-memory-summary-choice="c"]'), null);
-  await f.find('[data-memory-generate]').dispatch('click'); assert.equal(confirmations, 0); assert.equal(calls, 0);
-  choose(f, 'a'); assert.equal(f.find('[data-memory-generate]').disabled, false);
-  await f.find('[data-memory-generate]').dispatch('click'); assert.equal(confirmations, 1); assert.equal(calls, 0);
-});
-
-test('approved summary sends only selected IDs and versions and labels the result with evidence', async () => {
-  const requests = [], confirmations = [];
-  const f = fixture({confirm:async args => {confirmations.push(args); return true;}, fetch:async (url, options) => {requests.push({url, options}); return response();}});
-  f.setCards(summaryRows); f.overview.render(summaryRows, 's'); choose(f, 'a');
-  await f.find('[data-memory-generate]').dispatch('click');
-  assert.equal(requests.length, 1); assert.equal(requests[0].url, '/api/memory/summary'); assert.equal(requests[0].options.method, 'POST');
-  assert.deepEqual(JSON.parse(requests[0].options.body), {session_id:'s', confirm:true, memories:[{id:'a',version:1}]});
-  assert.match(confirmations[0].message, /完整内容.*模型服务/);
-  assert.match(f.find('.memory-generated').textContent, /模型生成，待核对/);
-  assert.match(f.find('.memory-generated').textContent, /合成总结/);
-  assert.match(f.find('.memory-summary-evidence').textContent, /合成绿茶/);
-  assert.doesNotMatch(f.find('.memory-generated').textContent, /合成音乐/);
-  const stored = [...f.values.values()].join(''); assert.doesNotMatch(stored, /合成总结|合成绿茶/);
-});
-
-test('failure is surfaced and leaves an explicit retry available', async () => {
-  const f = fixture({fetch:async () => ({ok:false, status:503, json:async () => ({detail:'合成服务暂不可用'})})});
-  f.setCards(summaryRows); f.overview.render(summaryRows, 's'); choose(f, 'a'); await f.find('[data-memory-generate]').dispatch('click');
-  assert.match(f.find('.memory-summary-status').textContent, /合成服务暂不可用/);
-  assert.equal(f.find('.memory-generated'), null); assert.equal(f.find('[data-memory-generate]').disabled, false);
-});
-
-test('a changed version invalidates a completed summary and clears its selected inputs', async () => {
-  const f = fixture({fetch:async () => response()}); f.setCards(summaryRows); f.overview.render(summaryRows, 's'); choose(f, 'a');
-  await f.find('[data-memory-generate]').dispatch('click'); assert.ok(f.find('.memory-generated'));
-  const changed = [{...summaryRows[0], version:2, text:'我喜欢合成红茶'}, ...summaryRows.slice(1)]; f.setCards(changed); f.overview.render(changed, 's');
-  assert.equal(f.find('.memory-generated'), null); assert.match(f.find('.memory-summary-status').textContent, /记忆已变化/);
-  assert.equal(f.find('[data-memory-summary-choice="a"]').checked, false); assert.equal(f.find('[data-memory-generate]').disabled, true);
-});
-
-test('a changed version or session discards an in-flight model response', async () => {
-  for (const change of ['version','session']) {
-    const pending = deferred(), f = fixture({fetch:async () => pending.promise});
-    f.setCards(summaryRows); f.overview.render(summaryRows, 's'); choose(f, 'a');
-    const running = f.find('[data-memory-generate]').dispatch('click'); await Promise.resolve(); await Promise.resolve();
-    const changed = change === 'version' ? [{...summaryRows[0], version:2}, ...summaryRows.slice(1)] : summaryRows;
-    f.setCards(changed); f.overview.render(changed, change === 'session' ? 'other' : 's');
-    pending.resolve(response()); await running;
-    assert.equal(f.find('.memory-generated'), null); assert.equal(f.find('[data-memory-summary-choice="a"]').checked, false);
-    assert.equal(f.find('[data-memory-generate]').disabled, true);
-  }
-});
-
-
-test('automatic facts enter the overview and selectable summary, while guesses and legacy candidates do not', () => {
+test('overview presents concise grounded facts without sources or the removed controls', () => {
   const records = [
-    {id:'auto', text:'我喜欢合成红茶', kind:'fact', status:'auto', version:1, source:'对话原话 · 自动记录'},
-    {id:'guess', text:'我喜欢合成咖啡', kind:'inference', status:'candidate', version:1},
-    {id:'old', text:'我喜欢合成气泡水', kind:'fact', status:'candidate', version:1},
-    {id:'stale', text:'我喜欢合成饮料', kind:'fact', status:'auto', version:1, source:'撤回后来源待核对'}
+    {id:'a', text:'我喜欢合成绿茶', kind:'fact', status:'confirmed', source:'私人来源', version:1},
+    {id:'b', text:'我喜欢合成红茶', kind:'fact', status:'candidate', version:1},
+    {id:'c', text:'过时内容', kind:'fact', status:'confirmed', source_attachment_id:'stale', version:1},
+    {id:'d', text:'我喜欢合成咖啡', kind:'inference', status:'confirmed', version:1}
   ];
-  const f = fixture(); f.setCards(records); f.overview.render(records, 's');
-  const summary = f.find('.memory-summary');
-  assert.match(summary.textContent, /合成红茶/);
-  assert.doesNotMatch(summary.textContent, /合成咖啡|合成气泡水|合成饮料/);
-  assert.ok(f.find('[data-memory-summary-choice="auto"]'));
-  assert.equal(f.find('[data-memory-summary-choice="guess"]'), null);
-  assert.equal(f.find('[data-memory-summary-choice="old"]'), null);
-  assert.equal(f.find('[data-memory-summary-choice="stale"]'), null);
-  assert.equal(f.find('.memory-summary-evidence').open, undefined);
+  const f=fixture(); f.setCards(records); f.overview.render(records, 's', [{id:'stale',stale:true}]);
+  const summary=f.find('.memory-summary'); assert.match(summary.textContent, /你喜欢合成绿茶/);
+  assert.doesNotMatch(summary.textContent, /私人来源|合成红茶|过时内容|合成咖啡|查看全部记忆|待核对/);
+  assert.equal(f.find('[data-memory-all]'), null); assert.equal(f.find('[data-memory-generate]'), null);
+  f.find('[data-memory-pending]').dispatch('click'); assert.equal(f.list.children[1].hidden, false); assert.equal(f.list.children[0].hidden, true);
+});
+
+test('review filters questions, generic insights and duplicates, and shows at most five at a time without mutating data', () => {
+  const records=Array.from({length:7}, (_,i)=>({id:`p${i}`,text:`我喜欢品种${i}`,kind:'fact',status:'candidate',version:1}));
+  records.push({...records[0],id:'duplicate'}, {id:'question',kind:'question',status:'candidate',text:'「日历」需要我先帮你做什么？'},
+    {id:'insight',kind:'inference',status:'candidate',text:'洞察（pattern）：本次展示 5 条提醒'}, {id:'other',kind:'fact',status:'candidate',text:'项目有三项安排'});
+  const before=JSON.stringify(records), f=fixture(); f.setCards(records); f.overview.render(records,'s',[]);
+  assert.match(f.find('[data-memory-pending]').textContent, /5 条/); f.find('[data-memory-pending]').dispatch('click');
+  assert.equal(f.list.children.filter(card=>!card.hidden).length,5); assert.equal(f.find('[data-memory-more]'),null);
+  f.find('[data-memory-back]').dispatch('click'); f.find('[data-memory-group="other"]').dispatch('click');
+  assert.equal(f.list.children[5].hidden,false); assert.equal(JSON.stringify(records),before);
+});
+
+test('summary avoids unconfirmed automatic memories and changes immediately after explicit correction', () => {
+  const f=fixture(), old={id:'auto',text:'我喜欢合成红茶',kind:'fact',status:'auto',source:'对话原话 · 自动记录',version:1};
+  f.setCards([old]); f.overview.render([old],'s',[]); assert.doesNotMatch(f.find('.memory-summary').textContent,/合成红茶/);
+  const corrected={...old,text:'我喜欢合成绿茶',source:'对话原话 · 用户纠正',version:2}; f.setCards([corrected]); f.overview.render([corrected],'s',[]);
+  assert.match(f.find('.memory-summary').textContent,/你喜欢合成绿茶/);
+});
+
+test('local understanding uses authorized reminder titles without claiming unverified traits', () => {
+  const source = {id:'r', connector_id:'apple_reminders', stale:false, items:[
+    {type:'提醒',title:'准备合成报告',modified_at:'2026-10-30'},
+    {type:'提醒',title:'新建提醒',modified_at:'2026-10-29'},
+    {type:'提醒',title:'准备合成报告',modified_at:'2026-10-28'},
+    {type:'提醒',title:'待判断？',modified_at:'2026-10-27'}
+  ]};
+  const f=fixture(); f.setCards([]); f.overview.render([], 's', [source]);
+  assert.match(f.find('.memory-summary').textContent,/你曾有提醒「准备合成报告」/);
+  assert.doesNotMatch(f.find('.memory-summary').textContent,/新建提醒|待判断/);
+  assert.doesNotMatch(f.find('[data-memory-group="other"]').textContent,/0 条记忆/);
+  f.overview.render([], 's', [{...source,stale:true}]); assert.doesNotMatch(f.find('.memory-summary').textContent,/合成报告/);
+  f.overview.render([], 's', [{...source,connector_id:'local_files'}]); assert.doesNotMatch(f.find('.memory-summary').textContent,/合成报告/);
+});
+
+test('category navigation retains editable cards and user changes', () => {
+  const f=fixture(); f.setCards(rows); const edit=f.list.children[0].querySelector('textarea'); f.overview.render(rows,'s');
+  f.find('[data-memory-group="preferences"]').dispatch('click'); assert.equal(f.list.children[0].hidden,false); assert.equal(edit.value,'未提交的草稿');
+  f.find('[data-memory-back]').dispatch('click'); assert.equal(f.list.hidden,true);
+});
+
+test('mobile overview uses the same grounded summary, no automatic-record module, and a maximum of five pending cards', () => {
+  const mobile=fs.readFileSync('web/m.js','utf8'), body={innerHTML:''}, add={};
+  const records=[{id:'ok',kind:'fact',status:'confirmed',text:'我喜欢茶',source:'私人来源'},
+    ...Array.from({length:7},(_,i)=>({id:`p${i}`,kind:'fact',status:'candidate',text:`我喜欢品种${i}`})),
+    {id:'question',kind:'question',status:'candidate',text:'你喜欢什么？'}];
+  const state={memorySaving:false,session:{id:'s'},memories:records}, window={};
+  const context=vm.createContext({state,window,mobileMemoryReviewOffset:0,mobileSources:()=>[],esc:String,
+    memCard:m=>`<article data-id="${m.id}">${m.text}</article>`,addMobileMemoryPrompt:()=>{},
+    $:selector=>selector==='#m-sheet-body'?body:selector==='#m-memory-more'?null:add});
+  vm.runInContext(fs.readFileSync('web/memory-insights.js','utf8'),context);
+  vm.runInContext(mobile.slice(mobile.indexOf('  function renderUnderstanding()'),mobile.indexOf('  let mobileManualMemoryOperation'))+'\nthis.render=renderUnderstanding;',context);
+  context.render(); assert.match(body.innerHTML,/你喜欢茶/); assert.match(body.innerHTML,/有 5 条/);
+  assert.doesNotMatch(body.innerHTML,/自动记录|私人来源/);
+  const overview=body.innerHTML.split('<summary>其他记忆</summary>')[0]; assert.doesNotMatch(overview,/你喜欢什么|品种5/);
 });
 
 test('PC and H5 cards distinguish memory states and allow confirmation of automatic records', () => {
   const desktop = fs.readFileSync('web/app.js', 'utf8');
   const mobile = fs.readFileSync('web/m.js', 'utf8');
-  const globals = {esc: value => String(value), memorySourceLabel: record => record.source || '', mobileSources: () => []};
+  const globals = {esc: value => String(value), memorySourceLabel: record => record.source || '', mobileSources: () => [], connectedSources: () => []};
   const pc = vm.createContext({...globals});
   vm.runInContext(desktop.slice(desktop.indexOf('  function memoryPresentation('), desktop.indexOf('\n  function renderBookmark()')) + '\nthis.card=memoryItem;', pc);
   const h5 = vm.createContext({...globals});
@@ -177,44 +124,13 @@ test('PC and H5 cards distinguish memory states and allow confirmation of automa
     [{id:'b',kind:'fact',status:'auto',source:'用户手动添加',version:1,text:'我喜欢音乐'}, /你已添加/, /你主动记下/],
     [{id:'c',kind:'fact',status:'candidate',source:'资料',version:1,text:'旧资料'}, /尚未核实/, /不作为确定事实/],
     [{id:'d',kind:'inference',status:'candidate',source:'资料',version:1,text:'可能喜欢散步'}, /推测/, /不作为确定事实/],
-    [{id:'e',kind:'fact',status:'auto',source:'撤回后来源待核对',version:1,text:'已撤回'}, /自动记录/, /暂不用于回复/]
+    [{id:'e',kind:'fact',status:'auto',source:'撤回后来源待核对',version:1,text:'已撤回'}, /来源待核对/, /暂不用于回复/],
+    [{id:'f',kind:'fact',status:'confirmed',source:'资料',source_attachment_id:'missing',version:1,text:'来源已变化'}, /来源待核对/, /仍可能用于回复/]
   ];
   for (const [record, label, use] of samples) for (const card of [pc.card(record), h5.card(record, record.kind)]) {
     assert.match(card, label); assert.match(card, use);
-    if (record.id === 'a') assert.match(card, /data-act="confirm"/);
+    if (record.id === 'a' || record.id === 'c') assert.match(card, /data-act="confirm"/);
     else assert.doesNotMatch(card, /data-act="confirm"/);
     assert.match(card, /data-act="edit"/); assert.match(card, /data-act="delete"/);
   }
-});
-
-
-test('editing an automatic fact updates the overview and invalidates the old summary selection', () => {
-  const f = fixture();
-  const initial = [{id:'auto', text:'我喜欢合成红茶', kind:'fact', status:'auto', version:1, source:'对话原话 · 自动记录'}];
-  f.setCards(initial); f.overview.render(initial, 's'); choose(f, 'auto');
-  const corrected = [{...initial[0], version:2, text:'我喜欢合成绿茶', source:'对话原话 · 用户纠正'}];
-  f.setCards(corrected); f.overview.render(corrected, 's');
-  assert.match(f.find('.memory-summary').textContent, /合成绿茶/);
-  assert.doesNotMatch(f.find('.memory-summary').textContent, /合成红茶/);
-  assert.equal(f.find('[data-memory-summary-choice="auto"]').checked, false);
-});
-
-
-test('trusted automatic personal statements are not lost to narrow wording patterns', () => {
-  const records = [
-    {id:'usual', text:'我平时喜欢听音乐', kind:'fact', status:'auto', version:1, source:'对话原话 · 自动记录'},
-    {id:'corrected', text:'通常听轻音乐', kind:'fact', status:'auto', version:2, source:'对话原话 · 用户纠正'},
-    {id:'manual', text:'周末喜欢散步', kind:'fact', status:'auto', version:1, source:'用户手动添加'},
-    {id:'guess', text:'我平时可能喜欢音乐', kind:'inference', status:'auto', version:1, source:'对话原话 · 自动记录'},
-    {id:'old', text:'我平时喜欢画画', kind:'fact', status:'candidate', version:1, source:'对话原话 · 自动记录'},
-    {id:'untrusted', text:'我喜欢电影', kind:'fact', status:'auto', version:1, source:'未核实资料'},
-    {id:'stale', text:'我平时喜欢旅行', kind:'fact', status:'auto', version:1, source:'撤回后来源待核对'}
-  ];
-  const f = fixture(); f.setCards(records); f.overview.render(records, 's');
-  const summary = f.find('.memory-summary');
-  assert.match(summary.textContent, /我平时喜欢听音乐/);
-  assert.match(summary.textContent, /通常听轻音乐/);
-  assert.match(summary.textContent, /周末喜欢散步/);
-  for (const id of ['usual','corrected','manual']) assert.ok(f.find(`[data-memory-summary-choice="${id}"]`));
-  for (const id of ['guess','old','untrusted','stale']) assert.equal(f.find(`[data-memory-summary-choice="${id}"]`), null);
 });

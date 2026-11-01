@@ -70,3 +70,34 @@ test('missing start/completion callbacks have bounded failure and stale timers c
 test('changing topic cancels the current read and its watchdog',()=>{
  const e=setup(),b=button();e.sync([e.message('a','原文')]);e.voice.playMessage('a','原文',b,'s');e.events['xinji-topic-change']();assert.equal(b.attrs['aria-pressed'],'false');assert.equal(e.timers.size,0);
 });
+
+
+test('rerender reuses a playing clip without pausing or resetting it',async()=>{
+ const e=setup(),b=button(),first={replaceChildren(){}},second={replaceChildren(node){this.node=node}};
+ e.sync([e.message('a','原文')]);await e.voice.configure({api:async()=>({features:{voice_clip_from_assistant_message:true}})});
+ await e.voice.makeClip({sessionId:'s',id:'a',text:'原文',button:b,container:first,isCurrent:()=>true});
+ const player=e.players[0];player.paused=false;const oldPauses=e.calls.filter(x=>x==='pause').length;
+ assert.equal(e.voice.attachClip('s','a','原文',second),true);assert.equal(second.node,player);assert.equal(e.players.length,1);assert.equal(player.paused,false);assert.equal(e.calls.filter(x=>x==='pause').length,oldPauses);
+});
+
+test('empty or incorrectly typed clips fail visibly and release the auto playback request',async()=>{
+ for(const [size,type] of [[0,'audio/wav'],[10,'text/html']]) {
+  const e=setup(),b=button(),failed=[];e.sync([e.message('a','原文')]);
+  e.win.XinjiMessageVoice={clipFailed:(id,button)=>failed.push([id,button])};
+  await e.voice.configure({api:async()=>({features:{voice_clip_from_assistant_message:true}})});
+  e.win.fetch=async()=>({ok:true,blob:async()=>({size}),headers:{get:()=>type}});
+  assert.equal(await e.voice.makeClip({sessionId:'s',id:'a',text:'原文',button:b,container:{},isCurrent:()=>true}),false);
+  assert.match(b.textContent,/不可用/);assert.equal(b.disabled,false);assert.deepEqual(failed,[['a',b]]);
+ }
+});
+
+test('session changes clear the queue and late clip results cannot attach',async()=>{
+ const e=setup(),b=button(),calls=[];let release,current=true;
+ e.win.XinjiMessageVoice={cancel:()=>calls.push('cancel'),clipFailed:()=>calls.push('failed')};
+ e.sync([e.message('a','原文')]);await e.voice.configure({api:async()=>({features:{voice_clip_from_assistant_message:true}})});
+ e.win.fetch=()=>new Promise(resolve=>{release=resolve});
+ const pending=e.voice.makeClip({sessionId:'s',id:'a',text:'原文',button:b,container:{replaceChildren(){throw Error('must not attach')}},isCurrent:()=>current});
+ current=false;e.sync([e.message('b','新会话')],'other');assert.deepEqual(calls,['cancel']);
+ release({ok:true,blob:async()=>({size:10}),headers:{get:()=> 'audio/wav'}});
+ assert.equal(await pending,false);assert.deepEqual(calls,['cancel','failed']);assert.equal(e.players.length,0);
+});

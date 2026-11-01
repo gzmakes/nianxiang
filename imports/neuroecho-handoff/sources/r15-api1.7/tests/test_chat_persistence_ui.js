@@ -11,7 +11,7 @@ for(const mobile of [false,true]){
  function setup(api,store=storage(),proposals=true,zone){
   const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},input=$(mobile?'#m-input':'#input');
   const timers=new Map(),state={session:{id:'synthetic-session'},messages:[],memories:[]},toasts=[];
-  const ctx=vm.createContext({api,localStorage:store,$,state,els:{input,composer:element(),messages:{insertAdjacentHTML(){}}},document:{createTextNode:x=>x},
+  const ctx=vm.createContext({api,localStorage:store,$,state,els:{input,composer:element(),messages:{insertAdjacentHTML(){}}},document:{createTextNode:x=>x,addEventListener(){}},
    memoryProposal:{shouldRequest:()=>proposals,offer(){}},toast:s=>toasts.push(s),setOrb(){},renderAll(){},renderMessages(){},chatScroll:{render:f=>f()},
    touchLastSeen(){},loadAudit(){},loadNextStep(){},setTimeout(fn){const id=++serial;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),
    crypto:{randomUUID:()=> 'request-fixture-'+(++serial)},Date,Map,Set,Promise,encodeURIComponent});
@@ -25,14 +25,31 @@ for(const mobile of [false,true]){
     let selectedImage=null,imageReadToken=0,imageReading=false;
     const displayedTurns=new Map(),uncertainTurns=new Map(),chatLedger=XinjiChatTransport.createLedger('web');
     const chatTransport=XinjiChatTransport.create(api,{ledger:chatLedger,pause:async()=>{},attempts:1});`;
-  const code=mobile?cut(src,'  async function recoverMobileChat()', '  function setupVoice()')+cut(src,'  function mPendingMessages(', '  // ---------- boot ----------')
-   :cut(src,'  function safeImageDataUrl(', '  function renderMessageText(')+cut(src,'  function setSelectedImage(', '  let recognition = null;')+cut(src,'  function pendingMessages(', '  function showMemoryContextNotice()');
+  const code=mobile?cut(src,'  let mSelectedImage = null', '  function cancelPending()')+cut(src,'  async function recoverMobileChat()', '  function setupVoice()')+cut(src,'  let mobilePetChatSession', '  // ---------- boot ----------')
+   :cut(src,'  function safeImageDataUrl(', '  function renderMessageText(')+cut(src,'  function setSelectedImage(', '  let recognition = null;')+cut(src,'  let petChatSession', '  function showMemoryContextNotice()');
   const pre=mobile?'mChat':'chat';
   vm.runInContext(declarations+code+`\nthis.send=${mobile?'send':'sendMessage'};this.recover=${mobile?'recoverMobileChat':'recoverChat'};
     this.restoreLedger=${mobile?'restoreMobileChatLedger':'restoreChatLedger'};this.keepDraft=${mobile?'keepMobileChatDraft':'keepChatDraft'};
-    this.ledger=${pre}Ledger;this.transport=${pre}Transport;this.blocked=${mobile?'mUncertainTurns':'uncertainTurns'};${mobile?'':'this.setImage=setSelectedImage;this.getImage=()=>selectedImage;this.expandSnapshot=expandTurns;'} `,ctx);
+    this.ledger=${pre}Ledger;this.transport=${pre}Transport;this.blocked=${mobile?'mUncertainTurns':'uncertainTurns'};${mobile?'this.setImage=setMobileImage;this.getImage=()=>mSelectedImage;':'this.setImage=setSelectedImage;this.getImage=()=>selectedImage;this.expandSnapshot=expandTurns;'} `,ctx);
   return{ctx,state,input,store,$,toasts,flush:async()=>{const jobs=[...timers.values()];timers.clear();jobs.forEach(f=>f());await tick()}};
  }
+ if (mobile) test('H5: image and following text use separate requests without persisting image bytes',async()=>{
+  const calls=[],data='data:image/png;base64,AAAA';
+  const env=setup(async(path,opt)=>{calls.push({path,body:opt?.body&&JSON.parse(opt.body)});return result()});
+  env.input.value='看这张';env.ctx.setImage({dataUrl:data,sessionId:env.state.session.id});env.ctx.send(env.input.value,{includeImage:true});
+  assert.equal(JSON.stringify(env.ctx.ledger.snapshot()).includes(data),false);
+  env.ctx.send('后续文字');await env.flush();await tick();
+  const posts=calls.filter(c=>c.path==='/api/chat');assert.equal(posts.length,2);
+  assert.equal(posts[0].body.image_data_url,data);assert.equal(posts[0].body.text,'看这张');
+  assert.equal(posts[1].body.text,'后续文字');assert.equal(posts[1].body.image_data_url,undefined);
+  assert.equal(calls.some(c=>c.path.endsWith('/cancel')),false);
+ });
+ if (mobile) test('H5: rejected image returns to preview and preserves typed text',async()=>{
+  const data='data:image/png;base64,AAAA',env=setup(async()=>{const e=Error('拒绝');e.status=422;throw e});
+  env.input.value='先看这个';env.ctx.setImage({dataUrl:data,sessionId:env.state.session.id});env.ctx.send(env.input.value,{includeImage:true});await env.flush();
+  assert.equal(env.ctx.getImage().dataUrl,data);assert.equal(env.input.value,'先看这个');
+  assert.equal(JSON.stringify(env.ctx.ledger.snapshot()).includes(data),false);
+ });
  if (!mobile) test('Web/Desktop: a single image and following text are sent as separate turns without cancellation',async()=>{
   const calls=[],data='data:image/png;base64,AAAA';
   const env=setup(async(path,opt)=>{calls.push({path,body:opt?.body&&JSON.parse(opt.body)});return result()});

@@ -8,15 +8,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <title>念响 · 移动端</title>
 <link rel="manifest" href="/static/manifest.webmanifest" />
-<link rel="stylesheet" href="/static/m.css?v=a79436d458ff8e9d" />
+<link rel="stylesheet" href="/static/m.css?v=82329e2358a87e4f" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=7907f58c72e29366" />
+<link rel="stylesheet" href="/static/design-system.css?v=3915f6a01ae285ec" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
 <link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
-<link rel="stylesheet" href="/static/connection-flow.css?v=3806a56fe7f8e637" />
-<link rel="stylesheet" href="/static/soundscape.css?v=0cdf2c8cdf2caed3" />
+<link rel="stylesheet" href="/static/connection-flow.css?v=388156eff1ccc0ee" />
+<link rel="stylesheet" href="/static/soundscape.css?v=429856ccbf1bb7d7" />
+<link rel="stylesheet" href="/static/memory-overview.css?v=99699cffd6abf5ea" />
+<link rel="stylesheet" href="/static/chat-pet.css?v=092a5c8b80b6c14f" />
+<link rel="stylesheet" href="/static/conversation-choices.css?v=4e616e1fb7638452" />
+<link rel="stylesheet" href="/static/proactive-preview.css?v=f3628d31d3c16939" />
+<link rel="stylesheet" href="/static/m-image.css?v=6ddd6d7f33c0a984" />
 </head>
 <body>
 <div class="grain"></div>
@@ -122,6 +127,9 @@
       <button type="button" class="text-btn" id="m-source-uncertain-dismiss">已核对，关闭</button></span>
   </div>
   <div class="content-update-line" data-content-update><span data-update-status role="status" aria-live="polite"></span><button type="button" class="text-btn" data-update-check data-copy-key="connection.sync.check">检查更新</button></div>
+  <section class="proactive-preview" data-proactive-preview data-input="#m-input" aria-label="主动提醒" hidden>
+    <div data-preview-card hidden aria-live="polite"></div>
+  </section>
   <div class="response-choices" aria-label="选择回应方式">
     <span>希望回响</span>
     <button type="button" data-response-choice="listen">先听我说</button>
@@ -129,9 +137,12 @@
     <button type="button" data-response-choice="auto">自然聊</button>
     <span class="response-choices-hint">加入草稿，发送后生效；随时可换</span>
   </div>
+  <div id="m-image-preview" class="m-image-preview is-hidden"><img id="m-image-preview-thumb" alt="待发送图片预览" /><span>发送后图片会交给当前模型识别</span><button type="button" id="m-image-remove" aria-label="移除图片">×</button></div>
+  <input type="file" id="m-image-input" accept="image/jpeg,image/png,image/webp" hidden />
   <form id="m-composer" class="composer">
     <button type="button" class="composer-connect" id="m-composer-connect" aria-label="连接应用" title="连接应用">＋</button>
     <textarea id="m-input" rows="1" placeholder="说点什么……"></textarea>
+    <button type="button" class="mic" id="m-image-btn" aria-label="选择图片">图片</button>
     <button type="button" class="mic is-hidden" id="m-meme">表情</button>
     <button type="button" class="mic" id="m-mic">语音</button>
     <button type="button" class="mic is-hidden" id="m-stop">停止</button>
@@ -141,6 +152,7 @@
   <nav class="m-tabbar" aria-label="主要导航">
     <button class="m-tab" data-mtab="today"><span aria-hidden="true">◌</span><span data-copy-key="nav.today">回响</span></button>
     <button class="m-tab active" data-mtab="chat"><span aria-hidden="true">⌁</span><span data-copy-key="nav.chat">对话</span></button>
+    <button class="m-tab" data-mtab="tasks"><span aria-hidden="true">☷</span><span>任务</span></button>
     <button class="m-tab" data-mtab="understand"><span aria-hidden="true">▤</span><span data-copy-key="nav.memory">记忆</span></button>
   </nav>
 </div>
@@ -230,7 +242,7 @@
 <script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
 <script src="/static/file-picker.js?v=95503f23c22ea9cb"></script>
 <script src="/static/connection-intro.js?v=2d71358d315b113d"></script>
-<script src="/static/feishu-account-picker.js?v=2fd2542059000621"></script>
+<script src="/static/feishu-account-picker.js?v=6b3be911fd3a0192"></script>
 <script src="/static/public-link-picker.js?v=7ce2e27329319c37"></script>
 <script src="/static/chat-transport.js?v=bf3d75e3e6f2d4db"></script>
 <script src="/static/generated-shared.js?v=279e6e0bf8a3189a"></script>
@@ -239,18 +251,23 @@
 <script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
 <script src="/static/design-system.js?v=9ec75bbfb3f54f99"></script>
 <script src="/static/paired-devices.js?v=8641114376d41d40"></script>
-<script src="/static/voice-reply.js?v=5a35a4d5059fa00a"></script>
+<script src="/static/voice-reply.js?v=d33eec21e104e4f1"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
-<script src="/static/chat-delivery.js?v=f49bbe7cd442ceec"></script>
-<script src="/static/soundscape.js?v=f617132d43d4ea24"></script>
+<script src="/static/chat-delivery.js?v=c0b0b732b74508ec"></script>
+<script src="/static/soundscape.js?v=71101e9edbbfb038"></script>
 <script src="/static/response-parser.js?v=b36dffc77f374ee6"></script>
-<script src="/static/auto-memory-settings.js?v=dfa61e0f873a4b1c"></script>
-<script src="/static/m.js?v=cf1112f8fbc9751a"></script>
+<script src="/static/memory-insights.js?v=6e0ee39da07beefa"></script>
+<script src="/static/device-connections.js?v=b38779d0a267f56f"></script>
+<script src="/static/personal-tasks.js?v=af3190008aacb7f2"></script>
+<script src="/static/m.js?v=bba6ffd9f60a530d"></script>
 <script src="/static/emoji-reactions.js?v=984098af2341e32a"></script>
-<script src="/static/message-voice.js?v=d2f5f242df660536"></script>
+<script src="/static/message-voice.js?v=dd4b786f2857d633"></script>
 <script src="/static/orb-face.js?v=40a8f976250f2036"></script>
 <script src="/static/mood-polish.js?v=1c748d608167772c"></script>
-<script src="/static/persona-switch.js?v=7835fc03f1158074"></script>
+<script src="/static/persona-switch.js?v=a7af7e9b780b3169"></script>
 <script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
+<script src="/static/pet-whisper.js?v=28d73677282a3947"></script>
+<script src="/static/chat-pet.js?v=33c52aeaf3447490"></script>
+<script src="/static/proactive-preview.js?v=f5c1ddc427f305c3"></script>
 </body>
 </html>

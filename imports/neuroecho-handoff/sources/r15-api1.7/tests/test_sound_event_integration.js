@@ -11,13 +11,23 @@ function delivery(api) {
   });
   const state = {session: {id: 's'}, messages: [{id: 'm', role: 'assistant', delivery_pending: true}]};
   const instance = win.XinjiChatDelivery.create({state, api, render() {}, busy: () => false});
-  return {state, instance, timers, played, soundDetails};
+  return {state, instance, timers, played, soundDetails, win};
 }
 test('a delayed reply sounds once when it completes', async () => {
   const env = delivery(async () => ({messages: [{id: 'm', role: 'assistant', delivery_pending: false}]}));
   env.instance.schedule(); await [...env.timers.values()][0]();
   assert.deepEqual(env.played, ['receive']); assert.equal(env.soundDetails[0].messageId, 'm');
   env.instance.schedule(); assert.deepEqual(env.played, ['receive']);
+});
+test('simultaneously completed delayed replies are announced once in message order', async () => {
+  const messages = [{id:'one',role:'assistant',delivery_pending:false},{id:'two',role:'assistant',delivery_pending:false}];
+  const env = delivery(async () => ({messages})), announced = [];
+  env.win.XinjiMessageVoice = {announce:id => announced.push(id)};
+  env.state.messages = messages.map(message => ({...message, delivery_pending:true}));
+  env.instance.schedule(); await [...env.timers.values()][0]();
+  assert.deepEqual(announced, ['one','two']);
+  assert.deepEqual(env.soundDetails.map(item => item.messageId), ['one','two']);
+  env.instance.schedule(); assert.deepEqual(announced, ['one','two']);
 });
 test('a user-stopped reply does not sound as completed', async () => {
   const env = delivery(async (path, options) => path === '/api/capabilities'
@@ -97,8 +107,10 @@ function mobileDispatchHarness(result) {
     mChatLedger: {returnDraft() {}}, mPendingMessages: () => [], memoryProposal: {shouldRequest: () => false, offer() {}},
     renderAll: () => events.push('render'), renderMessages() {}, loadNextStep() {}, toast() {}, $: () => node,
     window: {NianxiangSound: {play: (name, detail) => { events.push(name); soundDetails.push(detail); }}, XinjiComposerDraft: {save() {}}},
-    XinjiMobilePresence() {}, console};
-  vm.runInNewContext(source.slice(start, end) + '\nthis.dispatchSend = dispatchSend;', context);
+    XinjiMobilePresence() {}, document:{addEventListener(){}}, console};
+  const petStateStart = source.indexOf('  let mobilePetChatSession'), petStateEnd = source.indexOf('  function mPendingMessages(', petStateStart);
+  assert.ok(petStateStart >= 0 && petStateEnd > petStateStart);
+  vm.runInNewContext(source.slice(petStateStart, petStateEnd) + source.slice(start, end) + '\nthis.dispatchSend = dispatchSend;', context);
   return {run: () => context.dispatchSend(), events, soundDetails};
 }
 test('mobile immediate reply announces after the new voice controls are rendered', async () => {

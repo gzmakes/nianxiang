@@ -1,4 +1,4 @@
-/* 人格与模式切换：切换会话时同步到服务端，后续模型调用使用对应人格卡与模式提示词；浏览器本地仅保留当前空间和消息筛选视图。 */
+/* 人格切换：同步服务端，保留同一人格的完整历史对话。 */
 (() => {
   const root = document.documentElement;
   const PERSONAS = { nianxiang: { name: '念响', hello: '属于你的一小段空白' }, whale: { name: '小鲸鱼', hello: '小鲸鱼在这儿' } };
@@ -65,6 +65,11 @@
         current = `${serverPersona}:${serverMode}`;
         persist();
         root.dataset.persona = serverPersona;
+        // 统一会话模式：旧工作模式消息继续可见，新对话使用同一陪伴方式。
+        if (serverMode !== 'companion' && await syncSession(`${serverPersona}:companion`)) {
+          current = `${serverPersona}:companion`;
+          persist();
+        }
       }
     } catch (_) {
       // The main app will show its normal connection error if the session is unavailable.
@@ -88,13 +93,14 @@
   }
   function matches(id, filter, element) {
     if (filter === '全部') return true;
-    return label(spaceOf(id, element)) === filter;
+    const selectedPersona = filter.split('·')[0];
+    return PERSONAS[spaceOf(id, element).split(':')[0]]?.name === selectedPersona;
   }
 
   function workspace() { return window.XinjiWorkspace || window.XinjiMobileWorkspace; }
   function applyFilter() { workspace()?.setTopic(label(current)); }
 
-  // 顶部：人格名胶囊可点，弹出两个人格；话题行换成 陪伴 / 工作。
+  // 顶部人格名胶囊可点，弹出两个人格。
   let menu = null;
   function renderHeading() {
     const heading = document.querySelector('.conversation-persona h2');
@@ -105,13 +111,12 @@
     heading.setAttribute('aria-expanded', String(!!menu && !menu.hidden));
     const hello = document.querySelector('.chat-hello');
     if (hello) hello.textContent = PERSONAS[persona()].hello;
-    for (const button of document.querySelectorAll('.space-modes [data-space-mode]')) {
-      const active = button.dataset.spaceMode === mode();
-      button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
-    }
     for (const button of document.querySelectorAll('.persona-menu [data-space-persona]')) button.setAttribute('aria-checked', String(button.dataset.spacePersona === persona()));
   }
   async function switchTo(space) {
+    const nextPersona = space.split(':')[0];
+    if (!PERSONAS[nextPersona]) return;
+    space = `${nextPersona}:companion`;
     if (space === current) return;
     // 同步失败（服务旧、断线、被拒）也照常切换：空间筛选本来就只在本机；失败原因由 app.js 的 toast 提示。
     // 等待期间可能又点了别的：以最后一次为准。
@@ -143,22 +148,13 @@
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu && !menu.hidden) { event.stopPropagation(); closeMenu(); heading.focus(); } }, true);
     document.addEventListener('pointerdown', event => { if (menu && !menu.hidden && !menu.contains(event.target) && event.target !== heading) closeMenu(); });
   }
-  function mountModes() {
-    const topics = document.querySelector('#app #design-topics, #m-app #m-design-topics');
-    if (!topics || document.querySelector('.space-modes')) return;
-    const modes = document.createElement('div');
-    modes.className = 'topic-tabs space-modes'; modes.setAttribute('aria-label', '对话模式');
-    modes.innerHTML = Object.entries(MODES).map(([key, name]) => `<button type="button" class="topic-chip" data-space-mode="${key}" aria-pressed="false">${name}</button>`).join('');
-    topics.insertAdjacentElement('beforebegin', modes);
-    modes.addEventListener('click', event => { const button = event.target.closest('[data-space-mode]'); if (button) switchTo(`${persona()}:${button.dataset.spaceMode}`); });
-  }
 
   // 当前空间没有消息时的提示（整条对话不为空，所以 app 自己的空状态不会出现）。
   function renderEmpty(messages) {
     let note = messages.querySelector(':scope > .space-empty');
     if (!note) { note = document.createElement('div'); note.className = 'space-empty'; messages.prepend(note); }
     const visible = [...messages.querySelectorAll(':scope > .msg[data-message-id]')].some(msg => !msg.classList.contains('is-topic-hidden'));
-    const hidden = visible || !armed, text = `${PERSONAS[persona()].name}在这儿。这是「${MODES[mode()]}」的新对话，想说什么就从这里开始。`;
+    const hidden = visible || !armed, text = `${PERSONAS[persona()].name}在这儿，想说什么就从这里开始。`;
     // 只在真的变了时才写，否则这里的改动又会触发下面的 MutationObserver，形成死循环。
     if (note.hidden !== hidden) note.hidden = hidden;
     if (note.textContent !== text) note.textContent = text;
@@ -170,7 +166,7 @@
     if (!messages || !ws?.topics) { delete root.dataset.spaceArming; return; }
     await hydrateFromServer();
     ws.topics.matches = matches;
-    mountMenu(); mountModes(); renderHeading();
+    mountMenu(); renderHeading();
     // 第一次渲染出来的都是历史：没记录的归默认空间；之后到的才归当前空间。整条对话还是空的就直接开始。
     function arm() {
       if (armed) return;

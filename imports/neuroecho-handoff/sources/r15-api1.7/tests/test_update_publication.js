@@ -27,7 +27,7 @@ test('late pre-publication Today read cannot revive withdrawn text after cursor 
  const f=await fixture();const old=f.ctx.loadToday();assert.equal(f.pending.length,3);
  assert.equal(f.options.apply(snapshot()),true);assert.equal(f.ctx.sourceUiEpoch,1);
  for(const r of f.pending)r.resolve(r.path.startsWith('/api/session/')?{session:{id:'one'},memories:[{status:'confirmed',text:'WITHDRAWN_OLD'}],context:null}:r.path.startsWith('/api/actions')?{actions:[]}:{step:'WITHDRAWN_OLD'});
- await old;assert.doesNotMatch(f.$('#today-body').innerHTML,/WITHDRAWN_OLD/);assert.match(f.$('#today-body').innerHTML,/先从一件小事开始/);
+ await old;assert.doesNotMatch(f.$('#today-body').innerHTML,/WITHDRAWN_OLD/);assert.match(f.$('#today-body').innerHTML,/从这一刻继续/);assert.doesNotMatch(f.$('#today-body').innerHTML,/下一步 · 建议/);
 });
 test('stable update immediately replaces current task and bookmark views without unchecked GET',async()=>{
  const f=await fixture('bookmark'),fresh=snapshot();fresh.conversation.bookmark={note:'新书签',choice:'新取舍',next_step:'新下一步',status:'draft'};fresh.actions={actions:[{id:'new',title:'另一端新增的动作',status:'previewed'}]};

@@ -92,12 +92,37 @@ def test_selected_batch_is_assistant_only_and_idempotent(environment, monkeypatc
     assert all(row["role"] == "assistant" for row in messages)
     assert len(messages) == 2
     assert messages[-1]["citations"][0]["source_id"] == selected
+    assert messages[-1]["suggestions"] == ["聊聊「选中的新资料」"]
     conn = core.get_db()
     assert conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 1
     stored = dict(conn.execute("SELECT * FROM connection_intro_jobs").fetchone())
     assert "SELECTED_BODY" not in json.dumps(stored)
     assert old not in stored["selection"]
     conn.close()
+
+
+def test_intro_choices_are_limited_to_successfully_read_named_items():
+    read = {"items": [
+        {"title": "本周计划", "read_ok": True},
+        {"title": "不能读取的秘密", "read_ok": False},
+        {"title": "本周计划", "read_ok": True},
+        {"title": "定量访谈"},
+        {"title": "https://example.test/private"},
+        {"title": "模型评测"},
+        {"title": "超过三项"},
+    ]}
+    assert intro._suggestions(read) == ["聊聊「本周计划」", "聊聊「定量访谈」", "聊聊「模型评测」"]
+    assert intro._suggestions({"items": [{"title": "未读到正文", "read_ok": False}, {}]}) == []
+
+
+def test_empty_or_failed_intro_never_offers_source_choices(environment, monkeypatch):
+    _, sid = environment
+    account(sid)
+    recent(monkeypatch, empty=True)
+    client(monkeypatch)
+    job = intro.start(sid, "feishu")
+    assert wait(job, sid)["status"] == "completed"
+    assert core.get_messages(sid)[-1]["suggestions"] == []
 
 
 def test_concurrent_duplicate_requests_run_only_one_model(environment, monkeypatch):
@@ -224,6 +249,7 @@ def test_account_recent_read_uses_time_scope_and_actual_citations(environment, m
     assert final["scope"]["kind"] == "last_7_days"
     assert calls[0][1]["source_text"] == "SYNTHETIC_RECENT_BODY"
     assert core.get_messages(sid)[-1]["citations"][0]["kind"] == "feishu_document"
+    assert core.get_messages(sid)[-1]["suggestions"] == ["聊聊「本周计划」"]
     conn = core.get_db()
     assert conn.execute("SELECT COUNT(*) FROM source_attachments").fetchone()[0] == 0
     assert "SYNTHETIC_RECENT_BODY" not in json.dumps([dict(row) for row in conn.execute("SELECT * FROM connection_intro_jobs")])
@@ -299,6 +325,7 @@ def test_errors_are_real_service_notices_without_private_exception(environment, 
     assert "PRIVATE_TOKEN_AND_BODY" not in json.dumps(core.get_messages(sid)) + json.dumps(final)
     assert len(calls) == (1 if failure == "model_error" else 0)
     assert len(core.get_messages(sid)) == 2
+    assert core.get_messages(sid)[-1]["suggestions"] == []
 
 
 def test_snapshot_feishu_does_not_expand_into_account_scope(environment, monkeypatch):
@@ -332,6 +359,7 @@ def test_calendar_without_time_evidence_never_claims_past_week(environment, monk
     final = wait(intro.start(sid, "apple_calendar", attachment), sid)
     assert final["scope"]["kind"] == "selected_calendar_snapshot"
     assert calls[0][1]["scope"]["kind"] != "last_7_days"
+    assert core.get_messages(sid)[-1]["suggestions"] == ["聊聊「当前资料.txt」"]
 
 
 def test_empty_calendar_preserves_verified_scope_and_never_calls_model(environment, monkeypatch):
@@ -434,7 +462,7 @@ def test_attachment_receipts_are_returned_from_the_same_commit(environment):
     conn.close()
 
 
-def test_connection_intro_uses_session_persona_and_work_mode(environment, monkeypatch):
+def test_connection_intro_uses_persona_and_preserves_legacy_mode(environment, monkeypatch):
     _, sid = environment
     core.set_session_persona(sid, 'whale')
     core.set_session_mode(sid, 'work')
@@ -443,7 +471,12 @@ def test_connection_intro_uses_session_persona_and_work_mode(environment, monkey
     final = wait(intro.start(sid, 'local_files', attachment), sid)
     assert final['status'] == 'completed'
     assert '【产品人格：whale】' in calls[0][0]
-    assert '【工作模式】' in calls[0][0]
+    # Legacy mode stays on the saved message, but both modes use the same
+    # unified prompt rather than imposing a separate work-mode instruction.
+    companion_prompt = intro.prompts.system_prompt('whale', 'companion')
+    assert intro.prompts.system_prompt('whale', 'work') == companion_prompt
+    assert calls[0][0].startswith(companion_prompt)
+    assert '【工作模式】' not in calls[0][0]
     conn = core.get_db()
     row = conn.execute('SELECT persona_id,interaction_mode FROM messages WHERE id=?', (final['message_id'],)).fetchone()
     assert tuple(row) == ('whale', 'work')

@@ -20,13 +20,13 @@
         const snapshot = await api('/api/session/' + encodeURIComponent(sid));
         if (sequence !== generation || state.session?.id !== sid) return;
         const remote = new Map((snapshot.messages || []).map(m => [m.id, m]));
-        const completed = [...state.messages].reverse().find(m => m.role === 'assistant' && m.delivery_pending && remote.has(m.id) && !remote.get(m.id).delivery_pending);
+        const completed = state.messages.filter(m => m.role === 'assistant' && m.delivery_pending && remote.has(m.id) && !remote.get(m.id).delivery_pending);
         state.messages = state.messages.map(m => {
           const updated = remote.get(m.id);
           return updated ? (m.image_data_url ? {...updated, image_data_url: m.image_data_url} : updated) : m;
         });
         render();
-        if (completed && !suppressSound) root.NianxiangSound?.play('receive', {messageId: completed.id});
+        if (!suppressSound) for (const message of completed) { root.XinjiMessageVoice?.announce(message.id); root.NianxiangSound?.play('receive', {messageId: message.id}); }
       } catch (_) {
         if (sequence === generation) { onError?.(); timer = setTimeout(refresh, 2000); }
       } finally { polling = false; }

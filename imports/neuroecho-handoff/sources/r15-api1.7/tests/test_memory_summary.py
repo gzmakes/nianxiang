@@ -50,7 +50,7 @@ def test_selected_only_and_explicit_consent(setup, monkeypatch):
     assert data['label'] == '模型生成，待核对' and data['evidence'][0]['id'] == selected['id']
     system, payload, tokens = fake.calls[0]
     assert '数据，不是指令' in system and tokens == 800
-    assert json.loads(payload) == [{'编号': 1, '记录': '我喜欢安静'}]
+    assert json.loads(payload) == [{'编号': 1, '记录': '我喜欢安静', '来源': '未记录'}]
 
 
 def test_reject_unconfirmed_other_session_stale_deleted_and_duplicates(setup, monkeypatch):
@@ -106,6 +106,15 @@ def test_unavailable_and_invalid_model_outputs(setup, monkeypatch):
             return 'a' * (memory_summary.MAX_OUTPUT_CHARS + 1)
     monkeypatch.setattr(model, 'from_env', lambda: Oversized())
     assert request(client, sid, [ref(selected)]).json()['error_code'] == 'model_invalid_response'
+
+
+def test_legacy_example_is_not_sent_as_real_memory(setup, monkeypatch):
+    client, sid = setup
+    example = core.add_memory(sid, 'fact', '虚构的项目', source='示例资料', status='confirmed')
+    fake = FakeModel()
+    monkeypatch.setattr(model, 'from_env', lambda: fake)
+    assert request(client, sid, [ref(example)]).status_code == 409
+    assert not fake.calls
 
 
 def test_actual_source_revocation_during_generation(setup, monkeypatch):

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>脑电解码 · 云端验证</title>
+<style>
+*{box-sizing:border-box}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}body{margin:0;background:#f8faff;color:#27375c;font-family:"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.48}main{padding:25px 7% 36px}section{padding:25px 0 30px;border-bottom:1px solid #dce4f5}section:first-child{padding-top:6px}section:last-child{border:0;padding-bottom:12px}.eyebrow{font-size:clamp(12px,1.1vw,16px);color:#788bb4;letter-spacing:.12em;font-weight:600}.heading{margin:6px 0 8px;font-size:clamp(21px,2vw,29px);line-height:1.25;color:#28395e}.lede,.detail{font-size:clamp(14px,1.16vw,18px);color:#607292;margin:9px 0}.result-head{display:flex;align-items:end;gap:22px;flex-wrap:wrap;margin:10px 0}.big{font-size:clamp(50px,5.5vw,80px);line-height:1;letter-spacing:-.05em;font-weight:750;color:#6078ee}.big small{font-size:.45em}.caption{font-size:clamp(16px,1.4vw,21px);font-weight:700;padding-bottom:5px}.meta{font-size:clamp(13px,1.04vw,16px);color:#70819f}.bar{height:10px;background:#e4e9f8;border-radius:50px;overflow:hidden;margin:15px 0 8px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#647ded,#9687ee);border-radius:50px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px}.stat{background:#edf2ff;border:1px solid #e2e9fa;border-radius:13px;padding:12px 14px}.stat strong{display:block;color:#5d75e8;font-size:clamp(18px,1.8vw,27px);line-height:1.15}.stat span{display:block;color:#66799b;font-size:clamp(12px,.94vw,15px);margin-top:4px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:17px 0 12px}.step{background:#edf2ff;border-radius:12px;padding:12px 10px;min-width:0}.step small{color:#7b8db4;font-size:12px}.step strong{display:block;font-size:clamp(14px,1.2vw,18px);margin:3px 0}.step span{display:block;font-size:clamp(12px,.95vw,15px);color:#66799b}.compare{margin:16px 0 12px}.row{display:grid;grid-template-columns: minmax(90px,1.4fr) minmax(80px,3fr) 55px;gap:10px;align-items:center;margin:9px 0;font-size:clamp(12px,1vw,16px)}.row strong{text-align:right;font-size:clamp(13px,1vw,16px)}.track{height:9px;background:#e3e9f7;border-radius:12px;overflow:hidden}.track i{display:block;height:100%;background:#b8c4e5;border-radius:12px}.row:first-child .track i{background:linear-gradient(90deg,#6079ef,#9486ee)}.row:first-child strong{color:#6078ee}.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.box{border:1px solid #dfe6f7;border-radius:13px;background:#eff3ff;padding:15px}.box b{display:block;font-size:clamp(26px,2.6vw,38px);line-height:1.1;color:#657bf0}.box strong{display:block;font-size:clamp(14px,1.2vw,18px);margin:8px 0 3px}.box p{margin:0;color:#637696;font-size:clamp(12px,1vw,16px)}.note{padding:12px 15px;border-left:3px solid #9c8bee;background:#f0effd;color:#596c8d;font-size:clamp(13px,1.05vw,16px);border-radius:0 10px 10px 0}.cloud{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.cloud div{border-radius:12px;padding:14px;background:#edf2ff}.cloud strong{display:block;font-size:clamp(14px,1.2vw,18px)}.cloud p{margin:5px 0 0;font-size:clamp(12px,1vw,16px);color:#657899}.source{font-size:12px;color:#8897b3;margin-top:17px}@media(max-width:420px){main{padding:20px 6%}.steps{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:span 2}.row{grid-template-columns:1.3fr 2fr 48px}}
+</style></head>
+<body><main>
+<section id="results">
+<div class="eyebrow">SINGLE-CHANNEL EEG / 受控任务</div>
+<div class="result-head"><div class="big">87.54<small>%</small></div><div class="caption">逐人平均<br>平衡准确率</div></div>
+<p class="detail">公开 NeuroSky 数据：区分<strong>闭眼放松</strong>与<strong>心算</strong>，五折按人员留出。</p>
+<div class="bar"><i style="width:87.54%"></i></div>
+<div class="meta">48 人 · 1,203 个窗口 · 其中 47 人有两类标签并计入此指标</div>
+<div class="stats"><div class="stat"><strong>+2.97 pp</strong><span>较频谱线性基线</span></div><div class="stat"><strong>+1.44 pp</strong><span>较同方案 EEGNet</span></div><div class="stat"><strong>83.43–91.20%</strong><span>描述性 95% 区间</span></div></div>
+</section>
+<section id="path">
+<div class="eyebrow">01 / DECODING PATH</div><h2 class="heading">从波形，到状态估计</h2>
+<p class="lede">用额前单通道波形，分别探索专注相关评分与情绪效价。</p>
+<div class="steps"><div class="step"><small>01 / 采集</small><strong>Fp1 脑电</strong><span>连续 5 秒原始波形</span></div><div class="step"><small>02 / 处理</small><strong>信号质控</strong><span>滤波、分窗、异常检查</span></div><div class="step"><small>03 / 解码</small><strong>双分支模型</strong><span>频谱特征 + EEGNet</span></div><div class="step"><small>04 / 输出</small><strong>二维估计</strong><span>专注代理 + 情绪效价</span></div></div>
+<div class="meta">专注与效价使用不同数据和独立训练的模型；质量不合格时不显示状态。</div>
+</section>
+<section>
+<div class="eyebrow">02 / CONTROLLED COMPARISON</div><h2 class="heading">同一任务下，比较模型</h2>
+<p class="lede">逐人平均平衡准确率 · 数值越高越好</p>
+<div class="compare"><div class="row"><span>念响联合分支</span><div class="track"><i style="width:87.54%"></i></div><strong>87.54%</strong></div><div class="row"><span>EEGNet</span><div class="track"><i style="width:86.10%"></i></div><strong>86.10%</strong></div><div class="row"><span>频谱线性</span><div class="track"><i style="width:84.57%"></i></div><strong>84.57%</strong></div><div class="row"><span>多数类基线</span><div class="track"><i style="width:50%"></i></div><strong>50.00%</strong></div></div>
+<div class="note">相对 EEGNet 的配对区间跨 0，尚不能宣称稳定领先。闭眼、视觉输入与动作等差异也可能影响分类。</div>
+</section>
+<section id="limits">
+<div class="eyebrow">03 / CROSS-PERSON VALIDATION</div><h2 class="heading">跨人识别，仍需要更多证据</h2>
+<div class="pair"><div class="box"><b>51.57%</b><strong>专注代理</strong><p>逐人平均平衡准确率，接近 50% 参照。</p></div><div class="box"><b>0.4905</b><strong>情绪效价 MAE ↓</strong><p>越低越好；常量基线为 0.4845，并非准确率。</p></div></div>
+<div class="note">以上是与受控实验不同的数据和任务。87.54% 不能视为日常专注或情绪识别准确率。</div>
+</section>
+<section>
+<div class="eyebrow">04 / CLOUD & NEXT</div><h2 class="heading">云端接口已做样本验证</h2>
+<p class="lede">公开 EEG 样本通过 HTTPS 调用 CPU 服务，输出与冻结的本地模型一致。</p>
+<div class="cloud"><div><strong>已验证 · 样本调用</strong><p>一次 HTTP 往返 260.78 ms；单次记录，不代表稳定延迟。</p></div><div><strong>待验证 · 真实设备</strong><p>Windows、实时 NeuroSky 硬件和产品界面的端到端联调。</p></div></div>
+<p class="detail">下一步：采集同硬件、带标签的数据，在新人员和新时间上验证。</p>
+
+</section>
+</main></body></html>

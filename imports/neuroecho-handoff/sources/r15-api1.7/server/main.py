@@ -22,7 +22,7 @@ from fastapi import FastAPI, Header, HTTPException, Path as ApiPath, Query, Requ
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -34,7 +34,7 @@ from . import notion_cli_source, git_source, feishu_account, lark_account_auth, 
 from .runtime_lock import DatabaseLease
 from . import visitors
 from . import api_contract as contract
-from . import paired_access, conversation_changes, memory_summary, vision_images
+from . import paired_access, conversation_changes, memory_summary, vision_images, pet_assets, pet_whisper
 
 BASE = Path(__file__).resolve().parent
 WEB = BASE.parent / "web"
@@ -1632,7 +1632,8 @@ def _turn_response(record):
         reply = next((m for m in messages if m["id"] == result.get("assistant_message_id")), None)
         out["result"] = {"request_id": record.request_id, "reply": reply["text"] if reply else "",
                          "action": result.get("action"), "state": result.get("state", "listening"),
-                         "user_message_id": result.get("user_message_id"), "messages": messages,
+                         "user_message_id": result.get("user_message_id"),
+                         "assistant_message_id": reply["id"] if reply else None, "messages": messages,
                          "memories": core.list_memories(record.session_id),
                          "cancelled": record.status == "cancelled" or bool(result.get("suppressed"))}
     return out
@@ -1720,6 +1721,11 @@ def chat(body: ChatIn):
                 "reply_lock": store.reply_lock(body.session_id, body.request_id)} if store else {}))
         if body.memory_proposals and not result.get("cancelled") and result.get("action") != "safety":
             result["memory_proposal"] = core.propose_from_message(body.session_id, result["user_message_id"])
+        # Return exactly the currently delivered text, as the request-recovery
+        # endpoint does. The full reply may still contain undelivered bubbles.
+        assistant = next((m for m in result['messages'] if m['id'] == result.get('assistant_message_id')), None)
+        if assistant is not None:
+            result['reply'] = assistant['text']
         if store:
             result["request_id"] = body.request_id
             if not core.get_session(body.session_id):
@@ -2013,6 +2019,96 @@ def mobile():
 @app.get("/api/plugins")
 def plugins():
     return {"meme": plugin_bridge.memes(), "pet": plugin_bridge.pet()}
+
+
+def _pet_asset_local_only(request: Request):
+    """Do not expose installed third-party media through a hosted service."""
+    try:
+        local = request.client is not None and ipaddress.ip_address(request.client.host).is_loopback
+    except ValueError:
+        local = False
+    host = request.headers.get("host", "")
+    origin = request.headers.get("origin")
+    if (PUBLIC_ORIGIN or not local or request.url.hostname not in ("127.0.0.1", "localhost", "::1")
+            or "@" in host or (origin is not None and origin != f"{request.url.scheme}://{host}")
+            or request.headers.get("sec-fetch-site", "").lower() not in ("", "same-origin", "none")):
+        raise HTTPException(403, "local same-origin requests only", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/pet-whisper")
+def generate_pet_whisper(request: Request):
+    # Like the locally installed pet media, this endpoint is local-only. It
+    # takes no user content and never records the generated line in chat.
+    _pet_asset_local_only(request)
+    return JSONResponse(pet_whisper.generate(), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/pet-assets")
+def pet_asset_manifest(request: Request):
+    _pet_asset_local_only(request)
+    return JSONResponse(pet_assets.manifest(), headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@app.get("/api/pet-assets/{name}", response_class=StreamingResponse, responses={
+    200: {"content": {"video/webm": {"schema": {"type": "string", "format": "binary"}}}},
+    206: {"description": "Partial content", "content": {"video/webm": {"schema": {"type": "string", "format": "binary"}}}},
+    416: {"description": "Range not satisfiable"},
+})
+def pet_asset_video(name: str, request: Request):
+    _pet_asset_local_only(request)
+    opened = pet_assets.open_video(name)
+    if opened is None:
+        raise HTTPException(404, "pet animation not found", headers={"Cache-Control": "no-store"})
+    file, size = opened
+    header = request.headers.get("range")
+    selected = pet_assets.byte_range(header, size)
+    if selected is None:
+        file.close()
+        raise HTTPException(416, "range not satisfiable", headers={"Content-Range": f"bytes */{size}", "Cache-Control": "no-store"})
+    start, end = selected
+    headers = {"Content-Length": str(max(0, end - start + 1)), "Accept-Ranges": "bytes",
+               "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
+    if header:
+        headers["Content-Range"] = f"bytes {start}-{end}/{size}"
+
+    def chunks():
+        try:
+            file.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                block = file.read(min(65536, remaining))
+                if not block:
+                    break
+                remaining -= len(block)
+                yield block
+        finally:
+            file.close()
+
+    return StreamingResponse(chunks(), status_code=206 if header else 200, media_type="video/webm", headers=headers)
+
+
+@app.get("/api/pet-memes")
+def pet_meme_manifest(request: Request):
+    _pet_asset_local_only(request)
+    return JSONResponse(pet_assets.meme_manifest(), headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@app.get("/api/pet-memes/{name}", response_class=StreamingResponse, responses={
+    200: {"content": {"image/png": {"schema": {"type": "string", "format": "binary"}}}},
+})
+def pet_meme_image(name: str, request: Request):
+    _pet_asset_local_only(request)
+    opened = pet_assets.open_meme(name)
+    if opened is None:
+        raise HTTPException(404, "pet image not found", headers={"Cache-Control": "no-store"})
+    file, size = opened
+    def chunks():
+        try:
+            while block := file.read(65536):
+                yield block
+        finally:
+            file.close()
+    return StreamingResponse(chunks(), media_type="image/png", headers={"Content-Length": str(size), "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @app.get("/plugin-memes/{pack}/{tag}/{name}")

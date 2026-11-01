@@ -19,7 +19,21 @@
   const panels = new Set();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(config)); } catch (_) {} };
   const quiet = () => { const resume = document.querySelector('[data-companion-boundary] [data-b-resume]'); return !!resume && !resume.hidden; };
-  const blocked = () => recording || voice || document.hidden || quiet();
+  // Speech gently ducks music; recording, quiet mode and hidden pages still pause it.
+  const blocked = () => recording || document.hidden || quiet();
+  const duckFactor = () => voice ? 0.72 : 1;
+  let fadeTimer = null, fadeToken = 0;
+  function fadeMusic() {
+    const token = ++fadeToken, from = music.volume, started = Date.now();
+    if (fadeTimer !== null) clearTimeout(fadeTimer);
+    const step = () => {
+      if (token !== fadeToken) return;
+      const progress = Math.min(1, (Date.now() - started) / 400);
+      music.volume = Math.max(0, Math.min(1, from + (config.musicVolume * duckFactor() - from) * progress));
+      if (progress < 1) fadeTimer = setTimeout(step, 16); else fadeTimer = null;
+    };
+    step();
+  }
   const guideSound = () => guiding && !guidePaused && !guideMuted;
   const wantsMusic = () => guideSound() || (!guiding && (preview || config.music));
   function guideTime() {
@@ -64,7 +78,7 @@
       const guide = panel.querySelector('[data-breath-status]');
       const elapsed = guideTime();
       const phase = (elapsed % 10000) / 1000;
-      guide.textContent = !guiding ? '跟着节奏试一试，也可以按自己舒服的方式呼吸。' : guidePaused ? '已暂停，准备好再继续。' : `${phase < 4 ? '吸气' : '呼气'} · ${Math.ceil(phase < 4 ? 4 - phase : 10 - phase)} 秒${blocked() ? ' · 声音已暂停' : guideMuted ? ' · 引导已静音' : ''}`;
+      guide.textContent = !guiding ? '按舒服的节奏来。' : guidePaused ? '已暂停，准备好再继续。' : `${phase < 4 ? '吸气' : '呼气'} · ${Math.ceil(phase < 4 ? 4 - phase : 10 - phase)} 秒${blocked() ? ' · 声音已暂停' : guideMuted ? ' · 引导已静音' : ''}`;
       panel.querySelector('[data-breath-start]').textContent = !guiding ? '开始呼吸' : guidePaused ? '继续' : '暂停';
       panel.querySelector('[data-breath-end]').hidden = !guiding;
       panel.querySelector('[data-breath-mute]').hidden = !guiding;
@@ -75,13 +89,13 @@
   }
   function halt() { ++sequence; music.pause(); }
   function clearPreview() { preview = false; clearTimeout(previewTimer); previewTimer = null; }
-  function setSource(theme) { current = theme; previous = theme; music.src = base + 'bgm/' + theme + '_loop.mp3'; music.volume = config.musicVolume; }
+  function setSource(theme) { current = theme; previous = theme; music.src = base + 'bgm/' + theme + '_loop.mp3'; music.volume = config.musicVolume * duckFactor(); }
   function startMusic(theme) {
     const ticket = ++sequence;
     if (theme) setSource(theme);
     if (!current || blocked() || !unlocked || !wantsMusic()) { music.pause(); render(); return; }
     global.XinjiAmbientMusic?.stop();
-    music.volume = config.musicVolume; error = '';
+    music.volume = config.musicVolume * duckFactor(); error = '';
     const result = music.play();
     if (result && typeof result.then === 'function') result.then(() => {
       if (ticket !== sequence) return;
@@ -91,12 +105,15 @@
     render();
   }
   function refreshAudio() {
-    if (blocked()) { freezeGuide(); halt(); sfx.pause(); global.XinjiAmbientMusic?.stop(); }
+    if (blocked()) {
+      if (quiet()) { global.XinjiMessageVoice?.cancel?.(); global.XinjiVoice?.stop?.(); }
+      freezeGuide(); halt(); sfx.pause(); global.XinjiAmbientMusic?.stop();
+    }
     else { resumeGuideClock(); if (unlocked && wantsMusic()) startMusic(); }
     render();
   }
   function play(event, options = {}) {
-    if (!events.has(event) || !config.effects || blocked()) return false;
+    if (!events.has(event) || !config.effects || blocked() || voice) return false;
     if (event === 'receive' && options.messageId != null) {
       let auto = true; try { auto = JSON.parse(localStorage.getItem('xinji_voice_autoplay_v1')) !== false; } catch (_) {}
       const messages = document.querySelectorAll('#messages .msg.assistant[data-message-id], #m-messages .msg.assistant[data-message-id]');
@@ -123,17 +140,32 @@
     } else if (config.music) startMusic(choose()); else { halt(); render(); }
     return publicState();
   }
+  function startGuide() {
+    unlocked = true; error = ''; clearPreview();
+    if (!guiding) { guiding = true; guidePaused = false; guideMuted = false; guideElapsed = 0; guideClockRunning = false; startMusic('breath'); }
+    else if (guidePaused) { guidePaused = false; resumeGuideClock(); if (!guideMuted) startMusic(); }
+    clearInterval(guideTimer); if (!guidePaused) guideTimer = setInterval(render, 250); render();
+    return publicState();
+  }
+  function pauseGuide() {
+    if (guiding && !guidePaused) { freezeGuide(); guidePaused = true; halt(); clearInterval(guideTimer); render(); }
+    return publicState();
+  }
+  function stopGuide() {
+    if (!guiding) return publicState();
+    guiding = false; guidePaused = false; guideClockRunning = false; clearInterval(guideTimer); guideTimer = null; guideElapsed = 0;
+    if (config.music) startMusic(choose()); else { halt(); render(); }
+    return publicState();
+  }
   function mount(container) {
     if (!container || container.querySelector('.soundscape-settings')) return;
     const panel = document.createElement('section'); panel.className = 'soundscape-settings';
-    panel.innerHTML = `<div class="soundscape-heading"><div><h3>声音与音乐</h3><p>让陪伴的声音按你的节奏出现</p></div><span aria-hidden="true">♫</span></div>
-      <label class="soundscape-toggle"><span><b>背景音乐</b><small>开启后可随机播放或选择一首。</small></span><input type="checkbox" data-sound-music></label>
-      <label class="soundscape-select"><span>陪伴氛围</span><select data-sound-theme aria-label="选择陪伴音乐"><option value="random">随机：晨曦、呼吸、深潮</option><option value="dawn">晨曦 · 温暖陪伴</option><option value="breath">呼吸 · 舒缓</option><option value="tide">深潮 · 安静专注</option><option value="stardust">星尘 · 灵感</option><option value="circuit">电路 · 探索</option><option value="pulse">心跳 · 陪伴</option></select><button type="button" data-sound-preview aria-pressed="false">试听</button></label>
-      <label class="soundscape-volume"><span>音乐音量</span><input type="range" min="0" max="1" step="0.05" data-sound-music-volume aria-label="音乐音量"></label>
-      <label class="soundscape-toggle"><span><b>交互音效</b><small>发送、回复和重要状态的轻提示。</small></span><input type="checkbox" data-sound-effects></label>
-      <label class="soundscape-volume"><span>音效音量</span><input type="range" min="0" max="1" step="0.05" data-sound-effects-volume aria-label="音效音量"></label>
-      <p class="soundscape-status" data-sound-status role="status" aria-live="polite"></p><button type="button" class="soundscape-silence" data-sound-silence>一键关闭音乐与音效</button><p class="soundscape-note">录音、朗读、先不打扰或离开页面时声音暂停；设置只保存在此设备。</p>
-      <div class="soundscape-breath"><div><b>一起呼吸</b><small>可随时暂停或结束，不必勉强跟随节奏。</small></div><p data-breath-status role="status"></p><div class="soundscape-breath-actions"><button type="button" data-breath-start>开始呼吸</button><button type="button" data-breath-mute hidden>引导静音</button><button type="button" data-breath-end hidden>结束</button></div></div>`;
+    panel.innerHTML = `<div class="soundscape-heading"><h3>声音与音乐</h3><button type="button" class="soundscape-silence" data-sound-silence>全部关闭</button></div>
+      <div class="soundscape-toggles"><label class="soundscape-toggle"><b>背景音乐</b><input type="checkbox" data-sound-music></label><label class="soundscape-toggle"><b>交互音效</b><input type="checkbox" data-sound-effects></label></div>
+      <div class="soundscape-select"><span>陪伴氛围</span><select data-sound-theme aria-label="选择陪伴音乐"><option value="random">随机：晨曦、呼吸、深潮</option><option value="dawn">晨曦 · 温暖陪伴</option><option value="breath">呼吸 · 舒缓</option><option value="tide">深潮 · 安静专注</option><option value="stardust">星尘 · 灵感</option><option value="circuit">电路 · 探索</option><option value="pulse">心跳 · 陪伴</option></select><button type="button" data-sound-preview aria-pressed="false">试听</button></div>
+      <div class="soundscape-volumes"><label class="soundscape-volume"><span>音乐音量</span><input type="range" min="0" max="1" step="0.05" data-sound-music-volume aria-label="音乐音量"></label><label class="soundscape-volume"><span>音效音量</span><input type="range" min="0" max="1" step="0.05" data-sound-effects-volume aria-label="音效音量"></label></div>
+      <p class="soundscape-status" data-sound-status role="status" aria-live="polite"></p>
+      <div class="soundscape-breath"><div class="soundscape-breath-copy"><b>一起呼吸</b><p data-breath-status role="status"></p></div><div class="soundscape-breath-actions"><button type="button" data-breath-start>开始呼吸</button><button type="button" data-breath-mute hidden>引导静音</button><button type="button" data-breath-end hidden>结束</button></div></div>`;
     container.appendChild(panel); panels.add(panel);
     panel.querySelector('[data-sound-music]').onchange = e => {
       setMusicEnabled(e.target.checked);
@@ -151,11 +183,8 @@
       freezeGuide(); config.music = false; config.effects = false; guideMuted = true; clearPreview(); halt(); resumeGuideClock(); sfx.pause(); save(); render();
     };
     panel.querySelector('[data-breath-start]').onclick = () => {
-      unlocked = true; error = ''; clearPreview();
-      if (!guiding) { guiding = true; guidePaused = false; guideMuted = false; guideElapsed = 0; guideClockRunning = false; startMusic('breath'); }
-      else if (!guidePaused) { freezeGuide(); guidePaused = true; halt(); }
-      else { guidePaused = false; resumeGuideClock(); if (!guideMuted) startMusic(); }
-      clearInterval(guideTimer); if (!guidePaused) guideTimer = setInterval(render, 250); render();
+      if (guiding && !guidePaused) pauseGuide();
+      else startGuide();
     };
     panel.querySelector('[data-breath-mute]').onclick = () => {
       freezeGuide(); guideMuted = !guideMuted;
@@ -163,11 +192,8 @@
       else { try { music.currentTime = (guideElapsed % 40000) / 1000; } catch (_) {} if (!guidePaused) startMusic(); }
       render();
     };
-    panel.querySelector('[data-breath-end]').onclick = () => {
-      guiding = false; guidePaused = false; guideClockRunning = false; clearInterval(guideTimer); guideTimer = null; guideElapsed = 0;
-      if (config.music) startMusic(choose()); else { halt(); render(); }
-    };
-    panel.querySelector('[data-sound-music-volume]').oninput = e => { config.musicVolume = Number(e.target.value); music.volume = config.musicVolume; save(); };
+    panel.querySelector('[data-breath-end]').onclick = stopGuide;
+    panel.querySelector('[data-sound-music-volume]').oninput = e => { config.musicVolume = Number(e.target.value); fadeMusic(); save(); };
     panel.querySelector('[data-sound-effects-volume]').oninput = e => { config.effectsVolume = Number(e.target.value); sfx.volume = config.effectsVolume; save(); };
     render();
   }
@@ -180,7 +206,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   // Persisted opt-in may resume only after a fresh user gesture, per browser policy.
   document.addEventListener('click', event => { if (event.target.closest?.('[data-tool=music]')) return; if (!unlocked && config.music) { unlocked = true; startMusic(current || choose()); } }, true);
-  global.NianxiangSound = {mount, play, isBlocked: blocked, setMusicEnabled, toggleMusic() { return setMusicEnabled(!publicState().active); }, getState:publicState, pauseForOtherMusic() {
+  global.NianxiangSound = {mount, play, startGuide, pauseGuide, stopGuide, isBlocked: blocked, setMusicEnabled, toggleMusic() { return setMusicEnabled(!publicState().active); }, getState:publicState, pauseForOtherMusic() {
     freezeGuide(); config.music = false; guideMuted = true; clearPreview(); halt(); resumeGuideClock(); save(); render();
-  }, setRecording(value) { recording = !!value; refreshAudio(); }, setVoiceActive(value) { voice = !!value; refreshAudio(); }};
+  }, setRecording(value) { recording = !!value; if (recording) { global.XinjiMessageVoice?.cancel?.(); global.XinjiVoice?.stop?.(); } refreshAudio(); }, isVoiceActive: () => voice, isRecording: () => recording, setVoiceActive(value) {
+    const next = !!value; if (voice === next) return; voice = next;
+    fadeMusic(); global.XinjiAmbientMusic?.setDucked?.(voice); if (voice) sfx.pause(); render();
+  }};
 })(window);

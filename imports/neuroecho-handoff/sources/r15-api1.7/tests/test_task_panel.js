@@ -59,26 +59,29 @@ test('adding a default suggestion keeps the existing draft and does not send it'
   assert.equal(inputEvents, 1); assert.equal(env.saves(), 1); assert.equal(env.input.focused, true);
 });
 
-test('created task survives remount and can be added back into a draft', () => {
-  const store = storage(), first = setup(store);
-  first.click(first.create); first.form.elements.title.value = '我的计划'; first.form.elements.detail.value = '帮我拆解计划';
-  first.form.dispatchEvent(event('submit'));
-  assert.deepEqual(JSON.parse(store.values.get(KEY)), [{title: '我的计划', detail: '帮我拆解计划'}]);
-  assert.equal(first.mineView.hidden, false); assert.equal(first.legacy.hidden, false);
-  const restored = setup(store); restored.click(restored.mineButton);
-  assert.equal(restored.mine.children[0].children[1].children[0].textContent, '我的计划');
-  restored.input.value = '原草稿'; restored.click(restored.mine.children[0].children[2]);
-  assert.equal(restored.input.value, '原草稿\n帮我拆解计划');
+test('create task preserves a draft and focuses the conversation without a form', () => {
+  const env = setup(); env.input.value = '原草稿';
+  env.click(env.create);
+  assert.equal(env.input.value, '原草稿\n我要创建任务：');
+  assert.equal(env.input.focused, true); assert.equal(env.saves(), 1);
+  assert.doesNotMatch(env.root.innerHTML, /task-create-form|自己创建的任务保存在此浏览器/);
 });
 
-test('task view switching keeps legacy task actions reachable', () => {
-  const env = setup();
+test('task views show existing user tasks and keep old unrelated actions hidden', () => {
+  const store = storage(new Map([[KEY, JSON.stringify([{title: '我的计划', detail: '帮我拆解计划'}])]]));
+  const env = setup(store);
   assert.equal(env.defaultView.hidden, false); assert.equal(env.legacy.hidden, true);
   env.click(env.mineButton);
-  assert.equal(env.defaultView.hidden, true); assert.equal(env.mineView.hidden, false); assert.equal(env.legacy.hidden, false);
-  assert.equal(env.mineButton.attributes['aria-pressed'], 'true');
+  assert.equal(env.mineView.hidden, false); assert.equal(env.legacy.hidden, true);
+  assert.equal(env.mine.children[0].children[1].children[0].textContent, '我的计划');
+  assert.match(env.root.innerHTML, /自动任务/);
   env.click(env.defaultButton);
   assert.equal(env.legacy.hidden, true); assert.equal(env.defaultView.hidden, false);
+});
+
+test('empty personal tasks provide a clear next step', () => {
+  const env = setup(); env.click(env.mineButton);
+  assert.equal(env.mine.children[0].textContent, '这里空空如也，点击上方去创建一个任务吧！');
 });
 
 test('drop only accepts task cards and leaves ordinary text drops to the browser', () => {
@@ -92,12 +95,4 @@ test('drop only accepts task cards and leaves ordinary text drops to the browser
   const drop = event('drop', {dataTransfer: data}); env.input.dispatchEvent(drop);
   assert.equal(drop.defaultPrevented, true); assert.equal(env.composer.classList.contains('task-drop-active'), false);
   assert.equal(env.input.value, '草稿\n把一个目标拆成几步，明确下一步现在就能开始做什么。');
-});
-
-test('storage failure does not claim a task was saved or clear the form', () => {
-  const store = storage(); store.setItem = () => { throw new Error('quota'); };
-  const env = setup(store); env.click(env.create); env.form.elements.title.value = '保留这项任务';
-  env.form.dispatchEvent(event('submit'));
-  assert.equal(env.form.elements.title.value, '保留这项任务');
-  assert.equal(env.form.hidden, false); assert.match(env.status.textContent, /未保存/); assert.equal(store.values.has(KEY), false);
 });

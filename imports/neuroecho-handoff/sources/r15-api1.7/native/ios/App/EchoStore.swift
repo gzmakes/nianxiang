@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor final class EchoStore: ObservableObject {
-    @Published var conversation: EchoConversation? {didSet {conversationRevision &+= 1;changeReadBarrier &+= 1}}
+    @Published var conversation: EchoConversation? {didSet {conversationRevision &+= 1;changeReadBarrier &+= 1; maintainDeliveryMonitoring()}}
     @Published var actions: [EchoAction] = [] {didSet {changeReadBarrier &+= 1}}
     @Published var nextStep: EchoNextStep?
     @Published private(set) var capabilities: EchoCapabilities?
@@ -44,6 +44,10 @@ import SwiftUI
     private var changeMonitoringActive=false
     private var changeMonitoringTask: Task<Void,Never>?
     private var changeMonitoringID: UUID?
+    private var deliveryMonitoringTask: Task<Void,Never>?
+    private var deliveryMonitoringID: UUID?
+    private var deliveryReadID: UUID?
+    private var deliveryLifecycleRevision=0
     var canDiscoverChanges: Bool {capabilities?.features["conversation_change_cursor"] == true && sessionID != nil && (!isRemote || deviceConnected)}
     var changesWaiting: Bool {changePoll.pending}
     var changeNoticeKind: EchoChangeNoticeKind {EchoChangeNoticeKind.resolve(status:changeSyncStatus,capabilitiesKnown:capabilities != nil,capabilityReadFailed:capabilityReadFailed,changesWaiting:changesWaiting)}
@@ -214,19 +218,55 @@ import SwiftUI
         guard snapshot.session.id == expectedID, sessionID == expectedID else { throw EchoAPIError.message("返回的对话不匹配，结果仍需核对。") }
         conversation = snapshot
     }
-    /// Read server-controlled delivery progress only. A concurrent user action,
-    /// endpoint change or newer snapshot makes this response stale.
+    /// Foreground continuation belongs to the store, independent of the selected tab.
+    /// One task observes server-timed parts; it never submits a chat/intro request.
+    private var pendingDelivery: EchoMessage? {
+        conversation?.messages.first(where: {$0.role == "assistant" && $0.deliveryPending == true})
+    }
+    private var deliveryMonitoringAllowed: Bool {
+        changeMonitoringActive && (!isRemote || deviceConnected) && pendingDelivery != nil
+    }
+    private var deliveryReadAllowed: Bool {
+        deliveryMonitoringAllowed && !busy && !verifyingDevice && pending == nil && pendingFollowup == nil && editReadLeases.isEmpty
+    }
+    private func maintainDeliveryMonitoring() {
+        guard deliveryMonitoringAllowed else {deliveryMonitoringTask?.cancel();return}
+        guard automaticChangePolling,deliveryMonitoringTask == nil else {return}
+        let id=UUID();deliveryMonitoringID=id
+        deliveryMonitoringTask=Task {[weak self] in
+            guard let self else {return}
+            defer {
+                if self.deliveryMonitoringID == id {
+                    self.deliveryMonitoringTask=nil;self.deliveryMonitoringID=nil
+                    if self.deliveryMonitoringAllowed {self.maintainDeliveryMonitoring()}
+                }
+            }
+            while !Task.isCancelled,self.deliveryMonitoringAllowed,let message=self.pendingDelivery {
+                let delay=max(100,min(2000,message.deliveryNextMs ?? 800))
+                do {try await Task.sleep(for:.milliseconds(delay))} catch {break}
+                guard !Task.isCancelled,self.deliveryMonitoringAllowed else {break}
+                await self.refreshDelivery()
+            }
+        }
+    }
+    /// Read server-controlled delivery progress only. Bind the exact observed
+    /// message, connection/lifecycle generation and conversation revision.
     func refreshDelivery() async {
-        guard !busy, let sid = sessionID,
-              conversation?.messages.contains(where: { $0.deliveryPending == true }) == true else { return }
-        let epoch = generation, revision = conversationRevision, client = api
+        guard deliveryReadAllowed,deliveryReadID == nil,let sid=sessionID,let messageID=pendingDelivery?.id else {return}
+        let epoch=generation,revision=conversationRevision,lifecycle=deliveryLifecycleRevision,scope=scopeIdentity,client=api,id=UUID()
+        deliveryReadID=id
+        defer {if deliveryReadID == id {deliveryReadID=nil}}
+        func current() -> Bool {
+            !Task.isCancelled && deliveryReadAllowed && epoch == generation && revision == conversationRevision &&
+            lifecycle == deliveryLifecycleRevision && scope == scopeIdentity && sessionID == sid &&
+            conversation?.messages.contains(where: {$0.id == messageID && $0.role == "assistant" && $0.deliveryPending == true}) == true
+        }
         do {
-            let snapshot = try await client.conversation()
-            guard !Task.isCancelled, !busy, epoch == generation, revision == conversationRevision,
-                  sessionID == sid, snapshot.session.id == sid else { return }
-            conversation = snapshot
+            let snapshot=try await client.conversation()
+            guard current(),snapshot.session.id == sid else {return}
+            conversation=snapshot
         } catch {
-            if !Task.isCancelled, !busy, epoch == generation, revision == conversationRevision, sessionID == sid { self.error = "暂时没能更新正在发送的内容，已有文字仍保留。" }
+            if current() {self.error="暂时没能更新正在发送的内容，已有文字仍保留。"}
         }
     }
     /// Stops only the displayed assistant message. This never cancels a model
@@ -596,7 +636,9 @@ import SwiftUI
         if changed {changeReadBarrier &+= 1}
     }
     func setChangeMonitoringActive(_ active: Bool) {
+        if changeMonitoringActive != active {deliveryLifecycleRevision &+= 1}
         changeMonitoringActive=active
+        maintainDeliveryMonitoring()
         if !active {changeMonitoringTask?.cancel();changePoll.interrupt();return}
         guard canDiscoverChanges else {if capabilities != nil {changeSyncStatus = .unsupported};return}
         guard automaticChangePolling,changeMonitoringTask == nil else {return}
@@ -616,6 +658,7 @@ import SwiftUI
         }
     }
     private func resetChangeReadIdentity() {
+        deliveryLifecycleRevision &+= 1;deliveryMonitoringTask?.cancel()
         changeMonitoringTask?.cancel();changePoll.bind(UUID().uuidString)
         changeServiceInstanceID=nil;remoteMoods=[];changeSyncStatus = .idle
     }

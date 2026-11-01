@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交互决策 · 模型实测</title>
+<style>
+*{box-sizing:border-box}
+html{scrollbar-width:none;scroll-behavior:auto}html::-webkit-scrollbar{display:none}
+body{margin:0;background:#f8f9ff;color:#253454;font-family:"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}
+main{padding:28px 7% 38px}
+section{padding:0 0 26px;margin:0 0 26px;border-bottom:1px solid #dfe6f7}section:last-child{border:0;margin:0;padding:0}
+.kicker{font-size:13px;letter-spacing:.13em;color:#7285b2;font-weight:600}
+h1,h2,p{margin:0}h1{font-size:clamp(23px,3vw,34px);line-height:1.25;letter-spacing:.015em;margin:8px 0 8px}h2{font-size:clamp(20px,2.5vw,27px);line-height:1.3;margin:6px 0 12px}.sub{font-size:clamp(13px,1.55vw,17px);color:#627394;line-height:1.6}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(145px,.8fr);gap:20px;align-items:end;margin:20px 0 13px}.figure{font-size:clamp(48px,7.5vw,76px);font-weight:750;line-height:.95;letter-spacing:-.05em;color:#6079ef}.figure small{font-size:.45em;letter-spacing:0}.figure-label{font-size:clamp(15px,1.75vw,20px);font-weight:700;margin-top:8px}.hero-aside{border-left:2px solid #dce4ff;padding-left:16px;color:#5c6d90;font-size:clamp(12px,1.35vw,15px)}.hero-aside strong{display:block;color:#344a7b;font-size:clamp(17px,1.9vw,22px)}
+.compare{background:#edf2ff;border-radius:14px;padding:15px 17px;margin-top:16px}.compare-title{font-size:13px;color:#627397;font-weight:700;margin-bottom:9px}.row{display:grid;grid-template-columns:115px 1fr 51px;gap:9px;align-items:center;margin:7px 0;font-size:clamp(12px,1.35vw,15px)}.track{height:8px;background:#dce4f6;border-radius:8px;overflow:hidden}.track i{display:block;height:100%;background:#aab9e7;border-radius:8px}.row.primary .track i{background:#687ef0}.row.primary{color:#425fd4;font-weight:700}.value{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}.foot{color:#7584a1;font-size:12px;line-height:1.55;margin-top:10px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:15px}.step{background:#eef2ff;border-radius:12px;padding:12px 10px;min-width:0}.step span{display:block;color:#6d83e6;font-size:12px;letter-spacing:.04em}.step b{display:block;font-size:clamp(13px,1.5vw,16px);margin:4px 0;color:#33466c}.step p{font-size:12px;color:#6a7b98;line-height:1.45}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}.action{padding:8px 9px;background:#f0f3fb;border-radius:9px;font-size:clamp(12px,1.25vw,14px);color:#526589}.action b{color:#6b7feb;margin-right:7px}.rule{font-size:13px;color:#65799e;margin-top:12px}
+.training{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.stat{background:#eef2ff;border-radius:12px;padding:12px}.stat strong{display:block;color:#627aeb;font-size:clamp(21px,2.6vw,29px);line-height:1.1}.stat span{display:block;color:#65789a;font-size:12px;margin-top:5px}.limit{background:#fff5f0;border-left:3px solid #f0b89e;border-radius:0 11px 11px 0;padding:13px 15px;color:#5f6981;font-size:clamp(12px,1.3vw,15px);line-height:1.6;margin-top:13px}.limit strong{color:#35425e}
+@media(max-width:430px){main{padding:22px 6% 30px}.hero{grid-template-columns:1fr 1fr;gap:12px}.row{grid-template-columns:94px 1fr 48px;font-size:11px}.steps{grid-template-columns:repeat(2,1fr)}.training{gap:5px}.stat{padding:10px 7px}}
+</style>
+</head>
+<body><main>
+<section id="results">
+<div class="kicker">01 / DECISION MODEL</div>
+<h1>理解当下，选择回应方式</h1>
+<p class="sub">Qwen3-0.6B + LoRA 根据当前表达、场景与偏好，从六种动作中做选择。</p>
+<div class="hero"><div><div class="figure">98.61<small>%</small></div><div class="figure-label">合成动作选择测试</div></div><div class="hero-aside"><strong>142 / 144</strong>仅场景 LoRA 选择正确<br>72 条表达，各配两种模拟信号</div></div>
+<div class="compare"><div class="compare-title">同一合成测试 · 动作选择准确率</div>
+<div class="row"><span>Jev</span><div class="track"><i style="width:99.31%"></i></div><span class="value">99.31%</span></div>
+<div class="row primary"><span>仅场景 LoRA</span><div class="track"><i style="width:98.61%"></i></div><span class="value">98.61%</span></div>
+<div class="row"><span>原始 Qwen</span><div class="track"><i style="width:36.11%"></i></div><span class="value">36.11%</span></div>
+</div><p class="foot">原始 Qwen 与仅场景 LoRA 使用相同输入和提示；Jev 为 143 / 144。测试不代表真实用户效果。</p>
+</section>
+<section id="flow">
+<div class="kicker">02 / HOW IT WORKS</div><h2>从表达，到合适的回应</h2><p class="sub">让信号、决策和执行各司其职；用户当前的明确要求始终优先。</p>
+<div class="steps"><div class="step"><span>01 · 输入</span><b>整理状态</b><p>话语、场景、偏好与可用信号摘要</p></div><div class="step"><span>02 · 判断</span><b>选择动作</b><p>小模型为六种回应方式打分</p></div><div class="step"><span>03 · 检查</span><b>尊重约束</b><p>检查静音与语音权限</p></div><div class="step"><span>04 · 执行</span><b>生成回应</b><p>后续模块负责内容与呈现</p></div></div>
+<div class="actions"><div class="action"><b>A</b>保持安静</div><div class="action"><b>B</b>简短文字</div><div class="action"><b>C</b>简短语音</div><div class="action"><b>D</b>分步文字</div><div class="action"><b>E</b>澄清需要</div><div class="action"><b>F</b>提供倾听</div></div>
+<p class="rule">例如：明确禁止语音时，系统会将语音动作调整为文字。</p>
+</section>
+<section id="training">
+<div class="kicker">03 / TRAINING & SPEED</div><h2>小模型，专注一个决策</h2><p class="sub">冻结基础模型，用合成场景训练 LoRA，让模型学习选择动作；内容生成由后续模块完成。</p>
+<div class="training"><div class="stat"><strong>1,350</strong><span>合成训练行</span></div><div class="stat"><strong>72 / 144</strong><span>验证 / 测试行</span></div><div class="stat"><strong>31 ms</strong><span>本地决策 P95</span></div></div>
+<p class="foot">RTX 4090 预热后单样本测得，包含编码、打分及约束检查；不含采样、设备传输与界面。</p>
+</section>
+<section id="limits"><div class="kicker">04 / WHAT'S NEXT</div><h2>下一步：从合成走向真实</h2><p class="sub">当前训练与评测使用合成场景和模拟生理摘要。真实设备能否改善交互，仍需真人数据与设备闭环验证。</p><div class="limit"><strong>边界：</strong>生理信号不是心理诊断；LoRA 微调不等于教师到学生的模型蒸馏。</div></section>
+</main></body></html>

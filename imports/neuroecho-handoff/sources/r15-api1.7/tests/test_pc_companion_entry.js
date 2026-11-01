@@ -52,31 +52,22 @@ test('an existing single document still opens account settings and never implies
  assert.equal(env.context.wizard.pendingSource,null);assert.equal(env.state.messages[0].text,'已经说过的经历');
 });
 
-test('calendar waits on its scope screen until the user explicitly consents to read',async()=>{
- const env=setup(async path=>path==='/api/onboarding/sources'
-  ?{sources:[{id:'apple_calendar',status:'needs_click',name:'日历',reads:['未来7天日程']}]}
-  :path.endsWith('/read')?{ok:true,preview_id:'calendar-preview',connector:{id:'apple_calendar',name:'日历'},items:[]}:{session:{id:'existing'}});
- await env.context.open('calendar');assert.equal(env.calls.length,1);
- assert.equal(env.context.wizard.pendingSource,'apple_calendar');assert.match(env.$('#read-head').innerHTML,/过去 7 天/);
- assert.equal(env.$('#wz-read').textContent,'授权');await env.context.read();
- assert.equal(env.calls.length,3);assert.equal(env.calls[1].path,'/api/onboarding/real/read');
- assert.equal(JSON.parse(env.calls[1].opts.body).source_id,'apple_calendar');assert.equal(env.calls[2].path,'/api/onboarding/real/start');assert.ok(env.actions.includes('connected'));
+test('calendar immediately shows the scope and waits for explicit consent before reading',async()=>{
+ const env=setup(async path=>path.endsWith('/read')
+  ?{ok:true,preview_id:'calendar-preview',connector:{id:'apple_calendar',name:'日历'},items:[]}:{session:{id:'existing'}});
+ const pending=env.context.open('calendar');
+ assert.equal(env.calls.length,0);assert.equal(env.context.wizard.pendingSource,'apple_calendar');
+ assert.match(env.$('#read-head').innerHTML,/过去 7 天/);assert.doesNotMatch(env.$('#read-head').innerHTML,/先看看可用状态/);
+ assert.equal(env.$('#wz-read').textContent,'授权');await pending;await env.context.read();
+ assert.equal(env.calls.length,2);assert.equal(env.calls[0].path,'/api/onboarding/real/read');
+ assert.equal(JSON.parse(env.calls[0].opts.body).source_id,'apple_calendar');assert.equal(env.calls[1].path,'/api/onboarding/real/start');assert.ok(env.actions.includes('connected'));
  assert.equal(env.state.session.id,'existing');
 });
 
-test('a late metadata response cannot replace a newly selected conversation or its source screen',async()=>{
- let resolve;const env=setup(()=>new Promise(r=>resolve=r));const pending=env.context.open('calendar');
- const initial=env.$('#read-head').innerHTML;env.state.session={id:'other'};
- resolve({sources:[{id:'apple_calendar',status:'needs_click'}]});await pending;
- assert.equal(env.$('#read-head').innerHTML,initial);assert.ok(!env.actions.includes('feishu-picker'));
- assert.equal(env.state.session.id,'other');
-});
-
-test('opening Rokid while calendar status is pending prevents the late source state from painting over it',async()=>{
- let resolve;const env=setup(()=>new Promise(r=>resolve=r));const pending=env.context.open('calendar');
- await env.context.open('rokid');const rokid=env.$('#read-items').innerHTML;
- resolve({sources:[{id:'apple_calendar',status:'needs_click'}]});await pending;
- assert.equal(env.$('#read-items').innerHTML,rokid);assert.equal(env.$('#welcome-feishu-authorize').onclick,undefined);
+test('opening another source replaces the calendar scope without a pending metadata request',async()=>{
+ const env=setup();await env.context.open('calendar');await env.context.open('rokid');
+ assert.match(env.$('#read-items').innerHTML,/没有连接设备/);assert.equal(env.calls.length,0);
+ assert.equal(env.context.wizard.pendingSource,null);assert.equal(env.state.session.id,'existing');
 });
 
 test('legacy source cards show actual account enablement independently from CLI login and snapshots',()=>{

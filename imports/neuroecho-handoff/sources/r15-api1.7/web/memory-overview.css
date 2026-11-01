@@ -1,9 +1,21 @@
 /* The overview remains a quiet doorway into the existing editable records. */
-.memory-overview[hidden], .memory-overview-toolbar[hidden], #memory-list[hidden], #memory-list .mem-item[hidden], .memory-overview-empty[hidden] { display: none !important; }
+.memory-overview[hidden], .memory-overview-toolbar[hidden], #memory-list[hidden], #memory-list .mem-item[hidden], .memory-overview-empty[hidden], .memory-summary-account[hidden] { display: none !important; }
+.memory-summary-account { margin: 9px 0 0; color: #526a99; font-size: 12px; line-height: 1.6; }
+.memory-auto-control { margin: 12px 0; padding: 14px 17px; border: 1px solid rgba(255,255,255,.9); border-radius: 18px; background: rgba(255,255,255,.55); color: var(--ink); }
+.memory-auto-control > summary { cursor: pointer; font-size: 13px; font-weight: 650; }
+.memory-auto-control > summary:focus-visible { outline: 3px solid #7893d5; outline-offset: 3px; }
+.memory-auto-control > p.note { margin: 10px 0; color: var(--ink-mute); font-size: 12px; line-height: 1.6; }
+.memory-auto-control > label { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
+.memory-auto-control > label input { accent-color: #6a86bd; }
+.memory-auto-control > [data-auto-memory-status] { margin: 6px 0 0; color: var(--ink-mute); font-size: 12px; }
 .memory-summary { padding: 22px; border: 1px solid rgba(255,255,255,.9); border-radius: 25px; background: rgba(255,255,255,.64); box-shadow: 0 12px 30px rgba(99,117,164,.08); }
 .memory-summary-kicker { color: #c08359; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
 #app .context .memory-summary-title { margin: 10px 0 5px; color: var(--ink); font-size: 20px; letter-spacing: -.02em; }
-.memory-summary-intro, .memory-summary-pending, .memory-overview-footnote { margin: 0; color: var(--ink-mute); font-size: 12px; line-height: 1.65; }
+.memory-summary-intro, .memory-summary-pending, .memory-summary-sources, .memory-overview-footnote { margin: 0; color: var(--ink-mute); font-size: 12px; line-height: 1.65; }
+.memory-summary-sources { margin-top: 9px; }
+.memory-summary-origin { color: var(--ink-mute); font-size: 11px; }
+.memory-review-link { display: block; margin: 12px 0 0; padding: 7px 11px; border: 1px solid rgba(82,106,153,.18); border-radius: 12px; background: rgba(255,255,255,.65); color: #526a99; font: inherit; font-size: 12px; cursor: pointer; }
+.memory-review-link:focus-visible { outline: 3px solid #7893d5; outline-offset: 3px; }
 .memory-summary-excerpts { margin: 16px 0 12px; padding: 14px 0 0; border-top: 1px solid rgba(71,89,122,.13); list-style: none; }
 .memory-summary-excerpts li { position: relative; margin: 0 0 10px; padding-left: 13px; color: var(--ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .memory-summary-excerpts li::before { content: ''; position: absolute; left: 0; top: .62em; width: 4px; height: 4px; border-radius: 50%; background: #8ca4d1; }
@@ -38,7 +50,9 @@
 .memory-category-card strong { font-size: 14px; line-height: 1.3; }.memory-category-count { color: var(--ink-mute); font-size: 12px; }
 .memory-overview-footnote { margin: 14px 2px 0; }
 .memory-overview-toolbar { margin: 0 0 14px; }.memory-overview-toolbar h4 { margin: 12px 0 0; font-size: 18px; color: var(--ink); }.memory-overview-back { padding: 5px 0; }
-.memory-category-control { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(71,89,122,.1); color: var(--ink-mute); font-size: 12px; }
+.memory-category-control { margin-top: 9px; color: var(--ink-mute); font-size: 12px; }
+.memory-category-control summary { cursor: pointer; color: #526a99; }
+.memory-category-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding-top: 8px; }
 .memory-category-select { max-width: 100%; border: 1px solid rgba(80,99,138,.2); border-radius: 12px; padding: 7px 9px; color: var(--ink); background: rgba(255,255,255,.75); font: inherit; }.memory-category-hint { font-size: 11px; color: var(--ink-mute); }
 @media (max-width: 380px) { .memory-summary { padding: 18px; }.memory-category-card { padding: 12px; min-height: 116px; } }
 @media (prefers-reduced-motion: reduce) { .memory-category-card { transition: none; } }

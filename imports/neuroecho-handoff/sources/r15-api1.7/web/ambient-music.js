@@ -66,7 +66,7 @@ window.XinjiAmbientMusic = (() => {
     window.NianxiangSound?.pauseForOtherMusic?.();
     playing = true;
     master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(MASTER, ctx.currentTime + 2.5);
+    master.gain.linearRampToValueAtTime(MASTER * (window.NianxiangSound?.isVoiceActive?.() ? 0.72 : 1), ctx.currentTime + 2.5);
     playChord();
     chordTimer = setInterval(playChord, CHORD_SECONDS * 1000);
     sparkleTimer = setTimeout(sparkle, 2500);
@@ -87,6 +87,12 @@ window.XinjiAmbientMusic = (() => {
     document.dispatchEvent(new CustomEvent('xinji-ambient-music', { detail: { playing: false } }));
   }
 
+  function setDucked(value) {
+    if (!playing || !master || !ctx) return;
+    const now = ctx.currentTime;
+    master.gain.cancelScheduledValues(now); master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(MASTER * (value ? 0.72 : 1), now + 0.4);
+  }
   window.addEventListener('pagehide', stop);
-  return { start, stop, toggle: () => (playing ? (stop(), Promise.resolve(false)) : start()), playing: () => playing };
+  return { start, stop, setDucked, toggle: () => (playing ? (stop(), Promise.resolve(false)) : start()), playing: () => playing };
 })();

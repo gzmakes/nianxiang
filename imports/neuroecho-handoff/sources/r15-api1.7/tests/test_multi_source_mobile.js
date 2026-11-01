@@ -22,7 +22,7 @@ function setup(handler){
  const ctx=vm.createContext({$,state,followups:{mount(){},stop(){}},localStorage:storage(),location:{reload(){counts.reloads++}},encodeURIComponent,
   esc:s=>String(s??'').replace(/[<>"']/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
   api:async(...args)=>{calls.push(args);return handler(...args)},confirm:text=>{confirms.push(text);return true},toast:text=>shown.push(text),
-  clearMobileSourceForm(){counts.clears++},renderAll(){counts.rendered++},renderStarters(){},loadNextStep(){},loadEngine(){},loadCarryover(){},
+  clearMobileSourceForm(){counts.clears++},clearMobileImage(){counts.imagesCleared=(counts.imagesCleared||0)+1},renderAll(){counts.rendered++},renderStarters(){},loadNextStep(){},loadEngine(){},loadCarryover(){},
   closeSheet(){const sheet=$('#m-sheet');sheet._xinjiEpoch++;sheet._xinjiKind=null;sheet.classList.add('is-hidden')},
   openSheet(kind){$('#m-sheet')._xinjiEpoch++;$('#m-sheet')._xinjiKind=kind},showMobileOnboarding(){},renderBookmark(){},renderUnderstanding(){counts.understanding=(counts.understanding||0)+1}});
  ctx.document = {}; ctx.connectionIntro = {start(){}};
@@ -82,7 +82,7 @@ test('legacy flat context retains one removable source',()=>{
 });
 test('history restore preserves each conversation draft and restores all source data',async()=>{
  const e=setup(async()=>session('target',[B]));e.state.mobileDrafts={target:'目标会话草稿'};await e.ctx.openHistory('target');
- assert.equal(e.state.session.id,'target');assert.equal(e.state.mobileDrafts.s,'尚未发送的草稿');assert.equal(e.$('#m-input').value,'目标会话草稿');assert.equal(e.state.context.sources[0].id,'source-b');
+ assert.equal(e.state.session.id,'target');assert.equal(e.counts.imagesCleared,1);assert.equal(e.state.mobileDrafts.s,'尚未发送的草稿');assert.equal(e.$('#m-input').value,'目标会话草稿');assert.equal(e.state.context.sources[0].id,'source-b');
 });
 test('a late history read cannot override a newer chosen session',async()=>{
  let resolve;const old=new Promise(r=>resolve=r);const e=setup(async path=>path.endsWith('/first')?old:session('second',[B]));

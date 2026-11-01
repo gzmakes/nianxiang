@@ -3,6 +3,8 @@ package cn.xinji.echo
 import android.animation.ValueAnimator
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -203,7 +206,7 @@ private val LocalEchoFeedbackModel = staticCompositionLocalOf<EchoViewModel?> { 
                         else -> Sources(model, chooseFiles = { run { if (!fileSelectionActive) { fileSelectionContext = model.dataContextId; fileSelectionActive = true; picker.launch(arrayOf("text/*", "application/json", "application/javascript")) } else model.tell("请先完成或取消上一次文件选择。") } }, onPlan = { sourcePlan = it; sourceUrl = "" }, onRemove = { removing = it })
                     }
                 }
-                1 -> Chat(model, readAloud, readAloudState)
+                1 -> Chat(model, readAloud, readAloudState, citationActive = { resumed && page == 1 && !settings && !search })
                 else -> Memories(model, onOpen = { memory = it }, onForget = { forgetting = it })
             }
         }
@@ -456,12 +459,15 @@ private fun displayFollowupTime(value: String, zone: String = ZoneId.systemDefau
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun Chat(model: EchoViewModel, readAloud: ReadAloudController, speech: ReadAloudState) {
+@Composable private fun Chat(model: EchoViewModel, readAloud: ReadAloudController, speech: ReadAloudState, citationActive: () -> Boolean) {
     val state = model.state; val conversation = state.conversation ?: return
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scroll = rememberLazyListState()
     var tagging by remember { mutableStateOf<Message?>(null) }
     var remembering by remember { mutableStateOf<Message?>(null) }
     val displayed = conversation.messages.filter { TopicPolicy.matches(state.topics, it.id, state.selectedTopic) }
+    val citationContext = CitationContext(model.baseUrl, model.dataContextId, conversation, displayed.map { it.id }.toSet(), citationActive())
     LaunchedEffect(state.focusMessageId, displayed.size) {
         val target = state.focusMessageId?.let { id -> displayed.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
         if (target != null) { scroll.scrollToItem(target); model.clearMessageFocus() }
@@ -494,6 +500,19 @@ private fun displayFollowupTime(value: String, zone: String = ZoneId.systemDefau
                             Surface(color = if (mine) UserBubble else Color.White, shape = RoundedCornerShape(topStart = 22.dp, topEnd = if (mine) 6.dp else 22.dp, bottomEnd = 22.dp, bottomStart = if (mine) 22.dp else 6.dp), modifier = Modifier.widthIn(max = 310.dp)) {
                                 SelectionContainer { Text(part, modifier = Modifier.padding(16.dp), fontSize = Shared.DIMENSION_BODY_FONT.sp, lineHeight = 25.sp) }
                             }
+                        }
+                        val documents = CitationPolicy.targets(citationContext, message.id)
+                        if (documents.isNotEmpty()) {
+                            documents.forEach { target -> TextButton(onClick = {
+                                val current = model.state
+                                val visibleIds = current.conversation?.messages.orEmpty().filter { TopicPolicy.matches(current.topics, it.id, current.selectedTopic) }.map { it.id }.toSet()
+                                val url = CitationPolicy.urlForOpen(target, CitationContext(model.baseUrl, model.dataContextId, current.conversation, visibleIds, citationActive() && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)))
+                                if (url == null) model.tell("这条文档引用已变化或暂不可用，请刷新对话后重新点选。")
+                                else try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+                                } catch (_: Exception) { model.tell("未能交给系统浏览器打开，请检查是否有可用浏览器后重试。") }
+                            }, modifier = Modifier.widthIn(max = 310.dp).heightIn(min = Shared.DIMENSION_TOUCH_ANDROID.dp)) { Text("查阅 · ${target.document.title}", maxLines = 2, overflow = TextOverflow.Ellipsis) } }
+                            Text("文档权限与飞书连接在电脑端管理。", color = Muted, fontSize = 12.sp)
                         }
                         if (ReadAloudPolicy.target(ReadAloudContext(model.baseUrl, conversation, displayed.map { it.id }.toSet(), true), message.id) != null) {
                             val selected = speech.target?.let { it.endpoint == model.baseUrl && it.sessionId == conversation.id && it.messageId == message.id } == true

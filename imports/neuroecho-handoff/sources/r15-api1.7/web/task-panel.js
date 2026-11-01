@@ -23,18 +23,11 @@
     <div class="task-enhancement-actions"><button type="button" class="task-create-link">＋ 创建任务</button></div>
     <div class="task-view-switch" role="group" aria-label="任务视图">
       <button type="button" data-task-view="mine" aria-pressed="false">☷ 我的任务</button>
-      <button type="button" data-task-view="default" aria-pressed="true">◷ 默认任务</button>
+      <button type="button" data-task-view="default" aria-pressed="true">◷ 自动任务</button>
     </div>
-    <form class="task-create-form" hidden>
-      <label>任务名称<input name="title" required maxlength="80" autocomplete="off" placeholder="例如：整理本周计划"></label>
-      <label>任务说明<textarea name="detail" rows="3" maxlength="1000" placeholder="希望念响如何帮你？（可选）"></textarea></label>
-      <div class="task-form-actions"><button type="submit">保存任务</button><button type="button" class="task-form-cancel">取消</button></div>
-    </form>
-    <p class="task-storage-note">自己创建的任务保存在此浏览器中，暂不同步到其他设备。</p>
     <p class="task-status" role="status" aria-live="polite"></p>
     <div class="task-default-view"><h4>推荐任务</h4><p class="task-view-hint">点击＋添加到对话，也可拖入输入框。</p><div class="task-cards"></div></div>
     <div class="task-mine-view" hidden><div class="task-cards"></div></div>`;
-  const form = root.querySelector('.task-create-form');
   const status = root.querySelector('.task-status');
   const defaultView = root.querySelector('.task-default-view');
   const mineView = root.querySelector('.task-mine-view');
@@ -83,29 +76,17 @@
     const recommended = defaultView.querySelector('.task-cards'); recommended.replaceChildren(...defaults.map((t, i) => makeCard(t, i, 'default')));
     const mine = mineView.querySelector('.task-cards');
     if (tasks.length) mine.replaceChildren(...tasks.map((t, i) => makeCard(t, i, 'mine')));
-    else { const empty = document.createElement('p'); empty.className = 'task-empty'; empty.textContent = storageAvailable ? '还没有创建任务。点击上方「创建任务」开始。' : '本地任务暂时无法读取。'; mine.replaceChildren(empty); }
+    else { const empty = document.createElement('p'); empty.className = 'task-empty'; empty.textContent = storageAvailable ? '这里空空如也，点击上方去创建一个任务吧！' : '本地任务暂时无法读取。'; mine.replaceChildren(empty); }
   };
   const setView = view => {
     currentView = view;
     defaultView.hidden = view !== 'default';
     mineView.hidden = view !== 'mine';
-    legacy.hidden = view !== 'mine';
+    legacy.hidden = true;
     buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.taskView === view)));
   };
   buttons.forEach(button => button.addEventListener('click', () => setView(button.dataset.taskView)));
-  root.querySelector('.task-create-link').addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) form.elements.title.focus(); });
-  root.querySelector('.task-form-cancel').addEventListener('click', () => { form.hidden = true; });
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    const title = form.elements.title.value.trim();
-    const detail = form.elements.detail.value.trim();
-    if (!title) { form.elements.title.focus(); return; }
-    if (!storageAvailable) { say('任务未保存：本地存储不可用或已有数据无法读取。'); return; }
-    const next = [...tasks, { title, detail: detail || title }];
-    try { localStorage.setItem(key, JSON.stringify(next)); }
-    catch (_) { say('任务未保存：浏览器本地存储不可用或空间不足。请保留表单内容后重试。'); return; }
-    tasks = next; render(); setView('mine'); form.reset(); form.hidden = true; say('任务已保存在此浏览器。');
-  });
+  root.querySelector('.task-create-link').addEventListener('click', () => addToConversation('我要创建任务：'));
   const hasTask = event => Array.from(event.dataTransfer?.types || []).includes(mime);
   input.addEventListener('dragover', event => { if (!hasTask(event)) return; event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; composer?.classList.add('task-drop-active'); });
   input.addEventListener('dragleave', () => composer?.classList.remove('task-drop-active'));
@@ -115,5 +96,6 @@
     try { const item = JSON.parse(event.dataTransfer.getData(mime)); const task = (item.kind === 'default' ? defaults : item.kind === 'mine' ? tasks : [])[item.index]; if (task) addToConversation(task.detail || task.title); } catch (_) { say('无法添加这项任务，请使用任务卡上的＋按钮。'); }
   });
   window.addEventListener('storage', event => { if (event.key === key) { load(); render(); setView(currentView); } });
+  window.addEventListener('xinji-personal-tasks-change', () => { load(); render(); setView(currentView); });
   load(); render(); setView('default');
 })();

@@ -35,22 +35,18 @@ test('opening Today reads saved context and never silently sends, authorizes, or
  const e=setup(),pending=e.context.run(),data=sessionData();
  data.context.sources=[{id:'source-a',title:'合成生活笔记',label:'本机资料',stale:false},{id:'source-b',title:'合成日程',label:'日历',stale:false}];
  data.memories=[{id:'memory-a',text:'确认过的合成偏好',status:'confirmed'}];e.resolve(data);await pending;
- assert.equal(e.actions.length,0);assert.ok(e.calls.some(call=>call.path.startsWith('/api/actions?session_id=original')));
+ assert.equal(e.actions.length,0);assert.ok(e.calls.some(call=>call.path.startsWith('/api/session/original')));
  assert.ok(e.calls.every(call=>!call.opts?.method||call.opts.method==='GET'));assert.ok(!e.calls.some(call=>/\/auth\/|\/commit|\/api\/chat/.test(call.path)));
  assert.match(e.$('#m-sheet-body').innerHTML,/合成生活笔记|2\s*份来源/);
 });
-test('Today continuation keeps the current draft, carries the actual bookmark into chat, and waits for Send',async()=>{
+test('Today leaves the unsent draft untouched and hides the removed suggestion and task cards',async()=>{
  const e=setup(),pending=e.context.run(),data=sessionData();e.$('#m-input').value='已有未发送的心事';
  data.bookmark={id:'bookmark',note:'合成停留点',next_step:'继续整理这张卡里的准确下一步'};e.resolve(data);await pending;
- const before=e.calls.length;assert.equal(typeof e.$('#m-today-continue').onclick,'function');e.$('#m-today-continue').onclick();
- const draft=e.$('#m-input').value;assert.ok(draft.includes('已有未发送的心事'));assert.ok(draft.includes(data.bookmark.next_step));assert.ok(draft.indexOf('已有未发送的心事')<draft.indexOf(data.bookmark.next_step));
- assert.equal(e.$('#m-input').focused,true);assert.ok(e.actions.some(action=>action[0]==='close-sheet'));assert.ok(!e.actions.some(action=>action[0]==='send'||action[0]==='action'));assert.equal(e.calls.length,before);assert.equal(e.state.session.id,'original');
+ assert.equal(e.$('#m-input').value,'已有未发送的心事');
+ assert.doesNotMatch(e.$('#m-sheet-body').innerHTML,/m-today-continue|m-today-tasks|下一步 · 候选|任务与草稿/);
+ assert.equal(e.actions.length,0);assert.ok(e.calls.every(call=>!call.opts?.method||call.opts.method==='GET'));
 });
-test('Today without a bookmark brings the displayed candidate back to the composer without sending',async()=>{
- const e=setup(),pending=e.context.run();e.resolve(sessionData());await pending;e.$('#m-today-continue').onclick();
- assert.ok(e.$('#m-input').value.includes('合成的当前建议'));assert.ok(!e.actions.some(action=>action[0]==='send'));assert.ok(e.calls.every(call=>!call.opts?.method||call.opts.method==='GET'));
-});
-for(const [id,target] of [['#m-today-tasks','tasks'],['#m-today-memories','understand'],['#m-today-sources','more']]){
+for(const [id,target] of [['#m-today-memories','understand'],['#m-today-sources','more']]){
  test(`${id} opens its real destination and a stale card cannot open it for another session`,async()=>{
   const e=setup(),pending=e.context.run();e.resolve(sessionData());await pending;
   const button=e.$(id);assert.equal(typeof button.onclick,'function');button.onclick();assert.equal(e.actions[0][0],'sheet');assert.equal(e.actions[0][1],target);

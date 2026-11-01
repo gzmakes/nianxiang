@@ -10,10 +10,10 @@ async function fixture({changesSupported=true}={}){
  const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);};
  const hosts=Array.from({length:2},()=>{const status=element(),button=element(),host=element();host.querySelector=key=>key==='[data-update-status]'?status:button;return{host,status,button};});
  const sheet=$('#m-sheet');sheet.classList.add('is-hidden');sheet._xinjiEpoch=1;sheet._xinjiKind=null;
- let cursor='c0',deferSnapshot=null,sync,modal=false,offline=false;const calls=[],renders=[];
+ let cursor='c0',deferSnapshot=null,sync,modal=false,autoOpen=false,autoBusy=false,offline=false;const calls=[],renders=[];
  const state={session:{id:'one'},messages:[],memories:[],sourceGeneration:0,companionBoundary:{canRefresh:()=>true,acceptSnapshot:()=>true},delivery:{pending:()=>false,invalidateReads(){}}};
  const ctx=connectionContext({state,$,AbortController,URLSearchParams,location:{search:''},setTimeout:()=>1,clearTimeout(){},
-  document:{hidden:false,querySelector:()=>modal?{}:null,querySelectorAll:()=>hosts.map(h=>h.host),addEventListener(){}},
+  document:{hidden:false,querySelector:selector=>modal||(autoOpen&&selector.includes('#m-auto-memory-settings details[open]'))||(autoBusy&&selector.includes('#m-auto-memory-settings[aria-busy="true"]'))?{}:null,querySelectorAll:()=>hosts.map(h=>h.host),addEventListener(){}},
   window:{addEventListener(){},XinjiMood:{entryValid:()=>true},XinjiContactContract:{validBoundary:()=>true}},
   contentMutationEpoch:0,contentMutationCount:0,mActiveTurn:null,mTurnQueue:[],mQueuedTurns:[],mChatBlocked:false,mobileManualMemoryOperation:null,onMemAction:{drafts:new Map()},
   followups:{canRefresh:()=>true},mood:{canRefresh:()=>true},bind(){},setupMobileDesign(){},restore:async()=>true,restoreMobileChatLedger(){},keepMobileChatDraft(){},
@@ -29,7 +29,7 @@ async function fixture({changesSupported=true}={}){
  ctx.window.XinjiContentUpdates.create=options=>sync=create(options);
  ctx.window.XinjiForegroundSync.draft=()=>({save(){}});
  vm.runInContext(boot+'\nthis.boot=boot;',ctx);await ctx.boot();await flush();
- return{ctx,state,$,sheet,hosts,calls,renders,sync,change(){cursor='c'+(Number(cursor.slice(1))+1);},open(kind='understand'){sheet._xinjiEpoch++;sheet._xinjiKind=kind;sheet.classList.remove('is-hidden');},modal(v){modal=v;},offline(v){offline=v;},defer(p){deferSnapshot=p;}};
+ return{ctx,state,$,sheet,hosts,calls,renders,sync,change(){cursor='c'+(Number(cursor.slice(1))+1);},open(kind='understand'){sheet._xinjiEpoch++;sheet._xinjiKind=kind;sheet.classList.remove('is-hidden');},modal(v){modal=v;},autoOpen(v){autoOpen=v;},autoBusy(v){autoBusy=v;},offline(v){offline=v;},defer(p){deferSnapshot=p;}};
 }
 test('memory sheet shows pending feedback without automatic replacement; explicit GET review preserves chat and scroll',async()=>{
  const f=await fixture();f.open();f.$('#m-input').value='合成未发聊天';f.change();
@@ -40,15 +40,15 @@ test('memory sheet shows pending feedback without automatic replacement; explici
  assert.ok(f.calls.every(call=>!call.opts.method||call.opts.method==='GET'));f.sync.stop();
 });
 test('manual review cannot replace a memory editor, prompt, or unrelated form sheet',async()=>{
- for(const guard of ['draft','prompt','form']){const f=await fixture();f.open(guard==='form'?'tasks':'understand');f.change();
-  if(guard==='draft')f.ctx.onMemAction.drafts.set('mem','合成修改');if(guard==='prompt')f.modal(true);
+ for(const guard of ['draft','prompt','form','auto-open','auto-busy']){const f=await fixture();f.open(guard==='form'?'tasks':'understand');f.change();
+  if(guard==='draft')f.ctx.onMemAction.drafts.set('mem','合成修改');if(guard==='prompt')f.modal(true);if(guard==='auto-open')f.autoOpen(true);if(guard==='auto-busy')f.autoBusy(true);
   await f.hosts[1].button.onclick();assert.equal(f.renders.length,0);assert.equal(f.sync.state().cursor,'c0');assert.equal(f.hosts[1].host.dataset.updateState,'pending');
   assert.equal(f.calls.filter(c=>c.path==='/api/conversation').length,1);f.sync.stop();
  }
 });
 test('edit start or sheet change during a checked snapshot invalidates the whole publication',async()=>{
- for(const change of ['draft','sheet']){const f=await fixture();f.open();f.change();let release;f.defer(new Promise(r=>release=r));
-  const pending=f.hosts[1].button.onclick();await flush();if(change==='draft')f.ctx.onMemAction.drafts.set('mem','保留编辑');else{f.sheet._xinjiEpoch++;f.sheet._xinjiKind='tasks';}
+ for(const change of ['draft','sheet','auto-open','auto-busy']){const f=await fixture();f.open();f.change();let release;f.defer(new Promise(r=>release=r));
+  const pending=f.hosts[1].button.onclick();await flush();if(change==='draft')f.ctx.onMemAction.drafts.set('mem','保留编辑');else if(change==='auto-open')f.autoOpen(true);else if(change==='auto-busy')f.autoBusy(true);else{f.sheet._xinjiEpoch++;f.sheet._xinjiKind='tasks';}
   release();await pending;assert.equal(f.renders.length,0);assert.equal(f.sync.state().cursor,'c0');assert.equal(f.state.memories[0].text,'fresh-c0');f.sync.stop();
  }
 });

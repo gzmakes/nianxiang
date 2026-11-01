@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from server import agent_runtime, core, feishu_account, lark
+from server import agent_runtime, core, feishu_account, lark, plugin_bridge
 
 
 ACCOUNT = 'a' * 64
@@ -109,7 +109,12 @@ def test_unavailable_account_does_not_block_ordinary_companionship(monkeypatch, 
     monkeypatch.setattr(core.model, 'from_env', lambda: Companion())
     result = core.generate_reply(sid, '今天想有人陪我说说话')
     assert result['action'] == 'model.reply'
-    assert result['reply'] == '我在，今天想怎么聊都可以。'
+    text, separator, sticker = result['reply'].partition('\n\n')
+    assert text == '我在，今天想怎么聊都可以。'
+    # A welcoming sticker is allowed without changing the synthetic reply.
+    if separator:
+        assert sticker.startswith('[表情: ') and sticker.endswith(']')
+        assert plugin_bridge.sanitize_meme_markers(sticker) == sticker
     assert next(m for m in result['messages'] if m['id'] == result['assistant_message_id'])['citations'] == []
     assert not any(a['action'] in ('model.stale', 'model.fallback') for a in core.audit_list(sid))
 
