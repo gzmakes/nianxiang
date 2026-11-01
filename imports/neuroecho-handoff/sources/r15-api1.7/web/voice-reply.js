@@ -61,7 +61,7 @@
     button.setAttribute('title', copy('voice.unavailable', '本机语音暂不可用，可以继续看文字。'));
   }
   function playMessage(id, text, button, sessionId) {
-    if (!id || !button || !current(sessionId, id, text)) return false;
+    if (!id || !button || !current(sessionId, id, text) || global.NianxiangSound?.isRecording?.()) return false;
     if (active && active.id === id && active.sessionId === sessionId && active.text === text) { stop(); return true; }
     stopAll();
     const body = spokenText(text);
@@ -114,20 +114,23 @@
   function attachClip(sessionId, id, text, container) {
     const item = clips.get(keyFor(sessionId, id));
     if (!item || item.text !== text || !container) return false;
-    pauseClip(item, true);
-    const player = global.document.createElement('audio');
+    // Preserve the same media element across chat redraws so an ongoing reply
+    // does not restart or stop when the surrounding messages are re-rendered.
+    const existing = !!item.player;
+    const player = item.player || global.document.createElement('audio');
     item.player = player;
-    player.onplay = () => { stop(); for (const other of clips.values()) if (other !== item) pauseClip(other); if (!visible()) pauseClip(item); syncVoiceActivity(); };
+    player.onplay = () => { if (global.NianxiangSound?.isRecording?.()) { pauseClip(item); return; } stop(); for (const other of clips.values()) if (other !== item) pauseClip(other); if (!visible()) pauseClip(item); syncVoiceActivity(); };
     player.onpause = player.onended = player.onerror = syncVoiceActivity;
     player.controls = true;
     player.style.maxWidth = '100%';
     player.preload = 'metadata';
-    player.src = item.url;
+    if (!existing) player.src = item.url;
     player.setAttribute('aria-label', '播放这条回复的本机语音');
     container.replaceChildren(player);
     return true;
   }
   function pruneClips(sessionId, messages) {
+    if (currentSession && currentSession !== sessionId) global.XinjiMessageVoice?.cancel?.();
     currentSession = sessionId || null;
     readable = new Map((messages || []).filter(m => m.role === 'assistant' && !m.delivery_pending).map(m => [m.id, readText(m)]));
     if (active && !current(active.sessionId, active.id, active.text)) stop();
@@ -138,11 +141,12 @@
     }
   }
   async function makeClip({sessionId, id, text, button, container, isCurrent, onReady}) {
-    if (!clipSupported || !sessionId || !id || !button || !container || typeof isCurrent !== 'function' || !isCurrent() || sessionId !== currentSession || !readable.has(id) || spokenText(text) !== spokenText(readable.get(id))) return false;
+    if (!clipSupported || !sessionId || !id || !button || !container || typeof isCurrent !== 'function' || !isCurrent() || sessionId !== currentSession || !readable.has(id) || spokenText(text) !== spokenText(readable.get(id))) { global.XinjiMessageVoice?.clipFailed?.(id, button); return false; }
     if (attachClip(sessionId, id, text, container)) return true;
     const key = keyFor(sessionId, id);
-    if (inflight.has(key)) return false;
+    if (inflight.has(key)) { global.XinjiMessageVoice?.clipFailed?.(id, button); return false; }
     inflight.add(key); button.disabled = true; button.textContent = '正在生成语音…';
+    let completed = false;
     try {
       const response = await global.fetch('/api/voice/clip', {method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({session_id:sessionId, message_id:id})});
@@ -152,17 +156,19 @@
         throw new Error(message);
       }
       const blob = await response.blob();
-      if (!isCurrent() || !blob.size || !/^audio\/wav(?:;|$)/i.test(response.headers.get('content-type') || '')) return false;
+      if (!isCurrent()) return false;
+      if (!blob.size || !/^audio\/wav(?:;|$)/i.test(response.headers.get('content-type') || '')) throw new Error('语音不可用，可使用朗读');
       const url = global.URL.createObjectURL(blob);
       clips.set(key, {url, text});
       attachClip(sessionId, id, text, container);
       button.textContent = '语音已生成';
       if (typeof onReady === 'function') onReady();
+      completed = true;
       return true;
     } catch (error) {
       if (isCurrent()) button.textContent = error.message || '语音生成失败，可使用朗读';
       return false;
-    } finally { inflight.delete(key); button.disabled = false; }
+    } finally { inflight.delete(key); button.disabled = false; if (!completed) global.XinjiMessageVoice?.clipFailed?.(id, button); }
   }
   global.document?.addEventListener?.('visibilitychange', () => { if (!visible()) stopAll(); });
   global.addEventListener?.('pagehide', stopAll);

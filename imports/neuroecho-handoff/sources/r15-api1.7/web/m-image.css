@@ -1,0 +1,13 @@
+/* Mobile image attachment, kept separate from the chat layout. */
+.m-image-preview:not(.is-hidden) { display:flex; align-items:center; gap:10px; margin:0 12px 6px; padding:8px 10px; border-radius:16px; background:rgba(255,255,255,.88); color:#59677f; font-size:12px; }
+.m-image-preview img { width:46px; height:46px; object-fit:cover; border-radius:10px; }
+.m-image-preview span { flex:1; }
+.m-image-preview button { border:0; background:transparent; font-size:24px; color:#58657c; min-width:40px; min-height:40px; }
+.m-image-message img { display:block; max-width:min(220px, 62vw); max-height:240px; object-fit:contain; border-radius:12px; }
+/* Match the icon-only controls used by the mobile composer. */
+#m-app #m-image-btn { --c-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='4' width='17' height='16' rx='2.5'/><circle cx='8.5' cy='9' r='1.5'/><path d='m4.5 17 4.5-4.5 3 3 2.5-2.5 5 5'/></svg>"); }
+#m-app:has(#m-image-preview:not(.is-hidden)) #m-composer .send { background:var(--ink)!important; }
+@media (max-width:359px) {
+  #m-app #m-composer { flex-wrap:nowrap; }
+  #m-app #m-input { flex:1 1 0; width:auto; }
+}

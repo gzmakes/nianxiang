@@ -1,0 +1,52 @@
+/* A quiet set of ways to continue, attached to the assistant's message. */
+.conversation-choices {
+  max-width: 100%;
+  margin: 12px 0 4px;
+  padding: 14px;
+  border: 1px solid rgba(136, 155, 205, .24);
+  border-radius: 18px;
+  background: rgba(248, 250, 255, .78);
+  box-shadow: 0 6px 20px rgba(101, 121, 178, .06);
+}
+.conversation-choices-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 2px 10px;
+  color: #63749a;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.conversation-choices-label span { color: #8596d0; }
+.conversation-choices-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.conversation-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 15px;
+  border: 1px solid rgba(151, 169, 218, .4);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .95);
+  color: #263550;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+  transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.conversation-choice span { flex: none; color: #8494bb; }
+.conversation-choice:hover { border-color: #91a3d1; background: #f4f7ff; }
+.conversation-choice:active { transform: scale(.98); }
+.conversation-choice:focus-visible { outline: 2px solid #536999; outline-offset: 3px; }
+@media (max-width: 560px) {
+  .conversation-choices { padding: 12px; }
+  .conversation-choice { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .conversation-choice { transition: none; }
+}

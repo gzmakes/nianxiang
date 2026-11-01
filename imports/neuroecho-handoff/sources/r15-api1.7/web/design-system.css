@@ -703,11 +703,10 @@ html[data-reduce-motion=true] #app .conversation-tools [data-tool=music] .ui-ico
   #app #messages::before{display:none}
 }
 /* Web 改版 19 (2026-10-31，产品要求)：
-   1) 输入框任何状态都不画描边；2) 去掉「陪伴 / 工作」切换，只剩一种模式；3) 气泡里的链接去掉下划线、做成小胶囊；
+   1) 输入框任何状态都不画描边；2) 保留「陪伴 / 工作」切换；3) 气泡里的链接去掉下划线、做成小胶囊；
    4) 右侧面板统一：同一套玻璃卡片、同一套按钮（白色胶囊 / 墨色主按钮）、同一套字号行距、左右对齐；
    5) 接入资料（onboarding）改成对话式：光球在上，问题是回响的气泡，选项是胶囊，粘贴框是输入条。 */
 #app .composer textarea,#app .composer textarea:focus,#app .composer textarea:focus-visible,#app .composer textarea:active,#app .composer:focus-within textarea{outline:0!important;outline-width:0!important;outline-style:none!important;outline-offset:0!important;box-shadow:none!important;border:0!important;-webkit-appearance:none;appearance:none}
-#app .space-modes{display:none!important}
 #app #messages a{color:inherit;text-decoration:none!important}
 #app .msg .bubble a{display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;border:1px solid rgba(27,36,51,.10);background:rgba(255,255,255,.72);color:var(--ink);font-size:12px;line-height:18px;text-decoration:none!important}
 #app .msg .bubble a:hover{background:#fff;border-color:rgba(27,36,51,.18)}
@@ -858,11 +857,10 @@ html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba
   #app .context .mem-group-label{font-size:12px;line-height:1.6;letter-spacing:0;text-transform:none;color:var(--ink-mute);margin:0 0 8px}
 }
 /* Web 改版 22 (2026-10-31，产品要求)：
-   连接页：去掉「可选择」状态行，卡片按内容收紧、间距缩小；
+   连接页：保留连接状态，卡片按内容收紧、间距缩小；
    记忆页：标题字号与其他页一致（memory-overview.css 在后面加载，这里用更高的特异性），分类卡内容居中、四边等距，去掉页脚那句话；
    设置页：「伙伴角色」里列出 念响 / 小鲸鱼（settings-polish.js），「自动记录记忆」说明压短、勾选框与文字对齐。 */
 @media(min-width:900px){
-  #app #tab-apps .app-card .status{display:none}
   #app #tab-apps .apps-grid{gap:8px;padding:0}
   #app #tab-apps .app-card{padding:12px 14px;margin:0;gap:10px;align-items:center;flex-wrap:nowrap}
   #app #tab-apps .app-card+.app-card{margin-top:0}
@@ -884,7 +882,7 @@ html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba
   #app #auto-memory-settings [data-auto-memory-status]{margin:0;font-size:12px;line-height:1.6;color:var(--ink-mute)}
 }
 /* Web 改版 23 (2026-10-31，产品要求)：
-   设置页：「自动记录记忆」勾选在上、说明一句更浅更小；「声音与音乐」卡改成同款玻璃；「数据与记录」整块不再显示；
+   设置页：「自动记录记忆」勾选在上、说明一句更浅更小；「声音与音乐」卡改成同款玻璃；「数据与记录」保留；
    连接页：来源图标按蓝 / 绿 / 黄 / 粉 轮换着色（和心情平面、记忆分类同一套）；
    弹窗统一：搜索、标记此刻、我打算这样做、记下一件事 等所有弹窗都用磨砂玻璃卡，标题 17/600、正文 13、说明 12，按钮和右侧面板同款胶囊，
    打开时淡入 + 轻微放大。 */
@@ -902,7 +900,6 @@ html[data-reduce-transparency=true] #onboarding .onboarding-card{background:rgba
   #app .context .soundscape-settings input[type=checkbox],#app .context .soundscape-volume input{accent-color:var(--ink)}
   #app .context .soundscape-select select{padding:8px 12px;border:1px solid rgba(27,36,51,.10);border-radius:14px;background:rgba(255,255,255,.85);color:var(--ink);font-size:13px}
   #app .context .soundscape-settings :focus-visible{outline:none;box-shadow:0 0 0 2px rgba(27,36,51,.18)}
-  #app #tab-design div.settings-section:has(> .panel-title-row){display:none}
   #app #tab-apps .app-card:nth-child(4n+1) .ico{color:#4A5FA8;background:#E3EBFA}
   #app #tab-apps .app-card:nth-child(4n+2) .ico{color:#4E8A5F;background:#DDEDE0}
   #app #tab-apps .app-card:nth-child(4n+3) .ico{color:#8A7430;background:#F7EDC4}
@@ -948,21 +945,14 @@ body:has(#app) .design-search-results p{font-size:13px;line-height:1.6;color:var
 html[data-reduce-transparency=true] body:has(#app) .modal-card,html[data-reduce-transparency=true] body:has(#app) .echo-user-dialog,html[data-reduce-transparency=true] body:has(#app) .design-search-card{background:rgba(255,255,255,.96)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
 html[data-reduce-motion=true] body:has(#app) .modal,html[data-reduce-motion=true] body:has(#app) .modal-card,html[data-reduce-motion=true] body:has(#app) .design-search,html[data-reduce-motion=true] body:has(#app) .design-search-card,html[data-reduce-motion=true] body:has(#app) .echo-user-dialog,html[data-reduce-motion=true] body:has(#app) .onboarding-card{animation:none}
 @media(prefers-reduced-motion:reduce){body:has(#app) .modal,body:has(#app) .modal-card,body:has(#app) .design-search,body:has(#app) .design-search-card,body:has(#app) .echo-user-dialog,body:has(#app) .onboarding-card{animation:none}}
-/* Web 改版 24 (2026-10-31，产品要求)：「回响」页里的「留一条跟进」卡整块不再显示（followups.js 仍挂载，只是不画）。 */
-#app #today-followups,#app .context .followup-card{display:none!important}
-/* Web 改版 25 (2026-10-31，产品要求)：设置页保留「数据与模型设置」入口——「数据与记录」卡只留这一行，样式同「伙伴角色」「设备」，
-   点了进入原有的「数据与隐私」页（含模型配置）；理解卡 / 审计记录 / 指标 / 插件状态仍不显示。 */
-@media(min-width:900px){
-  #app #tab-design div.settings-section:has(> .panel-title-row){display:block;padding:0!important;border-radius:20px}
-  #app #tab-design div.settings-section:has(> .panel-title-row)>.panel-title-row,
-  #app #tab-design div.settings-section:has(> .panel-title-row) #persona-mount,
-  #app #tab-design div.settings-section:has(> .panel-title-row) #plugin-status,
-  #app #tab-design div.settings-section:has(> .panel-title-row) [data-more-tab]:not([data-more-tab=data]){display:none}
-  #app #tab-design div.settings-section:has(> .panel-title-row) .action-row{margin:0}
-  /* 面板通用按钮规则特异性更高，这里用 !important 让这一行和「伙伴角色」卡的标题行一致 */
-  #app #tab-design [data-more-tab=data]{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:68px;margin:0;padding:18px 20px!important;
-    border:0!important;border-radius:20px!important;background:transparent!important;box-shadow:none!important;color:var(--ink)!important;font-size:13px!important;font-weight:650!important;line-height:1.5;text-align:left;cursor:pointer}
-  #app #tab-design [data-more-tab=data]::after{content:"›";font-size:18px;line-height:1;color:var(--ink-mute)}
-  #app #tab-design [data-more-tab=data]:hover{background:rgba(255,255,255,.35)!important}
-  #app #tab-design [data-more-tab=data]:focus-visible{outline:2px solid #667caa;outline-offset:-2px}
-}
+/* Keep secondary memory actions quiet until they are needed. */
+.memory-actions-more { display: inline-block; position: relative; color: var(--ink-mute); }
+.memory-actions-more > summary { cursor: pointer; list-style: none; padding: 4px 9px; border: 1px solid var(--line); border-radius: 9px; font-size: 12px; }
+.memory-actions-more > summary::-webkit-details-marker { display: none; }
+.memory-actions-more[open] { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.memory-review > summary { margin: 16px 0 10px; color: var(--ink-mute); cursor: pointer; }
+.mindlink-dialog { width: min(420px, calc(100vw - 40px)); padding: 24px; border: 1px solid rgba(255,255,255,.9); border-radius: 24px; color: var(--ink); background: #f7f8ff; box-shadow: 0 18px 55px rgba(30,40,70,.2); }
+.mindlink-dialog::backdrop { background: rgba(26,35,55,.35); }
+.mindlink-dialog h3 { margin: 0 0 12px; }
+.mindlink-dialog .note { line-height: 1.65; }
+#m-app .m-tabbar { grid-template-columns: repeat(4, 1fr); }

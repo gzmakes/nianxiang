@@ -25,8 +25,30 @@ test('server message metadata wins over stale browser views while legacy message
   await new Promise(resolve=>setImmediate(resolve));
   poll();
   assert.equal(workspace.topics.matches('a','小鲸鱼·工作',serverMessage),true);
+  assert.equal(workspace.topics.matches('a','小鲸鱼·陪伴',serverMessage),true);
+  assert.equal(workspace.topics.matches('old','小鲸鱼·陪伴',legacyMessage),true);
   assert.equal(workspace.topics.matches('a','念响·陪伴',serverMessage),false);
   assert.equal(workspace.topics.matches('old','小鲸鱼·工作',legacyMessage),true);
   assert.equal(workspace.topics.matches('local-pending','念响·陪伴',{dataset:{}}),true);
   assert.equal(workspace.topics.matches('a','全部',serverMessage),true);
+});
+
+test('an existing work session switches to the unified companion mode', async () => {
+  const calls = [];
+  const storage = new Map([['xinji_session','session']]);
+  const root = {dataset:{}};
+  const messages = {querySelectorAll:()=>[],querySelector:()=>null,prepend(){}};
+  const workspace = {topics:{},setTopic(){}};
+  const document = {readyState:'complete',documentElement:root,querySelector(selector){
+    return selector === '#app #messages, #m-app #m-messages' ? messages : null;
+  },querySelectorAll:()=>[],addEventListener(){},createElement(){return {hidden:false,textContent:''}}};
+  const context = vm.createContext({document,window:{XinjiWorkspace:workspace},
+    localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},
+    fetch:async (path, options) => {calls.push({path, options}); return {ok:true,json:async()=>({session:{id:'session',persona_id:'whale',interaction_mode:'work'}})};},
+    MutationObserver:class {observe(){} takeRecords(){}},setInterval:()=>1,clearInterval(){},Date,CustomEvent:class{}});
+  vm.runInContext(fs.readFileSync('web/persona-switch.js','utf8'),context);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(context.window.XinjiSpaces.current(), 'whale:companion');
+  const modeUpdate = calls.find(call => call.path.endsWith('/mode'));
+  assert.equal(JSON.parse(modeUpdate.options.body).interaction_mode, 'companion');
 });

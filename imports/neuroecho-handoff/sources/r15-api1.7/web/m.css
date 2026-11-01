@@ -461,3 +461,16 @@ button:disabled { opacity: .5; cursor: wait; }
 .m-today-card .btn, .m-today-card .text-btn { margin-top:8px; min-height:40px; }
 .m-modal-card { box-sizing:border-box; max-height:calc(100dvh - 40px); overflow-y:auto; }
 .feishu-full-preview { max-height: 16rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; margin: 8px 0; border: 1px solid rgba(86,98,122,.2); border-radius: 12px; background: rgba(255,255,255,.8); color: var(--ink); font-size: 14px; line-height: 1.65; }
+
+/* Keep the keyboard focus indicator on the whole composer instead of drawing
+   a square inside its rounded input. */
+#m-app #m-input:focus-visible { outline: none !important; }
+#m-app #m-composer:has(#m-input:focus-visible) { box-shadow: 0 0 0 2px rgba(86,112,219,.28), 0 4px 16px rgba(80,100,170,.10) !important; }
+
+/* A navigation sheet covers the chat on narrow screens. Let its controls
+   remain reachable; the pet reappears in the same state when it closes. */
+body:has(#m-sheet:not(.is-hidden)) .chat-pet-root,
+body:has(#m-sheet:not(.is-hidden)) .chat-pet-menu,
+body:has(#m-sheet:not(.is-hidden)) .chat-pet-tooltip,
+body:has(#m-sheet:not(.is-hidden)) .chat-pet-score,
+body:has(#m-sheet:not(.is-hidden)) .chat-pet-restore { visibility: hidden; }

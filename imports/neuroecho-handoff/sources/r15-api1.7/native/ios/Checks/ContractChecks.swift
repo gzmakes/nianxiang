@@ -44,6 +44,67 @@ final class EchoCoreTests {
         else { return [:] }
         return try JSONSerialization.jsonObject(with:data) as! [String:Any]
     }
+
+    func testCitationMissingNullAndMalformedListsKeepLegacyRepliesReadable() throws {
+        let decoder=JSONDecoder(); decoder.keyDecodingStrategy = .convertFromSnakeCase
+        for suffix in ["", #","citations":null"#, #","citations":{}"#, #","citations":[null,42,"bad",[],{},true]"#] {
+            let message=try decoder.decode(EchoMessage.self,from:Data((#"{"id":"a","role":"assistant","text":"原回复","created_at":"2026-10-31T00:00:00Z""# + suffix + "}").utf8))
+            XCTAssertEqual(message.text,"原回复"); XCTAssertEqual(message.citations.count,0); XCTAssertEqual(message.createdAt,"2026-10-31T00:00:00Z")
+        }
+    }
+    func testCitationKindsStaySeparateAndBadItemsDoNotPoisonValidEvidence() throws {
+        let raw = #"{"id":"a","role":"assistant","text":"原回复","citations":[{"id":"m1","version":2,"text":"原记忆"},{"kind":"feishu_document","title":"项目资料","url":"https://team.feishu.cn/docx/doc_1","text":"实际片段"},{"kind":"future","id":"fake","version":1,"text":"不应是记忆"},{"kind":null,"id":"fake2","version":1,"text":"不应是记忆"},{"kind":"feishu_document","title":"非法","url":"https://evil.example/docx/a","text":"片段"},{"kind":"feishu_document","title":"缺正文键","url":"https://team.feishu.cn/docx/a"},{"id":"broken","version":"1","text":"不应强转"},null]}"#
+        let message=try JSONDecoder().decode(EchoMessage.self,from:Data(raw.utf8))
+        XCTAssertEqual(message.citations.count,2); XCTAssertEqual(message.documentCitations.count,1)
+        if case .memory(let id,let version,let text) = message.citations[0] {XCTAssertEqual(id,"m1");XCTAssertEqual(version,2);XCTAssertEqual(text,"原记忆")} else {XCTFail("legacy memory identity lost")}
+        XCTAssertEqual(message.documentCitations.first?.title,"项目资料")
+        let roundtrip=try JSONDecoder().decode(EchoMessage.self,from:JSONEncoder().encode(message))
+        XCTAssertEqual(roundtrip.citations,message.citations)
+    }
+    func testCitationURLAcceptsOnlyOfficialUnambiguousDocumentLinks() throws {
+        for url in ["https://feishu.cn/docx/a_1-2", "https://tenant.feishu.cn/docs/a/", "https://a-b.larksuite.com:443/wiki/A1?from=chat#part", "HTTPS://TEAM.FEISHU.CN/docx/a?name=%E4%B8%AD"] {XCTAssertNotNil(EchoFeishuCitationURL.validated(url))}
+        for url in ["http://team.feishu.cn/docx/a", "javascript:alert(1)", "file:///docx/a", "https://feishu.cn.evil.example/docx/a", "https://evilfeishu.cn/docx/a", "https://user@team.feishu.cn/docx/a", "https://team.feishu.cn:444/docx/a", "https://-team.feishu.cn/docx/a", "https://team-.feishu.cn/docx/a", "https://team..feishu.cn/docx/a", "https://%66eishu.cn/docx/a", "https://team.feishu.cn/docx/%61", "https://team.feishu.cn/docx/a/../b", "https://team.feishu.cn/docx/a/extra", "https://team.feishu.cn/page/cli?user_code=sample", "https://team.feishu.cn/docx/a?x=%0d", "https://team.feishu.cn/docx/a?x=%5c", "https://team.feishu.cn/docx/a?x=\u{3000}", "https://team.feishu.cn/docx/a#%C2%80", "https://team.feishu.cn\\@evil.example/docx/a", " https://team.feishu.cn/docx/a", "https://team.feishu.cn/docx/a\n"] {XCTAssertNil(EchoFeishuCitationURL.validated(url))}
+    }
+    func testCitationOnlyAppearsForCompleteVisibleAssistantReply() throws {
+        let document=EchoFeishuDocumentCitation(title:"资料",url:"https://team.feishu.cn/wiki/a",text:"")
+        let citation=EchoMessageCitation.feishuDocument(document)
+        XCTAssertEqual(EchoMessage(id:"a",role:"assistant",text:"完整回复",citations:[citation]).documentCitations.count,1)
+        XCTAssertTrue(EchoMessage(id:"a",role:"user",text:"原话",citations:[citation]).documentCitations.isEmpty)
+        XCTAssertTrue(EchoMessage(id:"a",role:"assistant",text:"隐藏后段",bubbles:["已显示"],deliveryPending:true,citations:[citation]).documentCitations.isEmpty)
+        XCTAssertTrue(EchoMessage(id:"a",role:"assistant",text:" ",citations:[citation]).documentCitations.isEmpty)
+        XCTAssertTrue(EchoMessage(id:"a",role:"assistant",text:"隐藏后段",bubbles:[" "],deliveryPending:false,citations:[citation]).documentCitations.isEmpty)
+    }
+    func testCitationOpenTargetRejectsChangedIdentityOrReply() throws {
+        let document=EchoFeishuDocumentCitation(title:"资料",url:"https://team.feishu.cn/docx/a",text:"片段")
+        let original=EchoMessage(id:"a",role:"assistant",text:"完整回复",citations:[.feishuDocument(document)])
+        guard let target=EchoDocumentCitationTarget(message:original,document:document,origin:"scope-device-generation1",sessionID:"canonical") else {XCTFail("target missing");return}
+        XCTAssertNotNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[original]))
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation2",sessionID:"canonical",messages:[original]))
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"other",messages:[original]))
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[]))
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[original,original]))
+        let changed=EchoMessage(id:"a",role:"assistant",text:"修改后的回复",citations:original.citations)
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[changed]))
+        let removed=EchoMessage(id:"a",role:"assistant",text:original.text)
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[removed]))
+        let pending=EchoMessage(id:"a",role:"assistant",text:original.text,deliveryPending:true,citations:original.citations)
+        XCTAssertNil(target.resolvedURL(origin:"scope-device-generation1",sessionID:"canonical",messages:[pending]))
+    }
+    func testCitationDecodesThroughActualConversationAndChatClients() async throws {
+        let message = #"{"id":"a","role":"assistant","text":"有依据的回复","citations":[{"kind":"feishu_document","title":"资料","url":"https://team.feishu.cn/wiki/a","text":"片段"},false,{"kind":"unknown","id":"m","version":1,"text":"不是记忆"}]}"#
+        var reads=0
+        let client=try api { request in
+            reads += 1
+            if request.url?.path == "/api/conversation" {return (200,#"{"session":{"id":"canonical"},"messages":["# + message + #"],"memories":[],"context":null}"#)}
+            XCTAssertEqual(request.url?.path,"/api/chat")
+            return (200,#"{"messages":["# + message + #"],"memories":[]}"#)
+        }
+        let conversation=try await client.conversation(); XCTAssertEqual(conversation.messages.first?.documentCitations.count,1)
+        let changes=try await client.changeConversationSnapshot(); XCTAssertEqual(changes.messages.first?.documentCitations.count,1)
+        if case .completed(let result) = try await client.send(.init(sessionID:"canonical",text:"合成消息",origin:"http://127.0.0.1:18787",requestID:"synthetic-citation-request")) {XCTAssertEqual(result.messages.first?.documentCitations.count,1)} else {XCTFail("expected completed reply")}
+        XCTAssertEqual(reads,3)
+    }
+
     func testConfiguredAddressAcceptsOnlyExplicitHTTPSOrLoopbackHTTP() throws {
         XCTAssertNoThrow(try EchoAPI.validatedBaseURL("http://127.0.0.1:18787"))
         XCTAssertNoThrow(try EchoAPI.validatedBaseURL("https://echo.example.invalid"))
@@ -914,6 +975,12 @@ extension EchoCoreTests {
             ("testMoodMismatchedSaveAndUnknownDeleteNeverConfirmSuccess", { try await suite.testMoodMismatchedSaveAndUnknownDeleteNeverConfirmSuccess() }),
             ("testMoodListRejectsDuplicateDaysOrInvalidTokens", { try await suite.testMoodListRejectsDuplicateDaysOrInvalidTokens() }),
             ("testMoodPendingSnapshotSurvivesRecreationWithoutBecomingMemoryOrChat", { try suite.testMoodPendingSnapshotSurvivesRecreationWithoutBecomingMemoryOrChat() }),
+            ("testCitationMissingNullAndMalformedListsKeepLegacyRepliesReadable", { try suite.testCitationMissingNullAndMalformedListsKeepLegacyRepliesReadable() }),
+            ("testCitationKindsStaySeparateAndBadItemsDoNotPoisonValidEvidence", { try suite.testCitationKindsStaySeparateAndBadItemsDoNotPoisonValidEvidence() }),
+            ("testCitationURLAcceptsOnlyOfficialUnambiguousDocumentLinks", { try suite.testCitationURLAcceptsOnlyOfficialUnambiguousDocumentLinks() }),
+            ("testCitationOnlyAppearsForCompleteVisibleAssistantReply", { try suite.testCitationOnlyAppearsForCompleteVisibleAssistantReply() }),
+            ("testCitationOpenTargetRejectsChangedIdentityOrReply", { try suite.testCitationOpenTargetRejectsChangedIdentityOrReply() }),
+            ("testCitationDecodesThroughActualConversationAndChatClients", { try await suite.testCitationDecodesThroughActualConversationAndChatClients() }),
             ("testConfiguredAddressAcceptsOnlyExplicitHTTPSOrLoopbackHTTP", { try suite.testConfiguredAddressAcceptsOnlyExplicitHTTPSOrLoopbackHTTP() }),
             ("testBootstrapUsesOnlyCanonicalGETAndDoesNotCreateAConversation", { try await suite.testBootstrapUsesOnlyCanonicalGETAndDoesNotCreateAConversation() }),
             ("testChatUsesStableRequestIDAndExactTextWithoutModelSecrets", { try await suite.testChatUsesStableRequestIDAndExactTextWithoutModelSecrets() }),

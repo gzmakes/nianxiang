@@ -24,7 +24,7 @@ test('a stale device sheet request is inert rather than reviving a hidden synthe
  const context=vm.createContext({});vm.runInContext(clip(mobile,'  function openSheet(', '  async function renderTodayMobile()')+'\nthis.open=openSheet;',context);assert.equal(context.open('device'),undefined);
 });
 test('real MindLink opt-in and truthful Rokid outline remain available without pretending hardware is connected',()=>{
- assert.match(pages[0],/id="mindlink-toggle"/);assert.match(pages[0],/MindLink.*专注度/);assert.match(pages[0],/不记录、不发送给模型，也不判断情绪/);assert.match(pc,/api\("\/api\/mindlink\/start"/);assert.match(pc,/X-MindLink-Token/);
+ assert.match(pages[0],/id="mindlink-toggle"/);assert.match(pages[0],/MindLink.*专注度/);assert.match(pages[0],/不记录、不发送给模型/);assert.match(pc,/api\("\/api\/mindlink\/start"/);assert.match(pc,/X-MindLink-Token/);
  assert.match(pages[1],/id="m-rokid-outline"/);assert.match(pages[1],/当前不会连接眼镜，也不会请求设备权限/);
  for(const script of [pc,mobile])assert.match(script,/force: true/);
 });

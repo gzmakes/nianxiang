@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import threading
 import uuid
@@ -324,7 +325,37 @@ def _prompt(label, read, persona_id="nianxiang", interaction_mode="companion") -
     return system, json.dumps(payload, ensure_ascii=False)
 
 
-def _finish(database, job_id, epoch, text, citations, scope, *, status="completed", error=None, access=None):
+def _suggestions(read: dict) -> list[str]:
+    """Offer topics from the successful read, never manufacture source details.
+
+    The chip is a request to discuss an item, not an instruction to carry out
+    its title. Failed Feishu documents and entries without a usable title are
+    omitted; an empty/short read is allowed to result in fewer than 3 choices.
+    """
+    choices, seen = [], set()
+    for item in read.get("items") or []:
+        if not isinstance(item, dict) or item.get("read_ok") is False:
+            continue
+        title = item.get("title")
+        if not isinstance(title, str):
+            continue
+        title = re.sub(r"\s+", " ", title).strip()
+        # Omit markup, URLs, and unusually long strings: titles come from an
+        # external source and will become part of a user-authored chat message.
+        if (not title or len(title) > 80 or re.search(r"[<>\x00-\x1f\x7f]", title)
+                or re.search(r"https?://", title, re.IGNORECASE)):
+            continue
+        title = title.replace("「", "").replace("」", "").strip()
+        if not title or title.casefold() in seen:
+            continue
+        seen.add(title.casefold())
+        choices.append(f"聊聊「{title}」")
+        if len(choices) == 3:
+            break
+    return choices
+
+
+def _finish(database, job_id, epoch, text, citations, scope, *, status="completed", error=None, access=None, suggestions=None):
     # CLI identity is external to SQLite. Recheck it outside the write lock;
     # database source/version and incoming-user checks are repeated atomically.
     if access is not None and not access.is_current():
@@ -345,7 +376,7 @@ def _finish(database, job_id, epoch, text, citations, scope, *, status="complete
             mid, stamp = "msg_" + uuid.uuid4().hex[:12], _now()
             space = json.loads(row["selection"])["conversation_space"]
             conn.execute("INSERT INTO messages(id,session_id,role,text,citations,suggestions,created_at,persona_id,interaction_mode) VALUES(?,?,'assistant',?,?,?,?,?,?)",
-                         (mid, row["session_id"], text, json.dumps(citations, ensure_ascii=False), "[]", stamp,
+                         (mid, row["session_id"], text, json.dumps(citations, ensure_ascii=False), json.dumps(suggestions or [], ensure_ascii=False), stamp,
                           space["persona_id"], space["interaction_mode"]))
             chat_delivery.register(conn, row["session_id"], mid, text, mode=space["interaction_mode"])
             conn.execute("UPDATE connection_intro_jobs SET status=?,scope=?,message_id=?,error=?,updated_at=? WHERE id=?",
@@ -408,7 +439,8 @@ def _run(database, job_id, epoch):
         output = plugin_bridge.sanitize_meme_markers(client.complete(system, user, max_tokens=600)).strip()
         if not output:
             raise model.ModelError("empty intro")
-        _finish(database, job_id, epoch, output, read.get("citations") or [], scope, access=access)
+        _finish(database, job_id, epoch, output, read.get("citations") or [], scope, access=access,
+                suggestions=_suggestions(read))
     except Exception:
         # Never persist or echo remote errors, source bodies, model credentials,
         # or CLI output. This is a true service notice, not a simulated insight.

@@ -160,6 +160,7 @@ struct ChatStreamView: View {
                 ForEach(store.visibleMessages) { message in
                     HStack { if message.role == "user" { Spacer(minLength:40) }; VStack(alignment:.leading,spacing:8) {
                         ForEach(Array(message.displayParts.enumerated()),id:\.offset) { _, part in Text(part).font(.body).lineSpacing(5).textSelection(.enabled).padding(16).frame(maxWidth:310,alignment:.leading).background(message.role == "user" ? Color(red:190/255,green:205/255,blue:1).opacity(0.55) : .white.opacity(0.94),in:RoundedRectangle(cornerRadius:22)) }
+                        MessageCitationLinks(message:message,scope:store.scopeIdentity,sessionID:store.sessionID)
                         if EchoSpeechTarget.visibleReply(message,origin:store.scopeIdentity,sessionID:store.sessionID,foreground:scenePhase == .active) != nil {
                             HStack(spacing:8) {
                                 let active=speech.active?.target.messageID == message.id
@@ -192,14 +193,7 @@ struct ChatStreamView: View {
         .onChange(of:scenePhase) {_,_ in reconcileSpeech()}
         .onChange(of:store.remoteReadRevision) {_,_ in _ = speech.stop()}
         .onDisappear {_ = speech.stop()}
-        .task(id:"\(store.scopeIdentity)|\(store.sessionID ?? "")|\(scenePhase == .active)|\(store.conversation?.messages.contains(where: { $0.deliveryPending == true }) == true)") {
-            while !Task.isCancelled, scenePhase == .active, let message = store.conversation?.messages.first(where: { $0.deliveryPending == true }) {
-                let delay = max(100, min(2000, message.deliveryNextMs ?? 800))
-                try? await Task.sleep(for:.milliseconds(delay))
-                guard !Task.isCancelled else { break }
-                await store.refreshDelivery()
-            }
-        }.confirmationDialog("结束本机等待？",isPresented:$endingLocalWait,titleVisibility:.visible) {
+        .confirmationDialog("结束本机等待？",isPresented:$endingLocalWait,titleVisibility:.visible) {
             Button("我已核对，结束本机等待") { Task { await store.endLocalWaitAfterReview() } }
             Button("继续等待",role:.cancel) {}
         } message: { Text("原请求的结果仍未确认，结束等待不代表服务器已取消。会重新读取聊天记录，再把原话放回输入框；不会重新发送。请先确认是否已有这句话，再决定后续操作。") }

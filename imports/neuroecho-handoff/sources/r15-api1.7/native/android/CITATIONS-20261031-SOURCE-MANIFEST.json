@@ -1,0 +1,34 @@
+{
+  "scope": "Android message citations patch only; excludes historical R15 sealing manifests",
+  "files": {
+    "app/src/main/java/cn/xinji/echo/Api.kt": "63c1dafade24732b0faf8a8a5ef8207aaea7f222845e1675ca5449c77c0940af",
+    "app/src/main/java/cn/xinji/echo/MainActivity.kt": "3b6fe982a486a55b44fb7ae3796b344754e4cca95aa99aefd6f02f21064dad0e",
+    "app/src/main/java/cn/xinji/echo/CitationRules.kt": "41cc862361fe80c7cf7db448c11a7a3edccdcf811b611f676233d52ef3395550",
+    "app/src/test/java/cn/xinji/echo/CitationRulesTest.kt": "6046c3ee98220f8bf41c1b19e8b02ecc7dc835d0209713fbf32a1dff097f7ff6",
+    "rules-jvm/build.gradle.kts": "cfa5cb4170264c11d11c5fd4dd686e44fe2acb0b2150cb7aeccba5d5f806b828",
+    "scripts/test_rules_cached.py": "978c5677ca4b15796177c168d11b1e3f1ac1a47799b95f437f4e270a2c366acd",
+    "ACCEPTANCE-CITATIONS-20261031.md": "654ab5bea4a8d0e282696c7bddccfa6a1a83d9b7a4ca23a5282bd5c5cbc1bc92",
+    "README.md": "4a557ca434187394da5d7fd2655ec59e96c65c616e99f229b81190d386ed003e",
+    "scripts/KotlinSyntaxCheck.java": "71c4b18e2b51e0d927e21266e9bfa7f0a6950d6b00b502a404f2ce448a3dd4e4",
+    "scripts/check_kotlin_cached.py": "c6eba49e1cbfca00aae919a416df947c09c754ee3a0abc6aed049e74dd7bd364",
+    "CITATIONS-SYNTAX-ACTIVE-20261031.log": "8585d0c0dff540d307bd1d453af8d547437514c1747c1a4273e98d5a86db018e"
+  },
+  "verification": {
+    "core_junit_tests": 213,
+    "new_citation_tests": 15,
+    "kotlin_psi_files": 44,
+    "kotlin_psi_syntax_errors": 0,
+    "android_sdk_compose_typecheck": false,
+    "gradle_apk_build": false,
+    "device_or_external_link_acceptance": false,
+    "active_source_syntax_rerun": {
+      "files": 44,
+      "syntax_errors": 0,
+      "exit": 0,
+      "helper_included": true,
+      "other_suites_rerun": false,
+      "log": "CITATIONS-SYNTAX-ACTIVE-20261031.log"
+    }
+  },
+  "documentation_updated_at": "2026-10-31T10:11:55.037761+08:00"
+}

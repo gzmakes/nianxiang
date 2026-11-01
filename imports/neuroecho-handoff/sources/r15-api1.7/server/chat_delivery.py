@@ -121,7 +121,7 @@ def _cap_parts(parts, limit=4):
             if len(values) <= slots:
                 return values
             head = values[:slots - 1]
-            head.append(' '.join(values[slots - 1:]))
+            head.append('\n\n'.join(values[slots - 1:]))
             return head
 
         after_slots = 1 if after else 0
@@ -222,7 +222,13 @@ def split_reply(text, mode='auto'):
         return _cap_parts(parts)
     stickers = _sticker_parts(text)
     if stickers is not None:
-        return _cap_parts(stickers)
+        # A sticker is its own bubble, but surrounding prose still follows
+        # the normal paragraph/sentence rules. Otherwise an appended sticker
+        # accidentally makes an entire multi-paragraph reply one bubble.
+        parts = []
+        for part in stickers:
+            parts.extend([part] if _STICKER_MARKER.fullmatch(part) else split_reply(part, mode))
+        return _cap_parts(parts)
     if mode not in ('auto', 'paragraph', 'sentence'):
         mode = 'auto'
     if _rich_reply(text) or mode == 'paragraph':

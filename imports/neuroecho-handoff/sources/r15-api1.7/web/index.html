@@ -6,15 +6,18 @@
 <title>念响 · 具身个人伙伴</title>
 <link rel="stylesheet" href="/static/styles.css?v=47fa198fe6bc312f" />
 <link rel="stylesheet" href="/static/user-dialog.css?v=023ee7220f7c0eda" />
-<link rel="stylesheet" href="/static/design-system.css?v=7907f58c72e29366" />
+<link rel="stylesheet" href="/static/design-system.css?v=3915f6a01ae285ec" />
 <link rel="stylesheet" href="/static/followups.css?v=247cfed54f6c8a20" />
 <link rel="stylesheet" href="/static/mood.css?v=c79d7242c3d1aed0" />
 <link rel="stylesheet" href="/static/generated-design.css?v=92ae3b94966a56ad" />
 <link rel="stylesheet" href="/static/paired-devices.css?v=f004ad8fc233431b">
-<link rel="stylesheet" href="/static/connection-flow.css?v=3806a56fe7f8e637" />
-<link rel="stylesheet" href="/static/soundscape.css?v=0cdf2c8cdf2caed3" />
+<link rel="stylesheet" href="/static/connection-flow.css?v=388156eff1ccc0ee" />
+<link rel="stylesheet" href="/static/soundscape.css?v=429856ccbf1bb7d7" />
 <link rel="stylesheet" href="/static/task-panel.css?v=a5808db894708c72" />
-<link rel="stylesheet" href="/static/memory-overview.css?v=aa6dc2d40df31372" />
+<link rel="stylesheet" href="/static/memory-overview.css?v=99699cffd6abf5ea" />
+<link rel="stylesheet" href="/static/chat-pet.css?v=092a5c8b80b6c14f" />
+<link rel="stylesheet" href="/static/conversation-choices.css?v=4e616e1fb7638452" />
+<link rel="stylesheet" href="/static/proactive-preview.css?v=f3628d31d3c16939" />
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
@@ -207,6 +210,9 @@
       </div>
   <p id="chat-error" class="chat-error is-hidden" role="status"></p>
   <button type="button" id="chat-recover" class="text-btn is-hidden">核对发送状态</button>
+  <section class="proactive-preview" data-proactive-preview data-input="#input" aria-label="主动提醒" hidden>
+    <div data-preview-card hidden aria-live="polite"></div>
+  </section>
   <div class="response-choices" aria-label="选择回应方式">
     <span>希望回响</span>
     <button type="button" data-response-choice="listen">先听我说</button>
@@ -242,25 +248,17 @@
         <button class="tab" data-tab="design">设置</button>
       </div>
 
-      <section id="tab-design" class="tab-panel is-hidden"><div class="panel-title-row"><h3>设置</h3></div><div class="design-shortcuts"><button type="button" class="btn ghost" data-design-route="apps">连接应用</button><button type="button" class="btn ghost" data-design-route="bookmark">任务与草稿</button><button type="button" class="btn ghost is-hidden" id="desktop-connection-entry">连接与空间</button></div><p class="note" id="desktop-connection-entry-status" role="status" aria-live="polite"></p><div id="design-settings"></div><div id="auto-memory-settings"></div><div id="sound-settings"></div>
+      <section id="tab-design" class="tab-panel is-hidden"><div class="panel-title-row"><h3>设置</h3></div><div id="sound-settings"></div>
       <details class="settings-section" id="settings-persona"><summary>伙伴角色</summary><p class="note">虚构角色不写入你的事实；切换伙伴不会影响已确认的记忆。</p><button type="button" class="btn ghost small" id="settings-choose-persona">选择聊天伙伴</button></details>
-      <details class="settings-section" id="settings-devices"><summary>设备</summary><div id="paired-devices"></div>
-        <div class="data-block" id="mindlink-panel"><div class="k">脑电设备 · 可选</div><p class="note">仅在这台电脑上读取 MindLink 的实时专注度设备估计值；不记录、不发送给模型，也不判断情绪。需要先启动队友提供的本机服务并连接设备。</p><p class="note" id="mindlink-status" role="status">脑电设备未开启</p><button class="btn ghost small" id="mindlink-toggle" type="button">同意并开启读取</button></div>
-        <div class="data-block"><div class="k">Rokid 眼镜 · 规划中</div><p class="note">将用于查看用户选择的简短提示；型号、连接方式和真机显示待联调。</p></div>
-      </details><div class="settings-section"><div class="panel-title-row"><h3>数据与记录</h3><span class="muted small">低频设置与记录</span></div><div id="persona-mount"></div>
-        <div class="action-row" style="flex-direction:column;align-items:stretch">
-          <button class="btn ghost small" data-more-tab="understanding">理解卡</button>
-          <button class="btn ghost small" data-more-tab="audit">审计记录</button>
-          <button class="btn ghost small" data-more-tab="metrics">指标</button>
-          <button class="btn ghost small" data-more-tab="data">数据与模型设置</button>
-        </div>
-        <div class="data-block" id="plugin-status"><div class="k">插件</div><p class="note">正在检查本机插件…</p></div>
-</div></section>
+      <button class="btn ghost small" data-more-tab="data">模型设置</button>
+      </section>
 
       <section id="tab-apps" class="tab-panel is-hidden">
-        <div class="panel-title-row"><h3>连接应用</h3><button type="button" class="text-btn" id="apps-refresh">重新检查</button></div>
-        <button type="button" class="text-btn" id="apps-manage-sources">管理已接入的资料</button>
+        <div class="panel-title-row"><h3>连接应用</h3></div>
         <div id="apps-grid" class="apps-grid"><p class="muted">正在检查本机可用来源…</p></div>
+        <dialog id="mindlink-dialog" class="mindlink-dialog" aria-labelledby="mindlink-title">
+          <div class="data-block" id="mindlink-panel"><h3 id="mindlink-title">连接脑机接口</h3><p class="note">仅在本机读取 MindLink 专注度估计值；不记录、不发送给模型。需要先连接设备并启动本机服务。</p><p class="note" id="mindlink-status" role="status">脑电设备未开启</p><button class="btn ghost small" id="mindlink-toggle" type="button">同意并开启读取</button> <button class="btn ghost small" id="mindlink-close" type="button">关闭</button></div>
+        </dialog>
       </section>
 
       <section id="tab-today" class="tab-panel">
@@ -464,31 +462,36 @@
 <script src="/static/chat-scroll.js?v=2bd102ae7031f077"></script>
 <script src="/static/file-picker.js?v=95503f23c22ea9cb"></script>
 <script src="/static/connection-intro.js?v=2d71358d315b113d"></script>
-<script src="/static/feishu-account-picker.js?v=2fd2542059000621"></script>
+<script src="/static/feishu-account-picker.js?v=6b3be911fd3a0192"></script>
 <script src="/static/public-link-picker.js?v=7ce2e27329319c37"></script>
 <script src="/static/chat-transport.js?v=bf3d75e3e6f2d4db"></script>
 <script src="/static/user-dialog.js?v=f1e2adf204a94a38"></script>
 <script src="/static/design-system.js?v=9ec75bbfb3f54f99"></script>
 <script src="/static/paired-devices.js?v=8641114376d41d40"></script>
-<script src="/static/voice-reply.js?v=5a35a4d5059fa00a"></script>
+<script src="/static/voice-reply.js?v=d33eec21e104e4f1"></script>
 <script src="/static/meme.js?v=2aaf253a7ea455e2"></script>
-<script src="/static/chat-delivery.js?v=f49bbe7cd442ceec"></script>
+<script src="/static/chat-delivery.js?v=c0b0b732b74508ec"></script>
 <script src="/static/connector-auth.js?v=4154d3d6cc0cd535"></script>
-<script src="/static/soundscape.js?v=f617132d43d4ea24"></script>
+<script src="/static/soundscape.js?v=71101e9edbbfb038"></script>
 <script src="/static/response-parser.js?v=b36dffc77f374ee6"></script>
-<script src="/static/memory-overview.js?v=e447b1632bc4420e"></script>
-<script src="/static/auto-memory-settings.js?v=dfa61e0f873a4b1c"></script>
-<script src="/static/app.js?v=237592bb10453f5c"></script>
+<script src="/static/memory-overview.js?v=91c60efafb4f7f62"></script>
+<script src="/static/memory-insights.js?v=6e0ee39da07beefa"></script>
+<script src="/static/device-connections.js?v=b38779d0a267f56f"></script>
+<script src="/static/personal-tasks.js?v=af3190008aacb7f2"></script>
+<script src="/static/app.js?v=7383df5fdae52823"></script>
 <script src="/static/emoji-reactions.js?v=984098af2341e32a"></script>
-<script src="/static/message-voice.js?v=d2f5f242df660536"></script>
+<script src="/static/message-voice.js?v=dd4b786f2857d633"></script>
 <script src="/static/orb-face.js?v=40a8f976250f2036"></script>
 <script src="/static/mood-polish.js?v=1c748d608167772c"></script>
-<script src="/static/persona-switch.js?v=7835fc03f1158074"></script>
+<script src="/static/persona-switch.js?v=a7af7e9b780b3169"></script>
 <script src="/static/panel-motion.js?v=c71611ef91b413f7"></script>
-<script src="/static/ambient-music.js?v=59f7829e5a6cd484"></script>
+<script src="/static/ambient-music.js?v=499193a6c62f4a64"></script>
 <script src="/static/conversation-tools.js?v=a73cc6c1de8c1e37"></script>
-<script src="/static/settings-polish.js?v=460964c7d78fd485"></script>
-<script src="/static/task-panel.js?v=18cbde8d3cf1b031"></script>
+<script src="/static/settings-polish.js?v=2b5e6ac39247a556"></script>
+<script src="/static/task-panel.js?v=d3aba79ba1f0fd03"></script>
 <script src="/static/slogan-particles.js?v=83b507e6ba7d7917"></script>
+<script src="/static/pet-whisper.js?v=28d73677282a3947"></script>
+<script src="/static/chat-pet.js?v=33c52aeaf3447490"></script>
+<script src="/static/proactive-preview.js?v=f5c1ddc427f305c3"></script>
 </body>
 </html>

@@ -13,6 +13,20 @@ public struct EchoMessage: Codable, Identifiable, Sendable {
     public let bubbles: [String]?
     public let deliveryPending: Bool?
     public let deliveryNextMs: Int?
+    public let citations: [EchoMessageCitation]
+    private enum CodingKeys: String, CodingKey { case id, role, text, createdAt, bubbles, deliveryPending, deliveryNextMs, citations }
+    public init(id: String, role: String, text: String, createdAt: String? = nil, bubbles: [String]? = nil, deliveryPending: Bool? = nil, deliveryNextMs: Int? = nil, citations: [EchoMessageCitation] = []) {
+        self.id=id; self.role=role; self.text=text; self.createdAt=createdAt; self.bubbles=bubbles
+        self.deliveryPending=deliveryPending; self.deliveryNextMs=deliveryNextMs; self.citations=citations
+    }
+    public init(from decoder: Decoder) throws {
+        let value = try decoder.container(keyedBy:CodingKeys.self)
+        id = try value.decode(String.self,forKey:.id); role = try value.decode(String.self,forKey:.role); text = try value.decode(String.self,forKey:.text)
+        createdAt = try value.decodeIfPresent(String.self,forKey:.createdAt); bubbles = try value.decodeIfPresent([String].self,forKey:.bubbles)
+        deliveryPending = try value.decodeIfPresent(Bool.self,forKey:.deliveryPending); deliveryNextMs = try value.decodeIfPresent(Int.self,forKey:.deliveryNextMs)
+        // Optional evidence must never make the containing reply unreadable.
+        citations = ((try? value.decode([EchoMessageCitation].self,forKey:.citations)) ?? []).filter {$0 != .unsupported}
+    }
     public var displayParts: [String] {
         guard role == "assistant", let parts = bubbles, !parts.isEmpty else {return [text]}
         return parts

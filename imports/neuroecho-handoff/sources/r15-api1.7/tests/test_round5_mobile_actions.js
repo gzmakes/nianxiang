@@ -43,6 +43,22 @@ function actionEnvironment(reply){
   '\nObject.assign(this,{open:openMobileAction,openSaved:openMobileSavedAction,check:checkMobileSavedAction,confirm:confirmMobileAction,close:closeMobileAction,current:()=>mobileAction});',context);
  return{context,state,$,calls,notes,refreshed};
 }
+test('H5 pet tracks only a real confirmation and does not override an active thinking state',async()=>{
+ const e=actionEnvironment(async path=>path==='/api/action'?{id:'created'}:{status:'committed',real:0}),events=[];let work=null;
+ e.context.NianxiangPet={getState:()=>({work}),setWork:s=>{work=s;events.push(s)}};
+ e.context.open('message',-1,{title:'草稿',text:'正文'});assert.deepEqual(events,['waiting']);
+ await e.context.confirm();assert.deepEqual(events,['waiting','working','result','success']);
+ work='thinking';events.length=0;e.context.open('message',-1,{title:'草稿',text:'正文'});e.context.close();assert.deepEqual(events,[]);
+});
+test('H5 pet shows a returned preview result during the pending commit',async()=>{
+ let release;const commit=new Promise(resolve=>release=resolve),events=[];let work=null;
+ const e=actionEnvironment(async path=>path==='/api/action'?{id:'created'}:commit);
+ e.context.NianxiangPet={getState:()=>({work}),setWork:s=>{work=s;events.push(s)}};
+ e.context.open('message',-1,{title:'草稿',text:'正文'});const pending=e.context.confirm();
+ while(!e.calls.some(call=>call.path.endsWith('/commit'))) await Promise.resolve();
+ assert.deepEqual(events,['waiting','working','result']);release({status:'committed',real:0});await pending;
+ assert.deepEqual(events,['waiting','working','result','success']);
+});
 const savedPreview=()=>({id:'old-preview',session_id:'canonical',kind:'message',status:'previewed',title:'原已核对标题',detail:'原已核对正文\n第二行'});
 test('H5 resumes the same saved preview, rechecks its status, and commits its original id without creating another record',async()=>{
  const action=savedPreview(),e=actionEnvironment(async path=>path.startsWith('/api/actions?')?{actions:[action]}:{status:'committed',real:0});

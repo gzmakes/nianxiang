@@ -13,7 +13,7 @@ fun JSONObject.rows(key: String) = optJSONArray(key)?.objects().orEmpty()
 fun JSONObject.str(key: String, fallback: String = "") = if (isNull(key)) fallback else optString(key, fallback)
 fun json(vararg pairs: Pair<String, Any?>) = JSONObject().also { obj -> pairs.forEach { (key, value) -> obj.put(key, value ?: JSONObject.NULL) } }
 fun encoded(value: String): String = URLEncoder.encode(value, "UTF-8")
-data class Message(val id: String, val role: String, val text: String, val createdAt: String = "", val bubbles: List<String> = emptyList(), val deliveryPending: Boolean = false, val deliveryNextMs: Long = 800, val deliveryFlagValid: Boolean = true) {
+data class Message(val id: String, val role: String, val text: String, val createdAt: String = "", val bubbles: List<String> = emptyList(), val deliveryPending: Boolean = false, val deliveryNextMs: Long = 800, val deliveryFlagValid: Boolean = true, val citations: List<MessageCitation> = emptyList()) {
     val displayParts: List<String> get() = if (role == "assistant" && bubbles.isNotEmpty()) bubbles else listOf(text)
 }
 data class Memory(val id: String, val text: String, val kind: String, val status: String, val version: Int, val source: String, val createdAt: String, val sourceMessageId: String = "", val sourceAttachmentId: String = "")
@@ -22,7 +22,7 @@ data class SavedAction(val id: String, val sessionId: String, val kind: String, 
 data class Conversation(val id: String, val messages: List<Message>, val memories: List<Memory>, val sources: List<Source>, val bookmark: String = "", val bookmarkNext: String = "")
 fun messages(obj: JSONObject) = obj.rows("messages").map { item ->
     val parts = item.optJSONArray("bubbles")?.let { list -> (0 until list.length()).mapNotNull { i -> (list.opt(i) as? String)?.takeIf { it.isNotEmpty() } } }.orEmpty()
-    Message(item.str("id"), item.str("role"), item.str("text"), item.str("created_at"), parts, item.optBoolean("delivery_pending"), item.optLong("delivery_next_ms", 800).coerceIn(100, 2000), !item.has("delivery_pending") || item.opt("delivery_pending") is Boolean)
+    Message(item.str("id"), item.str("role"), item.str("text"), item.str("created_at"), parts, item.optBoolean("delivery_pending"), item.optLong("delivery_next_ms", 800).coerceIn(100, 2000), !item.has("delivery_pending") || item.opt("delivery_pending") is Boolean, CitationPolicy.parse(item.optJSONArray("citations")))
 }
 fun memory(obj: JSONObject) = Memory(obj.str("id"), obj.str("text"), obj.str("kind"), obj.str("status"), obj.optInt("version", 1), obj.str("source"), obj.str("created_at"), obj.str("source_message_id"), obj.str("source_attachment_id"))
 fun memories(obj: JSONObject) = obj.rows("memories").map(::memory)

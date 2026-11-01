@@ -36,23 +36,18 @@
 
   function mount(container, {api, ensureSession, getSessionId, isCurrent, onAuthorize, onSingleDocument, onManageSources, onStateChange, onConnected, onReturn}) {
     container.innerHTML = `<div class="connection-card">
-      <div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">飞</span><h3>连接飞书</h3></div>
-      <p class="connection-value">从最近 7 天的文档里，陪你聊聊正在发生的事。</p>
-      <p class="connection-scope">只读你有权访问的文档，首次最多读取 3 篇最近编辑或打开过的文档。相关片段会发送给当前模型，之后聊天可按问题查阅。</p>
+      <div class="connection-card-header"><span class="connection-card-icon" aria-hidden="true">${window.XinjiDeviceConnections?.sourceIcon("feishu", "飞") || "飞"}</span><h3>连接飞书</h3></div>
+      <p class="connection-scope">只读你有权访问的文档，首次最多查看最近 7 天的 3 篇，之后按问题查阅；相关片段可能发送给当前模型。</p>
       <p class="connection-status feishu-account-status" role="status" aria-live="polite">正在核对连接状态…</p>
       <div class="lark-actions"><button type="button" class="btn primary small feishu-account-connect" disabled>授权</button>
       <button type="button" class="btn primary small feishu-account-authorize is-hidden">授权</button>
-      <button type="button" class="btn primary small feishu-account-return is-hidden">回到聊天</button></div>
-      <details><summary>连接管理</summary>
-        <button type="button" class="text-btn feishu-account-refresh">重新核对状态</button>
-        <button type="button" class="text-btn feishu-account-disconnect is-hidden">断开连接</button>
-        <button type="button" class="text-btn feishu-account-manage">管理已接入的资料</button>
-        <button type="button" class="text-btn feishu-account-single">仅接入一篇文档</button>
-        <p class="note">断开后停止自动查阅；此前手动接入的快照可在资料管理里移除。授权范围以飞书官方页面为准。</p>
-      </details></div>`;
+      <button type="button" class="btn primary small feishu-account-disconnect is-hidden">取消授权</button>
+      <button type="button" class="btn ghost small feishu-account-refresh is-hidden">重试</button></div>
+      <p class="connection-scope feishu-account-disconnect-note is-hidden">停止本对话自动查阅，已保存资料保留；飞书授权需在飞书中撤销。</p>
+      </div>`;
     const $ = selector => container.querySelector(selector);
     const status = $('.feishu-account-status'), connect = $('.feishu-account-connect'), disconnect = $('.feishu-account-disconnect');
-    const authorize = $('.feishu-account-authorize'), refresh = $('.feishu-account-refresh'), returnButton = $('.feishu-account-return');
+    const authorize = $('.feishu-account-authorize'), refresh = $('.feishu-account-refresh'), disconnectNote = $('.feishu-account-disconnect-note');
     let epoch = 0, busy = false, sessionId = null, verified = false, disposed = false;
     const current = version => !disposed && version === epoch && container.isConnected && isCurrent() && (!sessionId || getSessionId() === sessionId);
     const show = (element, visible) => element.classList.toggle('is-hidden', !visible);
@@ -60,13 +55,14 @@
       if (typeof data?.enabled !== 'boolean') throw Error('未取得有效连接状态，请重新核对。');
       const connected = data.enabled && data.ready !== false;
       verified = true;
+      status.classList.toggle('is-connected', connected);
       status.textContent = connected ? '✓ 已连接' : data.enabled
-        ? '连接需核对，请重新授权。' : '授权完成后，会直接回到聊天。';
+        ? '连接需核对，请重新授权。' : '授权后，就可以一起聊聊。';
       if (!connected && (data.error || data.hint)) status.textContent += ' ' + [data.error, data.hint].filter(Boolean).join(' · ');
       connect.textContent = '授权';
       connect.disabled = connected;
-      show(connect, !connected); show(returnButton, connected); show(disconnect, data.enabled);
-      show(authorize, false);
+      show(connect, !connected); show(disconnect, data.enabled); show(disconnectNote, data.enabled);
+      show(refresh, false); show(authorize, false);
       onStateChange?.(data);
     }
     async function identify(version) {
@@ -78,13 +74,13 @@
     }
     async function load() {
       if (busy || !current(epoch)) return;
-      busy = true; const version = ++epoch; verified = false; connect.disabled = true; refresh.disabled = true;
-      show(authorize, false); status.textContent = '正在核对连接状态…';
+      busy = true; const version = ++epoch; verified = false; status.classList.remove('is-connected'); connect.disabled = true; refresh.disabled = true;
+      show(authorize, false); show(refresh, false); status.textContent = '正在核对连接状态…';
       try {
         const id = await identify(version); if (!id) return;
         const data = await api(`/api/lark/account?session_id=${encodeURIComponent(id)}`);
         if (current(version)) apply(data);
-      } catch (error) { if (current(version)) status.textContent = `连接状态尚未确认：${error.message} 请重新核对。`; }
+      } catch (error) { if (current(version)) { status.textContent = `连接状态尚未确认：${error.message}`; show(refresh, true); } }
       finally { if (current(version)) { busy = false; refresh.disabled = false; } }
     }
     async function change(enable) {
@@ -109,15 +105,13 @@
         if (data.enabled !== enable) throw Error('返回的连接设置不匹配');
         apply(data);
         if (enable) onConnected?.(data);
+        else status.textContent = '已停止本对话自动查阅；已保存资料保留。飞书授权需在飞书中撤销。';
       } catch (error) {
-        if (current(version)) { verified = false; status.textContent = `操作结果尚未确认：${error.message} 请先重新核对状态。`; }
+        if (current(version)) { verified = false; status.textContent = `操作结果尚未确认：${error.message} 请重试检查状态。`; show(refresh, true); }
       } finally { if (current(version)) { busy = false; disconnect.disabled = false; refresh.disabled = false; } }
     }
-    returnButton.onclick = () => { if (!busy && current(epoch)) onReturn?.(); };
     connect.onclick = () => change(true); disconnect.onclick = () => change(false); refresh.onclick = load;
     authorize.onclick = () => { if (!busy && current(epoch) && !authorize.classList.contains('is-hidden')) onAuthorize(); };
-    $('.feishu-account-single').onclick = () => { if (!busy && current(epoch)) { disposed = true; epoch++; onSingleDocument(); } };
-    $('.feishu-account-manage').onclick = () => { if (!busy && current(epoch)) { disposed = true; epoch++; onManageSources(); } };
     void load();
     return {refresh: load, isVerified: () => verified, dispose: () => { disposed = true; epoch++; }};
   }

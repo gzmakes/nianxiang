@@ -46,6 +46,12 @@ class DeliveryTests(unittest.TestCase):
     self.assertEqual(chat_delivery.split_reply('```text\n[表情: builtin/happy.svg]\n```'), [
         '```text\n[表情: builtin/happy.svg]\n```'])
 
+ def test_sticker_does_not_disable_paragraph_delivery(self):
+    text = '一\n\n二\n\n三\n\n四\n\n五\n\n[表情: builtin/happy.svg]'
+    parts = chat_delivery.split_reply(text)
+    self.assertEqual(parts, ['一', '二', '三\n\n四\n\n五', '[表情: builtin/happy.svg]'])
+    self.assertEqual('\n\n'.join(parts), text)
+
  def test_five_paragraphs_have_four_ordered_persisted_sends(self):
     db = sqlite3.connect(':memory:'); db.row_factory = sqlite3.Row
     db.execute('create table messages(id text primary key, session_id text, text text)')

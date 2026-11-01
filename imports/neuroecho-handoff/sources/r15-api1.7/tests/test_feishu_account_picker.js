@@ -26,10 +26,11 @@ function setup({reply = async () => ({enabled:false,ready:true,version:1}), sess
 test('opening reads actual state only; existing CLI permission never silently enables account retrieval', async () => {
   const t = setup(); await flush();
   assert.equal(t.calls.length,1); assert.equal(t.calls[0][0],'/api/lark/account?session_id=same-dialogue');
-  assert.equal(t.calls[0][1],undefined); assert.match(t.status.textContent,/授权完成后/); assert.equal(t.connect.disabled,false);
+  assert.equal(t.calls[0][1],undefined); assert.match(t.status.textContent,/授权后/); assert.equal(t.connect.disabled,false);
   assert.equal(t.disconnect.classList.contains('is-hidden'),true); assert.equal(t.events.length,0);
   assert.match(t.container.html,/只读你有权访问的文档/);
-  assert.match(t.container.html,/此前手动接入的快照/);
+  assert.match(t.container.html,/相关片段可能发送给当前模型/);
+  assert.doesNotMatch(t.container.html,/管理已接入的资料|连接管理/);
 });
 
 test('one explicit connect verifies permissions and enables only the same ongoing dialogue', async () => {
@@ -79,24 +80,19 @@ test('a canonical dialogue is obtained once when needed without creating another
   assert.equal(t.calls.length,1);assert.equal(t.calls[0][0],'/api/lark/account?session_id=canonical-dialogue');
 });
 
-test('disconnect waits for server confirmation and retains the independent snapshot management choice',async()=>{
+test('disconnect waits for server confirmation and accurately distinguishes Feishu authorization',async()=>{
   const pending=deferred(),t=setup({reply:async path=>path.endsWith('/disconnect')?pending.promise:{enabled:true,ready:true}});await flush();
   const disconnecting=t.disconnect.onclick();await flush();assert.match(t.status.textContent,/正在断开/);
   assert.deepEqual(JSON.parse(t.calls[1][1].body),{session_id:'same-dialogue'});
   pending.resolve({ok:true,enabled:false,version:3});await disconnecting;
-  assert.match(t.status.textContent,/授权完成后/);assert.equal(t.connect.disabled,false);
-  t.node('.feishu-account-manage').onclick();assert.deepEqual(t.events,['manage']);
+  assert.match(t.status.textContent,/已停止本对话自动查阅.*已保存资料保留.*飞书授权需在飞书中撤销/);assert.equal(t.connect.disabled,false);
+  assert.equal(t.disconnect.classList.contains('is-hidden'),true);
 });
 
 test('uncertain write outcomes require state verification before another connect can run',async()=>{
   let fail=true;const t=setup({reply:async path=>{if(path.endsWith('/connect')&&fail)throw Error('response lost');return {enabled:false};}});await flush();
-  await t.connect.onclick();assert.match(t.status.textContent,/结果尚未确认.*先重新核对状态/);assert.equal(t.connect.disabled,true);
+  await t.connect.onclick();assert.match(t.status.textContent,/结果尚未确认.*重试检查状态/);assert.equal(t.connect.disabled,true);
   await t.connect.onclick();assert.equal(t.calls.length,2);fail=false;await t.refresh.onclick();assert.equal(t.connect.disabled,false);
-});
-
-test('single document mode remains a separate explicit choice and ends the old account surface',async()=>{
-  const t=setup();await flush();t.node('.feishu-account-single').onclick();assert.deepEqual(t.events,['single']);
-  await t.connect.onclick();assert.equal(t.calls.length,1);
 });
 
 test('actual document provenance renders escaped official links and leaves memory revision citations intact',()=>{
@@ -189,6 +185,11 @@ for (const mobile of [false,true]) {
   });
 }
 
-test('an already connected account offers return to chat without replaying a completed intro or searching again',async()=>{
- const e=setup({reply:async()=>({enabled:true,ready:true})});await flush();assert.match(e.container.html,/feishu-account-return is-hidden">回到聊天/);assert.doesNotMatch(e.container.html,/聊聊最近 7 天/);e.node('.feishu-account-return').onclick();assert.deepEqual(e.events,['return']);assert.equal(e.calls.length,1);assert.equal(e.calls[0][1],undefined);
+test('an already connected account offers a direct disconnect without replaying a completed intro',async()=>{
+ const e=setup({reply:async()=>({enabled:true,ready:true})});await flush();
+ assert.match(e.container.html,/feishu-account-disconnect is-hidden">取消授权/);
+ assert.match(e.container.html,/飞书授权需在飞书中撤销/);
+ assert.equal(e.disconnect.classList.contains('is-hidden'),false);
+ assert.equal(e.connect.classList.contains('is-hidden'),true);
+ assert.equal(e.calls.length,1);assert.equal(e.calls[0][1],undefined);assert.deepEqual(e.events,[]);
 });
